@@ -8,7 +8,7 @@ class AliyunEDMService {
   ConfigService? _configService;
 
   final Dio _dio = Dio(BaseOptions(baseUrl: 'https://dm.aliyuncs.com'));
-  
+
   // 初始化配置服务
   Future<void> _initConfigService() async {
     _configService ??= await ConfigService.getInstance();
@@ -43,10 +43,10 @@ class AliyunEDMService {
   Future<List<Map<String, dynamic>>> queryReceivers() async {
     final params = await _buildCommonParams("QueryReceiverByParam");
     final accessKeySecret = await _getAccessKeySecret();
-    
+
     final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
     params['Signature'] = signature;
-    
+
     final response = await _dio.get('', queryParameters: params);
     final responseData = response.data;
     final data = responseData['data'];
@@ -96,7 +96,7 @@ class AliyunEDMService {
     params['Signature'] = signature;
 
     try {
-      final response = await _dio.get('', queryParameters: params);
+    final response = await _dio.get('', queryParameters: params);
       final detail = ReceiverDetail.fromJson(response.data);
       
       // 如果返回的数据总数小于pageSize,说明已经没有更多数据了
@@ -117,16 +117,35 @@ class AliyunEDMService {
     return null;
   }
 
-  Future<void> createReceiver(String name) async {
+  Future<void> createReceiver(String name, {String? alias, String? desc}) async {
     final params = await _buildCommonParams("CreateReceiver");
-    params['ReceiverName'] = name;
-    params['Desc'] = "新建收件人列表";
+    params['ReceiversName'] = name;
+    if (alias != null && alias.isNotEmpty) {
+      params['ReceiversAlias'] = alias;
+    }
+    params['Desc'] = desc ?? "新建收件人列表";
     final accessKeySecret = await _getAccessKeySecret();
 
     final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
     params['Signature'] = signature;
 
-    await _dio.get('', queryParameters: params);
+    print('CreateReceiver 请求参数:');
+    params.forEach((key, value) {
+      print('  $key: $value');
+    });
+
+    try {
+      final response = await _dio.get('', queryParameters: params);
+      print('CreateReceiver 响应: ${response.data}');
+    } catch (e) {
+      print('CreateReceiver 错误: $e');
+      if (e is DioException) {
+        print('错误详情: ${e.response?.data}');
+        print('状态码: ${e.response?.statusCode}');
+        print('错误信息: ${e.message}');
+      }
+      rethrow;
+    }
   }
 
   Future<void> deleteReceiverDetail(String receiverId, String email) async {

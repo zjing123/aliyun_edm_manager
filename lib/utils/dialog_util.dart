@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/receiver_detail.dart';
 import '../services/aliyun_edm_service.dart';
 import 'package:intl/intl.dart';
@@ -8,13 +9,87 @@ class DialogUtil {
   static Future<bool> confirm(BuildContext context, String message) async {
     return await showDialog<bool>(
           context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("确认操作"),
-            content: Text(message),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("取消")),
-              TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("确定")),
-            ],
+          builder: (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Container(
+              width: 400,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 标题栏
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: Colors.orange[600], size: 24),
+                        const SizedBox(width: 12),
+                        const Text(
+                          "确认操作",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // 内容区域
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                    child: Text(
+                      message,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ),
+                  // 操作按钮
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(color: Colors.grey[200]!),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          ),
+                          child: const Text(
+                            "取消",
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            "确定",
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ) ??
         false;
@@ -27,20 +102,266 @@ class DialogUtil {
     );
   }
 
-  static Future<String?> inputReceiverName(BuildContext context) async {
-    final controller = TextEditingController();
-    return showDialog<String>(
+  static Future<Map<String, String>?> inputReceiverName(BuildContext context) async {
+    final nameController = TextEditingController();
+    final aliasController = TextEditingController();
+    final descController = TextEditingController();
+    String? nameError;
+    String? aliasError;
+    
+    return showDialog<Map<String, String>>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("新建收件人列表"),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(labelText: "收件人列表名称"),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Container(
+            width: 500,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 标题栏
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
+                    ),
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey[200]!),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "新建收件人列表",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+                // 内容区域
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 说明信息
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.blue[50],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.blue[200]!),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.info_outline, color: Colors.blue[600], size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    '请填写收件人列表信息，标有 * 的字段为必填项\n• 列表名称：1-30个字符，不能重复\n• 列表别称：Email地址格式，长度小于30个字符',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.blue[700],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          // 列表名称
+                          TextField(
+                            controller: nameController,
+                            decoration: InputDecoration(
+                              labelText: "收件人列表名称（1-30个字符） *",
+                              labelStyle: const TextStyle(fontSize: 13),
+                              hintText: "请输入列表名称",
+                              hintStyle: const TextStyle(fontSize: 12),
+                              border: const OutlineInputBorder(),
+                              errorBorder: const OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.red),
+                              ),
+                              focusedErrorBorder: const OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.red),
+                              ),
+                              prefixIcon: const Icon(Icons.list_alt),
+                              filled: true,
+                              fillColor: Colors.white,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                              errorText: nameError,
+                            ),
+                            keyboardType: TextInputType.text,
+                            textInputAction: TextInputAction.next,
+                            enableIMEPersonalizedLearning: true,
+                            autofocus: true,
+                            onChanged: (value) {
+                              setState(() {
+                                if (value.trim().isEmpty) {
+                                  nameError = '列表名称不能为空';
+                                } else if (value.trim().length > 30) {
+                                  nameError = '列表名称长度不能超过30个字符';
+                                } else {
+                                  nameError = null;
+                                }
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          // 列表别称
+                          TextField(
+                            controller: aliasController,
+                            decoration: InputDecoration(
+                              labelText: "列表别称 *",
+                              labelStyle: const TextStyle(fontSize: 13),
+                              hintText: "请输入Email地址格式的别称",
+                              hintStyle: const TextStyle(fontSize: 12),
+                              border: const OutlineInputBorder(),
+                              errorBorder: const OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.red),
+                              ),
+                              focusedErrorBorder: const OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.red),
+                              ),
+                              prefixIcon: const Icon(Icons.alternate_email),
+                              filled: true,
+                              fillColor: Colors.white,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                              errorText: aliasError,
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            enableIMEPersonalizedLearning: false,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9._%+-@]')),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                if (value.trim().isEmpty) {
+                                  aliasError = '列表别称不能为空';
+                                } else if (value.trim().length >= 30) {
+                                  aliasError = '列表别称长度必须小于30个字符';
+                                } else if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(value.trim())) {
+                                  aliasError = '请输入有效的Email地址格式';
+                                } else {
+                                  aliasError = null;
+                                }
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          // 列表描述
+                          TextField(
+                            controller: descController,
+                            decoration: const InputDecoration(
+                              labelText: "列表描述",
+                              labelStyle: TextStyle(fontSize: 13),
+                              hintText: "请输入列表描述（可选）",
+                              hintStyle: TextStyle(fontSize: 12),
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.description_outlined),
+                              filled: true,
+                              fillColor: Colors.white,
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            ),
+                            keyboardType: TextInputType.multiline,
+                            textInputAction: TextInputAction.done,
+                            enableIMEPersonalizedLearning: true,
+                            maxLines: 3,
+                            minLines: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // 操作按钮
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(12),
+                      bottomRight: Radius.circular(12),
+                    ),
+                    border: Border(
+                      top: BorderSide(color: Colors.grey[200]!),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        ),
+                        child: const Text(
+                          "取消",
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: (nameError == null && aliasError == null && 
+                                   nameController.text.trim().isNotEmpty && 
+                                   aliasController.text.trim().isNotEmpty) ? () {
+                          final name = nameController.text.trim();
+                          final alias = aliasController.text.trim();
+                          final desc = descController.text.trim();
+                          
+                          Navigator.pop(context, {
+                            'name': name,
+                            'alias': alias,
+                            'desc': desc.isEmpty ? '新建收件人列表' : desc,
+                          });
+                        } : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          "创建",
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("取消")),
-          TextButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text("创建")),
-        ],
       ),
     );
   }
@@ -54,95 +375,256 @@ class DialogUtil {
     return showDialog<Map<String, dynamic>?>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text("添加收件人"),
-          content: SizedBox(
-            width: 400,
+        builder: (context, setState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Container(
+            width: 500,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8, // 最大高度为屏幕高度的80%
+            ),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Email输入框
-                TextField(
-                  controller: emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Email地址 *',
-                    border: OutlineInputBorder(),
-                    errorText: emailError,
-                    helperText: '请输入有效的邮箱地址',
+                // 标题栏
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
+                    ),
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey[200]!),
+                    ),
                   ),
-                  keyboardType: TextInputType.emailAddress,
-                  onChanged: (value) {
-                    setState(() {
-                      if (value.trim().isEmpty) {
-                        emailError = null;
-                      } else if (!_isValidEmailStatic(value.trim())) {
-                        emailError = '请输入有效的Email格式';
-                      } else {
-                        emailError = null;
-                      }
-                    });
-                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        '添加收件人',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 16),
-                // 其他字段
-                ...fields.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final field = entry.value;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: TextField(
-                      controller: fieldControllers[index],
-                      decoration: InputDecoration(
-                        labelText: field.label,
-                        border: OutlineInputBorder(),
+                // 内容区域
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 说明信息
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.blue[50],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.blue[200]!),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.info_outline, color: Colors.blue[600], size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    '请填写收件人的基本信息，标有 * 的字段为必填项',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.blue[700],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          // Email输入框
+                          TextField(
+                            controller: emailController,
+                            decoration: InputDecoration(
+                              labelText: 'Email地址 *',
+                              hintText: '请输入有效的邮箱地址',
+                              border: const OutlineInputBorder(),
+                              errorText: emailError,
+                              prefixIcon: const Icon(Icons.email_outlined),
+                              filled: true,
+                              fillColor: Colors.white,
+                              errorMaxLines: 2, // 限制错误信息最大行数
+                              isDense: true, // 使输入框更紧凑
+                              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16), // 减少内边距
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            enableIMEPersonalizedLearning: false,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9._%+-@]')),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                if (value.trim().isEmpty) {
+                                  emailError = null;
+                                } else if (!_isValidEmailStatic(value.trim())) {
+                                  emailError = '请输入有效的Email格式';
+                                } else {
+                                  emailError = null;
+                                }
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          // 其他字段
+                          ...fields.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final field = entry.value;
+                            IconData icon;
+                            switch (field.field) {
+                              case 'UserName':
+                                icon = Icons.person_outline;
+                                break;
+                              case 'NickName':
+                                icon = Icons.badge_outlined;
+                                break;
+                              case 'Gender':
+                                icon = Icons.wc_outlined;
+                                break;
+                              case 'Birthday':
+                                icon = Icons.cake_outlined;
+                                break;
+                              case 'Mobile':
+                                icon = Icons.phone_outlined;
+                                break;
+                              default:
+                                icon = Icons.text_fields;
+                            }
+                            
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 14), // 减少底部间距
+                              child: TextField(
+                                controller: fieldControllers[index],
+                                decoration: InputDecoration(
+                                  labelText: field.label,
+                                  hintText: '请输入${field.label}',
+                                  border: const OutlineInputBorder(),
+                                  prefixIcon: Icon(icon),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  isDense: true, // 使输入框更紧凑
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16), // 减少内边距
+                                ),
+                                keyboardType: field.field == 'Mobile' 
+                                    ? TextInputType.phone 
+                                    : field.field == 'Birthday'
+                                        ? TextInputType.datetime
+                                        : TextInputType.text,
+                                textInputAction: index == fields.length - 1 
+                                    ? TextInputAction.done 
+                                    : TextInputAction.next,
+                                enableIMEPersonalizedLearning: true,
+                              ),
+                            );
+                          }),
+                        ],
                       ),
                     ),
-                  );
-                }),
+                  ),
+                ),
+                // 操作按钮
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(12),
+                      bottomRight: Radius.circular(12),
+                    ),
+                    border: Border(
+                      top: BorderSide(color: Colors.grey[200]!),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        ),
+                        child: const Text(
+                          "取消",
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: () {
+                          final email = emailController.text.trim();
+                          
+                          if (email.isEmpty) {
+                            setState(() {
+                              emailError = '请输入Email地址';
+                            });
+                            return;
+                          }
+                          
+                          if (!_isValidEmailStatic(email)) {
+                            setState(() {
+                              emailError = '请输入有效的Email格式';
+                            });
+                            return;
+                          }
+                          
+                          // 构建关联数组，字段名作为key，用户输入作为value
+                          final dataMap = <String, String>{};
+                          for (int i = 0; i < fields.length && i < fieldControllers.length; i++) {
+                            final field = fields[i];
+                            final fieldValue = fieldControllers[i].text.trim();
+                            if (fieldValue.isNotEmpty) {
+                              dataMap[field.field] = fieldValue;
+                            }
+                          }
+                          
+                          Navigator.pop(context, {
+                            'email': email,
+                            'data': dataMap,
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          "确定",
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("取消"),
-            ),
-            TextButton(
-              onPressed: () {
-                final email = emailController.text.trim();
-                
-                if (email.isEmpty) {
-                  setState(() {
-                    emailError = '请输入Email地址';
-                  });
-                  return;
-                }
-                
-                if (!_isValidEmailStatic(email)) {
-                  setState(() {
-                    emailError = '请输入有效的Email格式';
-                  });
-                  return;
-                }
-                
-                // 构建关联数组，字段名作为key，用户输入作为value
-                final dataMap = <String, String>{};
-                for (int i = 0; i < fields.length && i < fieldControllers.length; i++) {
-                  final field = fields[i];
-                  final fieldValue = fieldControllers[i].text.trim();
-                  if (fieldValue.isNotEmpty) {
-                    dataMap[field.field] = fieldValue;
-                  }
-                }
-                
-                Navigator.pop(context, {
-                  'email': email,
-                  'data': dataMap,
-                });
-              },
-              child: const Text("确定"),
-            ),
-          ],
         ),
       ),
     );
@@ -369,6 +851,12 @@ class _ReceiverDetailDialogState extends State<ReceiverDetailDialog> {
                               isDense: true,
                               contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                             ),
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.search,
+                            enableIMEPersonalizedLearning: false,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9._%+-@]')),
+                            ],
                             onSubmitted: (value) => _onSearch(),
                           ),
                         ),

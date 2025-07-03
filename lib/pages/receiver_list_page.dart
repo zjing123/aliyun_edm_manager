@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/aliyun_edm_service.dart';
 import '../utils/dialog_util.dart';
 import 'config_page.dart';
+import 'receiver_detail_page.dart';
 
 class ReceiverListPage extends StatefulWidget {
   const ReceiverListPage({super.key});
@@ -26,20 +27,30 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
     });
   }
 
-  void _deleteReceiver(String name) async {
-    final confirm = await DialogUtil.confirm(context, "确认删除该收件人列表？");
+  void _deleteReceiver(String receiverId, String receiverName) async {
+    final confirm = await DialogUtil.confirm(context, "确认删除收件人列表 \"$receiverName\" 吗？\n\n删除后该列表及其所有收件人数据将无法恢复。");
     if (confirm) {
-      await _service.deleteReceiver(name);
+      await _service.deleteReceiver(receiverId);
       _reloadList();
     }
   }
 
   void _createReceiver() async {
-    final name = await DialogUtil.inputReceiverName(context);
-    if (name != null && name.isNotEmpty) {
+    final result = await DialogUtil.inputReceiverName(context);
+    if (result != null) {
       try {
-        await _service.createReceiver(name);
+        await _service.createReceiver(
+          result['name']!,
+          alias: result['alias']!,
+          desc: result['desc']!,
+        );
         _reloadList();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('创建成功'),
+            backgroundColor: Colors.green,
+          ),
+        );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -61,6 +72,21 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
     if (result == true) {
       _reloadList();
     }
+  }
+
+  void _openDetailPage(String receiverId, String receiverName) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ReceiverDetailPage(
+          receiverId: receiverId,
+          receiverName: receiverName,
+        ),
+      ),
+    );
+    
+    // 返回时重新加载列表以更新数据
+    _reloadList();
   }
 
   @override
@@ -143,12 +169,12 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
             // 数据表格
             Expanded(
               child: FutureBuilder<List<Map<String, dynamic>>>(
-                future: _receiverFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
+        future: _receiverFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
                     final error = snapshot.error.toString();
                     if (error.contains('Access Key') && error.contains('未配置')) {
                       return Center(
@@ -180,9 +206,9 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
                         ),
                       );
                     }
-                    return Center(child: Text("加载失败: ${snapshot.error}"));
-                  }
-                  final receivers = snapshot.data!;
+            return Center(child: Text("加载失败: ${snapshot.error}"));
+          }
+          final receivers = snapshot.data!;
                   final screenWidth = MediaQuery.of(context).size.width;
                   final showDescription = screenWidth >= 1000;
                   
@@ -298,8 +324,8 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
                                               _buildDataCell(item['Count']?.toString() ?? ''),
                                               _buildDataCell(item['CreateTime'] ?? ''),
                                               _buildActionCell(
-                                                onDetail: () => DialogUtil.showDetailDialog(context, item['ReceiverId'] ?? ''),
-                                                onDelete: () => _deleteReceiver(item['ReceiverId'] ?? ''),
+                                                onDetail: () => _openDetailPage(item['ReceiverId'] ?? '', item['ReceiversName'] ?? ''),
+                                                onDelete: () => _deleteReceiver(item['ReceiverId'] ?? '', item['ReceiversName'] ?? ''),
                                               ),
                                             ],
                                           );
