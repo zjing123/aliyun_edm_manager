@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'pages/receiver_list_page.dart';
+import 'widgets/main_layout.dart';
 
 class EDMApp extends StatelessWidget {
   const EDMApp({super.key});
@@ -8,8 +8,12 @@ class EDMApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: '阿里云EDM管理',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: const ReceiverListPage(),
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        useMaterial3: true,
+      ),
+      debugShowCheckedModeBanner: false,
+      home: const MainLayout(),
     );
   }
 }
