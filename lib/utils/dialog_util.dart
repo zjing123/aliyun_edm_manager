@@ -459,6 +459,7 @@ class _ReceiverDetailDialogState extends State<ReceiverDetailDialog> {
                                             ),
                                           )
                                         : Scrollbar(
+                                            controller: _scrollController,
                                             child: SingleChildScrollView(
                                               controller: _scrollController,
                                               child: Column(
