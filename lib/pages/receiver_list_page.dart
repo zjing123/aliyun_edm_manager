@@ -150,6 +150,37 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
           );
         },
       ),
+      drawer: Drawer(
+        child: Column(
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Colors.blue),
+              child: Align(
+                alignment: Alignment.bottomLeft,
+                child: Text(
+                  '菜单',
+                  style: TextStyle(color: Colors.white, fontSize: 24),
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.list),
+              title: const Text('收件人列表'),
+              selected: true,
+              onTap: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            const Spacer(),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('系统配置'),
+              onTap: _openConfigPage,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
