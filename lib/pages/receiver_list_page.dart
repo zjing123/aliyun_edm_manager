@@ -183,6 +183,9 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
                     return Center(child: Text("加载失败: ${snapshot.error}"));
                   }
                   final receivers = snapshot.data!;
+                  final screenWidth = MediaQuery.of(context).size.width;
+                  final showDescription = screenWidth >= 1000;
+                  
                   return Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -200,36 +203,52 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
                       child: SingleChildScrollView(
                         child: DataTable(
                           headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
-                          columns: const [
-                            DataColumn(label: Text('列表名称')),
-                            DataColumn(label: Text('别称地址')),
-                            DataColumn(label: Text('描述')),
-                            DataColumn(label: Text('总数')),
-                            DataColumn(label: Text('创建时间')),
-                            DataColumn(label: Text('操作')),
+                          columns: [
+                            const DataColumn(label: Text('列表名称')),
+                            const DataColumn(label: Text('别称地址')),
+                            if (showDescription) const DataColumn(label: Text('描述')),
+                            const DataColumn(label: Text('总数')),
+                            const DataColumn(label: Text('创建时间')),
+                            const DataColumn(
+                              label: Align(
+                                alignment: Alignment.centerRight,
+                                child: Text('操作'),
+                              ),
+                            ),
                           ],
                           rows: receivers.map((item) {
                             return DataRow(cells: [
                               DataCell(Text(item['ReceiversName'] ?? '')),
                               DataCell(Text(item['ReceiversAlias'] ?? '')),
-                              DataCell(Text(item['Desc'] ?? '')),
+                              if (showDescription) DataCell(Text(item['Desc'] ?? '')),
                               DataCell(Text(item['Count']?.toString() ?? '')),
                               DataCell(Text(item['CreateTime'] ?? '')),
                               DataCell(
-                                Row(
-                                  children: [
-                                    TextButton(
-                                      onPressed: () => DialogUtil.showDetailDialog(context, item['ReceiverId'] ?? ''), 
-                                      child: const Text('详情'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () => _deleteReceiver(item['ReceiverId'] ?? ''), 
-                                      child: const Text('删除'),
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: Colors.red,
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      TextButton(
+                                        onPressed: () => DialogUtil.showDetailDialog(context, item['ReceiverId'] ?? ''), 
+                                        child: const Text('详情', style: TextStyle(fontSize: 12)),
+                                        style: TextButton.styleFrom(
+                                          minimumSize: const Size(40, 30),
+                                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 4),
+                                      TextButton(
+                                        onPressed: () => _deleteReceiver(item['ReceiverId'] ?? ''), 
+                                        child: const Text('删除', style: TextStyle(fontSize: 12)),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.red,
+                                          minimumSize: const Size(40, 30),
+                                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ]);
