@@ -3,6 +3,7 @@ import '../services/aliyun_edm_service.dart';
 import '../utils/dialog_util.dart';
 import 'config_page.dart';
 import 'receiver_detail_page.dart';
+import 'batch_create_receiver_page.dart';
 
 class ReceiverListPage extends StatefulWidget {
   const ReceiverListPage({super.key});
@@ -14,6 +15,8 @@ class ReceiverListPage extends StatefulWidget {
 class _ReceiverListPageState extends State<ReceiverListPage> {
   final AliyunEDMService _service = AliyunEDMService();
   late Future<List<Map<String, dynamic>>> _receiverFuture;
+  final Set<String> _selectedReceivers = <String>{};
+  bool _selectAll = false;
 
   @override
   void initState() {
@@ -32,6 +35,86 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
     if (confirm) {
       await _service.deleteReceiver(receiverId);
       _reloadList();
+    }
+  }
+
+  void _deleteSelectedReceivers() async {
+    if (_selectedReceivers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('请先选择要删除的收件人列表'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final confirm = await DialogUtil.confirm(
+      context, 
+      "确认删除选中的 ${_selectedReceivers.length} 个收件人列表吗？\n\n删除后这些列表及其所有收件人数据将无法恢复。"
+    );
+    
+    if (confirm) {
+      try {
+        for (final receiverId in _selectedReceivers) {
+          await _service.deleteReceiver(receiverId);
+        }
+        _selectedReceivers.clear();
+        _selectAll = false;
+        _reloadList();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('成功删除 ${_selectedReceivers.length} 个收件人列表'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('删除失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _toggleSelectAll() {
+    if (_selectAll) {
+      setState(() {
+        _selectedReceivers.clear();
+        _selectAll = false;
+      });
+    } else {
+      // 异步获取所有receiverId并选中
+      _receiverFuture.then((data) {
+        final receiverIds = data.map((item) => item['ReceiverId'] as String).toSet();
+        setState(() {
+          _selectedReceivers.addAll(receiverIds);
+          _selectAll = true;
+        });
+      });
+    }
+  }
+
+  void _toggleReceiverSelection(String receiverId) {
+    if (_selectedReceivers.contains(receiverId)) {
+      setState(() {
+        _selectedReceivers.remove(receiverId);
+        _selectAll = false;
+      });
+    } else {
+      setState(() {
+        _selectedReceivers.add(receiverId);
+      });
+      // 检查是否所有项目都被选中
+      _receiverFuture.then((data) {
+        if (_selectedReceivers.length == data.length) {
+          setState(() {
+            _selectAll = true;
+          });
+        }
+      });
     }
   }
 
@@ -89,6 +172,18 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
     _reloadList();
   }
 
+  void _openBatchCreatePage() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const BatchCreateReceiverPage(),
+      ),
+    );
+    
+    // 返回时重新加载列表以更新数据
+    _reloadList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -122,14 +217,39 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: _createReceiver,
-                  icon: const Icon(Icons.add),
-                  label: const Text('新建收件人列表'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                  ),
+                Row(
+                  children: [
+                    if (_selectedReceivers.isNotEmpty)
+                      ElevatedButton.icon(
+                        onPressed: _deleteSelectedReceivers,
+                        icon: Icon(Icons.delete, color: Colors.white),
+                        label: Text('删除选中(${_selectedReceivers.length})'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    if (_selectedReceivers.isNotEmpty) const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: _createReceiver,
+                      icon: const Icon(Icons.add),
+                      label: const Text('新建收件人列表'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: _openBatchCreatePage,
+                      icon: const Icon(Icons.upload_file),
+                      label: const Text('批量创建收件人列表'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -241,23 +361,26 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
                             ),
                             child: Table(
                               columnWidths: showDescription ? {
-                                0: const FlexColumnWidth(2.0),  // 列表名称
-                                1: const FlexColumnWidth(2.5),  // 别称地址
-                                2: const FlexColumnWidth(2.0),  // 描述
-                                3: const FlexColumnWidth(1.0),  // 总数
-                                4: const FlexColumnWidth(2.0),  // 创建时间
-                                5: const FlexColumnWidth(1.5),  // 操作
+                                0: const FlexColumnWidth(0.8),  // 复选框
+                                1: const FlexColumnWidth(2.0),  // 列表名称
+                                2: const FlexColumnWidth(2.5),  // 别称地址
+                                3: const FlexColumnWidth(2.0),  // 描述
+                                4: const FlexColumnWidth(1.0),  // 总数
+                                5: const FlexColumnWidth(2.0),  // 创建时间
+                                6: const FlexColumnWidth(1.5),  // 操作
                               } : {
-                                0: const FlexColumnWidth(2.5),  // 列表名称
-                                1: const FlexColumnWidth(3.0),  // 别称地址
-                                2: const FlexColumnWidth(1.2),  // 总数
-                                3: const FlexColumnWidth(2.5),  // 创建时间
-                                4: const FlexColumnWidth(1.8),  // 操作
+                                0: const FlexColumnWidth(0.8),  // 复选框
+                                1: const FlexColumnWidth(2.5),  // 列表名称
+                                2: const FlexColumnWidth(3.0),  // 别称地址
+                                3: const FlexColumnWidth(1.2),  // 总数
+                                4: const FlexColumnWidth(2.5),  // 创建时间
+                                5: const FlexColumnWidth(1.8),  // 操作
                               },
                               defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                               children: [
                                 TableRow(
                                   children: [
+                                    _buildCheckboxHeaderCell(),
                                     _buildHeaderCell('列表名称'),
                                     _buildHeaderCell('别称地址'),
                                     if (showDescription) _buildHeaderCell('描述'),
@@ -288,24 +411,27 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
                                     child: SingleChildScrollView(
                                       child: Table(
                                         columnWidths: showDescription ? {
-                                          0: const FlexColumnWidth(2.0),
-                                          1: const FlexColumnWidth(2.5),
-                                          2: const FlexColumnWidth(2.0),
-                                          3: const FlexColumnWidth(1.0),
-                                          4: const FlexColumnWidth(2.0),
-                                          5: const FlexColumnWidth(1.5),
+                                          0: const FlexColumnWidth(0.8),
+                                          1: const FlexColumnWidth(2.0),
+                                          2: const FlexColumnWidth(2.5),
+                                          3: const FlexColumnWidth(2.0),
+                                          4: const FlexColumnWidth(1.0),
+                                          5: const FlexColumnWidth(2.0),
+                                          6: const FlexColumnWidth(1.5),
                                         } : {
-                                          0: const FlexColumnWidth(2.5),
-                                          1: const FlexColumnWidth(3.0),
-                                          2: const FlexColumnWidth(1.2),
-                                          3: const FlexColumnWidth(2.5),
-                                          4: const FlexColumnWidth(1.8),
+                                          0: const FlexColumnWidth(0.8),
+                                          1: const FlexColumnWidth(2.5),
+                                          2: const FlexColumnWidth(3.0),
+                                          3: const FlexColumnWidth(1.2),
+                                          4: const FlexColumnWidth(2.5),
+                                          5: const FlexColumnWidth(1.8),
                                         },
                                         defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                                         children: receivers.asMap().entries.map((entry) {
                                           final index = entry.key;
                                           final item = entry.value;
                                           final isLastRow = index == receivers.length - 1;
+                                          final receiverId = item['ReceiverId'] as String? ?? '';
                                           
                                           return TableRow(
                                             decoration: BoxDecoration(
@@ -318,6 +444,7 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
                                               ),
                                             ),
                                             children: [
+                                              _buildCheckboxCell(receiverId),
                                               _buildDataCell(item['ReceiversName'] ?? ''),
                                               _buildDataCell(item['ReceiversAlias'] ?? ''),
                                               if (showDescription) _buildDataCell(item['Desc'] ?? ''),
@@ -378,6 +505,28 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
     );
   }
 
+  Widget _buildCheckboxHeaderCell() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+      child: Checkbox(
+        value: _selectAll,
+        onChanged: (value) => _toggleSelectAll(),
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    );
+  }
+
+  Widget _buildCheckboxCell(String receiverId) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      child: Checkbox(
+        value: _selectedReceivers.contains(receiverId),
+        onChanged: (value) => _toggleReceiverSelection(receiverId),
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    );
+  }
+
   Widget _buildHeaderCell(String text, {bool isRight = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -409,7 +558,7 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
     required VoidCallback onDelete,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       alignment: Alignment.centerRight,
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -417,20 +566,20 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
         children: [
           TextButton(
             onPressed: onDetail,
-            child: const Text('详情', style: TextStyle(fontSize: 12)),
+            child: const Text('详情', style: TextStyle(fontSize: 11)),
             style: TextButton.styleFrom(
-              minimumSize: const Size(40, 30),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: const Size(32, 28),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 2),
           TextButton(
             onPressed: onDelete,
-            child: const Text('删除', style: TextStyle(fontSize: 12)),
+            child: const Text('删除', style: TextStyle(fontSize: 11)),
             style: TextButton.styleFrom(
               foregroundColor: Colors.red,
-              minimumSize: const Size(40, 30),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: const Size(32, 28),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
             ),
           ),
         ],
