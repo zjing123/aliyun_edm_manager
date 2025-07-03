@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/aliyun_edm_service.dart';
 import '../utils/dialog_util.dart';
+import '../pages/config_page.dart';
+import '../services/config_service.dart';
 
 class ReceiverListPage extends StatefulWidget {
   const ReceiverListPage({super.key});
@@ -41,6 +43,11 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
     }
   }
 
+  void _openConfig() async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConfigPage()));
+    _reloadList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -50,6 +57,10 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: _createReceiver,
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: _openConfig,
           ),
         ],
       ),

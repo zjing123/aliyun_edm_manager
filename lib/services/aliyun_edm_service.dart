@@ -2,19 +2,19 @@ import 'dart:math';
 import 'package:dio/dio.dart';
 import '../utils/aliyun_signer.dart';
 import '../models/receiver_detail.dart';
+import '../services/config_service.dart';
 
 class AliyunEDMService {
-  // TODO: 请在此处填入您的阿里云AccessKey信息
-  // 获取方式：阿里云控制台 -> AccessKey管理
-  final String accessKeyId = 'YOUR_ACCESS_KEY_ID';
-  final String accessKeySecret = 'YOUR_ACCESS_KEY_SECRET';
+  // 通过 ConfigService 读取 AccessKey 信息
+  String get _accessKeyId => ConfigService.accessKeyId ?? '';
+  String get _accessKeySecret => ConfigService.accessKeySecret ?? '';
 
   final Dio _dio = Dio(BaseOptions(baseUrl: 'https://dm.aliyuncs.com'));
 
   Future<List<Map<String, dynamic>>> queryReceivers() async {
     final params = _buildCommonParams("QueryReceiverByParam");
     
-    final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
+    final signature = AliyunSigner.sign(params, _accessKeySecret, 'GET');
     params['Signature'] = signature;
     
     final response = await _dio.get('', queryParameters: params);
@@ -32,7 +32,7 @@ class AliyunEDMService {
     final params = _buildCommonParams("DeleteReceiver");
     params['ReceiverId'] = receiverName;
 
-    final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
+    final signature = AliyunSigner.sign(params, _accessKeySecret, 'GET');
     params['Signature'] = signature;
 
     await _dio.get('', queryParameters: params);
@@ -60,7 +60,7 @@ class AliyunEDMService {
     if (keyWord.isNotEmpty) params['KeyWord'] = keyWord;
     if (nextStart.isNotEmpty) params['NextStart'] = nextStart;
 
-    final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
+    final signature = AliyunSigner.sign(params, _accessKeySecret, 'GET');
     params['Signature'] = signature;
 
     try {
@@ -90,7 +90,7 @@ class AliyunEDMService {
     params['ReceiverName'] = name;
     params['Desc'] = "新建收件人列表";
 
-    final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
+    final signature = AliyunSigner.sign(params, _accessKeySecret, 'GET');
     params['Signature'] = signature;
 
     await _dio.get('', queryParameters: params);
@@ -101,7 +101,7 @@ class AliyunEDMService {
     params['ReceiverId'] = receiverId;
     params['Email'] = email;
 
-    final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
+    final signature = AliyunSigner.sign(params, _accessKeySecret, 'GET');
     params['Signature'] = signature;
 
     await _dio.get('', queryParameters: params);
@@ -112,7 +112,7 @@ class AliyunEDMService {
     params['ReceiverId'] = receiverId;
     params['Detail'] = receiverParams.toDetailJson();
 
-    final signature = AliyunSigner.sign(params, accessKeySecret, 'POST');
+    final signature = AliyunSigner.sign(params, _accessKeySecret, 'POST');
     params['Signature'] = signature;
 
     print('SaveReceiverDetail 请求参数:');
@@ -140,7 +140,7 @@ class AliyunEDMService {
       'Action': action,
       'Format': 'JSON',
       'Version': '2015-11-23',
-      'AccessKeyId': accessKeyId,
+      'AccessKeyId': _accessKeyId,
       'SignatureMethod': 'HMAC-SHA1',
       'Timestamp': DateTime.now().toUtc().toIso8601String(),
       'SignatureVersion': '1.0',

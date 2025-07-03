@@ -37,6 +37,7 @@ dependencies:
   dio: ^5.8.0+1
   crypto: ^3.0.6
   intl: ^0.20.2
+  shared_preferences: ^2.2.3
 
 dev_dependencies:
   flutter_test:
