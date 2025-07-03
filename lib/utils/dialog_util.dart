@@ -171,6 +171,7 @@ class ReceiverDetailDialog extends StatefulWidget {
 class _ReceiverDetailDialogState extends State<ReceiverDetailDialog> {
   final AliyunEDMService _service = AliyunEDMService();
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   ReceiverDetail? _detail;
   List<MemberDetail> _allMembers = [];
   bool _loading = true;
@@ -187,6 +188,7 @@ class _ReceiverDetailDialogState extends State<ReceiverDetailDialog> {
     super.initState();
     _lastSearchText = '';
     _searchController.addListener(_onSearchTextChanged);
+    _scrollController.addListener(_onScroll);
     _fetchDetail();
   }
 
@@ -195,7 +197,19 @@ class _ReceiverDetailDialogState extends State<ReceiverDetailDialog> {
     _debounce?.cancel();
     _searchController.removeListener(_onSearchTextChanged);
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    // 检查是否接近底部
+    final threshold = _scrollController.position.maxScrollExtent - 200;
+    if (_scrollController.position.pixels >= threshold) {
+      // 当滚动到距离底部200px时开始加载更多
+      if (_hasMore && !_loadingMore && !_loading) {
+        _onLoadMore();
+      }
+    }
   }
 
   Future<void> _fetchDetail({
@@ -446,34 +460,76 @@ class _ReceiverDetailDialogState extends State<ReceiverDetailDialog> {
                                           )
                                         : Scrollbar(
                                             child: SingleChildScrollView(
-                                              child: Table(
-                                                columnWidths: columnWidths,
-                                                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                                                children: _filteredMembers.asMap().entries.map((entry) {
-                                                  final index = entry.key;
-                                                  final member = entry.value;
-                                                  final isLastRow = index == _filteredMembers.length - 1;
-                                                  
-                                                  return TableRow(
-                                                    decoration: BoxDecoration(
-                                                      color: index % 2 == 0 ? Colors.white : Colors.grey[50],
-                                                      border: isLastRow ? null : Border(
-                                                        bottom: BorderSide(
-                                                          color: Colors.grey[200]!,
-                                                          width: 1,
+                                              controller: _scrollController,
+                                              child: Column(
+                                                children: [
+                                                  if (_filteredMembers.isNotEmpty)
+                                                    Table(
+                                                      columnWidths: columnWidths,
+                                                      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                                                      children: _filteredMembers.asMap().entries.map((entry) {
+                                                      final index = entry.key;
+                                                      final member = entry.value;
+                                                      final isLastRow = index == _filteredMembers.length - 1;
+                                                      
+                                                      return TableRow(
+                                                        decoration: BoxDecoration(
+                                                          color: index % 2 == 0 ? Colors.white : Colors.grey[50],
+                                                          border: isLastRow ? null : Border(
+                                                            bottom: BorderSide(
+                                                              color: Colors.grey[200]!,
+                                                              width: 1,
+                                                            ),
+                                                          ),
                                                         ),
+                                                        children: [
+                                                          _buildDataCell(_formatBeijingTime(member.createTime) ?? ''),
+                                                          _buildDataCell(member.email ?? '', isEmail: true),
+                                                          _buildDataCell((member.data ?? '').split(',').join(', ')),
+                                                          _buildActionCell(
+                                                            onDelete: () => _onDelete(member.email ?? ''),
+                                                          ),
+                                                        ],
+                                                      );
+                                                    }).toList(),
+                                                  ),
+                                                  // 加载状态指示器
+                                                  if (_loadingMore)
+                                                    Container(
+                                                      padding: const EdgeInsets.all(20),
+                                                      child: Row(
+                                                        mainAxisAlignment: MainAxisAlignment.center,
+                                                        children: const [
+                                                          SizedBox(
+                                                            width: 16,
+                                                            height: 16,
+                                                            child: CircularProgressIndicator(strokeWidth: 2),
+                                                          ),
+                                                          SizedBox(width: 8),
+                                                          Text(
+                                                            '加载更多数据...',
+                                                            style: TextStyle(
+                                                              color: Colors.grey,
+                                                              fontSize: 14,
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ),
                                                     ),
-                                                    children: [
-                                                      _buildDataCell(_formatBeijingTime(member.createTime) ?? ''),
-                                                      _buildDataCell(member.email ?? '', isEmail: true),
-                                                      _buildDataCell((member.data ?? '').split(',').join(', ')),
-                                                      _buildActionCell(
-                                                        onDelete: () => _onDelete(member.email ?? ''),
+                                                  // 无更多数据提示
+                                                  if (!_hasMore && _filteredMembers.isNotEmpty && !_loading)
+                                                    Container(
+                                                      padding: const EdgeInsets.all(20),
+                                                      child: Text(
+                                                        '已加载全部数据',
+                                                        style: TextStyle(
+                                                          color: Colors.grey[600],
+                                                          fontSize: 14,
+                                                        ),
+                                                        textAlign: TextAlign.center,
                                                       ),
-                                                    ],
-                                                  );
-                                                }).toList(),
+                                                    ),
+                                                ],
                                               ),
                                             ),
                                           ),
@@ -483,29 +539,6 @@ class _ReceiverDetailDialogState extends State<ReceiverDetailDialog> {
                         ),
                       ),
                     ),
-                    // 加载更多按钮
-                    if (_hasMore) ...[
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: 150,
-                        child: ElevatedButton(
-                          onPressed: _loadingMore ? null : _onLoadMore,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.blue,
-                            side: const BorderSide(color: Colors.blue),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          child: _loadingMore
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Text('加载更多'),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -573,6 +606,10 @@ class _ReceiverDetailDialogState extends State<ReceiverDetailDialog> {
   }
 
   Future<void> _onLoadMore() async {
+    if (!_hasMore || _loadingMore || _loading) {
+      return;
+    }
+    
     if (_detail?.nextStart == null || _detail!.nextStart!.isEmpty) {
        return;
     }
@@ -581,6 +618,10 @@ class _ReceiverDetailDialogState extends State<ReceiverDetailDialog> {
   }
 
   Future<void> _onSearch() async {
+    // 重置滚动位置
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
     await _fetchDetail(keyWord: _searchController.text);
   }
 
