@@ -12,6 +12,7 @@ import '../pages/send_email_page.dart';
 import '../pages/invalid_addresses_page.dart';
 import '../pages/sending_data_page.dart';
 import '../pages/sending_details_page.dart';
+import '../pages/config_page.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -97,6 +98,24 @@ class _MainLayoutState extends State<MainLayout> {
                     itemCount: _navigationItems.length,
                     itemBuilder: (context, index) {
                       return _buildNavigationItem(_navigationItems[index], index);
+                    },
+                  ),
+                ),
+                // 系统配置选项
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Colors.grey[300]!),
+                    ),
+                  ),
+                  child: ListTile(
+                    leading: const Icon(Icons.settings, size: 20, color: Colors.grey),
+                    title: const Text(
+                      '系统配置',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    onTap: () {
+                      _openConfigPage();
                     },
                   ),
                 ),
@@ -186,6 +205,14 @@ class _MainLayoutState extends State<MainLayout> {
       default:
         return const OverviewPage();
     }
+  }
+
+  void _openConfigPage() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ConfigPage(),
+      ),
+    );
   }
 }
 
