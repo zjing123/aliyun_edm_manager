@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/aliyun_edm_service.dart';
 import '../utils/dialog_util.dart';
+import 'config_page.dart';
 
 class ReceiverListPage extends StatefulWidget {
   const ReceiverListPage({super.key});
@@ -36,7 +37,28 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
   void _createReceiver() async {
     final name = await DialogUtil.inputReceiverName(context);
     if (name != null && name.isNotEmpty) {
-      await _service.createReceiver(name);
+      try {
+        await _service.createReceiver(name);
+        _reloadList();
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('创建失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+  
+  void _openConfigPage() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (context) => const ConfigPage()),
+    );
+    
+    // 如果配置有更新，重新加载列表
+    if (result == true) {
       _reloadList();
     }
   }
@@ -48,8 +70,14 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
         title: const Text("阿里云 EDM 收件人列表"),
         actions: [
           IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: _openConfigPage,
+            tooltip: '配置',
+          ),
+          IconButton(
             icon: const Icon(Icons.add),
             onPressed: _createReceiver,
+            tooltip: '新建收件人列表',
           ),
         ],
       ),
@@ -60,6 +88,37 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
+            final error = snapshot.error.toString();
+            if (error.contains('Access Key') && error.contains('未配置')) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.settings_outlined,
+                      size: 64,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      '需要配置阿里云AccessKey',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '请点击右上角设置按钮配置您的阿里云AccessKey信息',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _openConfigPage,
+                      icon: const Icon(Icons.settings),
+                      label: const Text('去配置'),
+                    ),
+                  ],
+                ),
+              );
+            }
             return Center(child: Text("加载失败: ${snapshot.error}"));
           }
           final receivers = snapshot.data!;

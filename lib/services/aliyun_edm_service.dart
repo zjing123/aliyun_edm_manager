@@ -2,17 +2,47 @@ import 'dart:math';
 import 'package:dio/dio.dart';
 import '../utils/aliyun_signer.dart';
 import '../models/receiver_detail.dart';
+import 'config_service.dart';
 
 class AliyunEDMService {
-  // TODO: 请在此处填入您的阿里云AccessKey信息
-  // 获取方式：阿里云控制台 -> AccessKey管理
-  final String accessKeyId = 'YOUR_ACCESS_KEY_ID';
-  final String accessKeySecret = 'YOUR_ACCESS_KEY_SECRET';
+  ConfigService? _configService;
 
   final Dio _dio = Dio(BaseOptions(baseUrl: 'https://dm.aliyuncs.com'));
+  
+  // 初始化配置服务
+  Future<void> _initConfigService() async {
+    _configService ??= await ConfigService.getInstance();
+  }
+  
+  // 获取Access Key ID
+  Future<String> _getAccessKeyId() async {
+    await _initConfigService();
+    final accessKeyId = _configService!.getAccessKeyId();
+    if (accessKeyId == null || accessKeyId.isEmpty) {
+      throw Exception('Access Key ID未配置，请先在设置中配置阿里云AccessKey');
+    }
+    return accessKeyId;
+  }
+  
+  // 获取Access Key Secret
+  Future<String> _getAccessKeySecret() async {
+    await _initConfigService();
+    final accessKeySecret = _configService!.getAccessKeySecret();
+    if (accessKeySecret == null || accessKeySecret.isEmpty) {
+      throw Exception('Access Key Secret未配置，请先在设置中配置阿里云AccessKey');
+    }
+    return accessKeySecret;
+  }
+  
+  // 检查配置是否完整
+  Future<bool> isConfigured() async {
+    await _initConfigService();
+    return _configService!.isConfigured();
+  }
 
   Future<List<Map<String, dynamic>>> queryReceivers() async {
-    final params = _buildCommonParams("QueryReceiverByParam");
+    final params = await _buildCommonParams("QueryReceiverByParam");
+    final accessKeySecret = await _getAccessKeySecret();
     
     final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
     params['Signature'] = signature;
@@ -29,8 +59,9 @@ class AliyunEDMService {
   }
 
   Future<void> deleteReceiver(String receiverName) async {
-    final params = _buildCommonParams("DeleteReceiver");
+    final params = await _buildCommonParams("DeleteReceiver");
     params['ReceiverId'] = receiverName;
+    final accessKeySecret = await _getAccessKeySecret();
 
     final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
     params['Signature'] = signature;
@@ -54,11 +85,12 @@ class AliyunEDMService {
       pageSize = 50;
     }
 
-    final params = _buildCommonParams("QueryReceiverDetail");
+    final params = await _buildCommonParams("QueryReceiverDetail");
     params['ReceiverId'] = receiverId;
     params['PageSize'] = pageSize.toString();
     if (keyWord.isNotEmpty) params['KeyWord'] = keyWord;
     if (nextStart.isNotEmpty) params['NextStart'] = nextStart;
+    final accessKeySecret = await _getAccessKeySecret();
 
     final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
     params['Signature'] = signature;
@@ -86,9 +118,10 @@ class AliyunEDMService {
   }
 
   Future<void> createReceiver(String name) async {
-    final params = _buildCommonParams("CreateReceiver");
+    final params = await _buildCommonParams("CreateReceiver");
     params['ReceiverName'] = name;
     params['Desc'] = "新建收件人列表";
+    final accessKeySecret = await _getAccessKeySecret();
 
     final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
     params['Signature'] = signature;
@@ -97,9 +130,10 @@ class AliyunEDMService {
   }
 
   Future<void> deleteReceiverDetail(String receiverId, String email) async {
-    final params = _buildCommonParams("DeleteReceiverDetail");
+    final params = await _buildCommonParams("DeleteReceiverDetail");
     params['ReceiverId'] = receiverId;
     params['Email'] = email;
+    final accessKeySecret = await _getAccessKeySecret();
 
     final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
     params['Signature'] = signature;
@@ -108,9 +142,10 @@ class AliyunEDMService {
   }
 
   Future<SaveReceiverDetailResponse> saveReceiverDetail(String receiverId, ReceiverDetailParams receiverParams) async {
-    final params = _buildCommonParams("SaveReceiverDetail");
+    final params = await _buildCommonParams("SaveReceiverDetail");
     params['ReceiverId'] = receiverId;
     params['Detail'] = receiverParams.toDetailJson();
+    final accessKeySecret = await _getAccessKeySecret();
 
     final signature = AliyunSigner.sign(params, accessKeySecret, 'POST');
     params['Signature'] = signature;
@@ -135,7 +170,8 @@ class AliyunEDMService {
     }
   }
 
-  Map<String, String> _buildCommonParams(String action) {
+  Future<Map<String, String>> _buildCommonParams(String action) async {
+    final accessKeyId = await _getAccessKeyId();
     return {
       'Action': action,
       'Format': 'JSON',
