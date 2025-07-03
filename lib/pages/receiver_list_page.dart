@@ -198,63 +198,91 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
                         ),
                       ],
                     ),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: SingleChildScrollView(
-                        child: DataTable(
-                          headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
-                          columns: [
-                            const DataColumn(label: Text('列表名称')),
-                            const DataColumn(label: Text('别称地址')),
-                            if (showDescription) const DataColumn(label: Text('描述')),
-                            const DataColumn(label: Text('总数')),
-                            const DataColumn(label: Text('创建时间')),
-                            const DataColumn(
-                              label: Align(
-                                alignment: Alignment.centerRight,
-                                child: Text('操作'),
-                              ),
+                    child: Column(
+                      children: [
+                        // 表头
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(8),
+                              topRight: Radius.circular(8),
                             ),
-                          ],
-                          rows: receivers.map((item) {
-                            return DataRow(cells: [
-                              DataCell(Text(item['ReceiversName'] ?? '')),
-                              DataCell(Text(item['ReceiversAlias'] ?? '')),
-                              if (showDescription) DataCell(Text(item['Desc'] ?? '')),
-                              DataCell(Text(item['Count']?.toString() ?? '')),
-                              DataCell(Text(item['CreateTime'] ?? '')),
-                              DataCell(
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      TextButton(
-                                        onPressed: () => DialogUtil.showDetailDialog(context, item['ReceiverId'] ?? ''), 
-                                        child: const Text('详情', style: TextStyle(fontSize: 12)),
-                                        style: TextButton.styleFrom(
-                                          minimumSize: const Size(40, 30),
-                                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      TextButton(
-                                        onPressed: () => _deleteReceiver(item['ReceiverId'] ?? ''), 
-                                        child: const Text('删除', style: TextStyle(fontSize: 12)),
-                                        style: TextButton.styleFrom(
-                                          foregroundColor: Colors.red,
-                                          minimumSize: const Size(40, 30),
-                                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                          ),
+                          child: Table(
+                            columnWidths: showDescription ? {
+                              0: const FlexColumnWidth(2.0),  // 列表名称
+                              1: const FlexColumnWidth(2.5),  // 别称地址
+                              2: const FlexColumnWidth(2.0),  // 描述
+                              3: const FlexColumnWidth(1.0),  // 总数
+                              4: const FlexColumnWidth(2.0),  // 创建时间
+                              5: const FlexColumnWidth(1.5),  // 操作
+                            } : {
+                              0: const FlexColumnWidth(2.5),  // 列表名称
+                              1: const FlexColumnWidth(3.0),  // 别称地址
+                              2: const FlexColumnWidth(1.2),  // 总数
+                              3: const FlexColumnWidth(2.5),  // 创建时间
+                              4: const FlexColumnWidth(1.8),  // 操作
+                            },
+                            children: [
+                              TableRow(
+                                children: [
+                                  _buildHeaderCell('列表名称'),
+                                  _buildHeaderCell('别称地址'),
+                                  if (showDescription) _buildHeaderCell('描述'),
+                                  _buildHeaderCell('总数'),
+                                  _buildHeaderCell('创建时间'),
+                                  _buildHeaderCell('操作', isRight: true),
+                                ],
                               ),
-                            ]);
-                          }).toList(),
+                            ],
+                          ),
                         ),
-                      ),
+                        // 表体
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Table(
+                              columnWidths: showDescription ? {
+                                0: const FlexColumnWidth(2.0),
+                                1: const FlexColumnWidth(2.5),
+                                2: const FlexColumnWidth(2.0),
+                                3: const FlexColumnWidth(1.0),
+                                4: const FlexColumnWidth(2.0),
+                                5: const FlexColumnWidth(1.5),
+                              } : {
+                                0: const FlexColumnWidth(2.5),
+                                1: const FlexColumnWidth(3.0),
+                                2: const FlexColumnWidth(1.2),
+                                3: const FlexColumnWidth(2.5),
+                                4: const FlexColumnWidth(1.8),
+                              },
+                              children: receivers.map((item) {
+                                return TableRow(
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      bottom: BorderSide(
+                                        color: Colors.grey[200]!,
+                                        width: 1,
+                                      ),
+                                    ),
+                                  ),
+                                  children: [
+                                    _buildDataCell(item['ReceiversName'] ?? ''),
+                                    _buildDataCell(item['ReceiversAlias'] ?? ''),
+                                    if (showDescription) _buildDataCell(item['Desc'] ?? ''),
+                                    _buildDataCell(item['Count']?.toString() ?? ''),
+                                    _buildDataCell(item['CreateTime'] ?? ''),
+                                    _buildActionCell(
+                                      onDetail: () => DialogUtil.showDetailDialog(context, item['ReceiverId'] ?? ''),
+                                      onDelete: () => _deleteReceiver(item['ReceiverId'] ?? ''),
+                                    ),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -293,6 +321,65 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderCell(String text, {bool isRight = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+        ),
+        textAlign: isRight ? TextAlign.right : TextAlign.left,
+      ),
+    );
+  }
+
+  Widget _buildDataCell(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 14),
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  Widget _buildActionCell({
+    required VoidCallback onDetail,
+    required VoidCallback onDelete,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      alignment: Alignment.centerRight,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          TextButton(
+            onPressed: onDetail,
+            child: const Text('详情', style: TextStyle(fontSize: 12)),
+            style: TextButton.styleFrom(
+              minimumSize: const Size(40, 30),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+          ),
+          const SizedBox(width: 4),
+          TextButton(
+            onPressed: onDelete,
+            child: const Text('删除', style: TextStyle(fontSize: 12)),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+              minimumSize: const Size(40, 30),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+          ),
+        ],
       ),
     );
   }
