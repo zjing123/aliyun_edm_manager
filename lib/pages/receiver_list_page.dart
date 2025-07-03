@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/aliyun_edm_service.dart';
 import '../utils/dialog_util.dart';
-import 'config_page.dart';
+import '../widgets/app_drawer.dart';
 
 class ReceiverListPage extends StatefulWidget {
   const ReceiverListPage({super.key});
@@ -52,10 +52,7 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
   }
   
   void _openConfigPage() async {
-    final result = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(builder: (context) => const ConfigPage()),
-    );
+    final result = await Navigator.pushNamed<bool>(context, '/config');
     
     // 如果配置有更新，重新加载列表
     if (result == true) {
@@ -81,6 +78,7 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
           ),
         ],
       ),
+      drawer: const AppDrawer(currentRoute: '/receivers'),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _receiverFuture,
         builder: (context, snapshot) {
