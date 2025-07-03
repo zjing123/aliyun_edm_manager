@@ -278,162 +278,297 @@ class _ReceiverDetailDialogState extends State<ReceiverDetailDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final dialogWidth = screenWidth > 1200 ? 1000.0 : screenWidth * 0.9;
+    
     final columnWidths = {
-      0: FlexColumnWidth(3), // 创建时间
-      1: FlexColumnWidth(5), // Email
-      2: FlexColumnWidth(4), // dataSchema合并列
-      3: FixedColumnWidth(100), // 操作
+      0: const FlexColumnWidth(2.5), // 创建时间
+      1: const FlexColumnWidth(3.0), // Email
+      2: const FlexColumnWidth(3.0), // dataSchema合并列
+      3: const FlexColumnWidth(1.5), // 操作
     };
 
     print(_detail?.dataSchema);
-    return AlertDialog(
-      title: Text('编辑收件人列表'),
-      content: SizedBox(
-        width: 700,
-        height: 500,
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Container(
+        width: dialogWidth,
+        height: 600,
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(8),
+        ),
         child: Column(
-            children: [
-              // 搜索和新建
-              Row(
+          children: [
+            // 标题栏
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(8),
+                  topRight: Radius.circular(8),
+                ),
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey[200]!),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        labelText: 'Email地址',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                      ),
-                      onSubmitted: (value) => _onSearch(),
+                  const Text(
+                    '编辑收件人列表',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _onSearch,
-                    child: Text('查询'),
-                  ),
-                  SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _onCreate,
-                    child: Text('新建'),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      widget.onClose?.call();
+                    },
                   ),
                 ],
               ),
-              SizedBox(height: 16),
-              // 固定表头
-              Container(
-                color: Colors.grey[200],
-                child: Table(
-                  columnWidths: columnWidths,
+            ),
+            // 内容区域
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
                   children: [
-                    TableRow(
+                    // 搜索和新建
+                    Row(
                       children: [
-                        Padding(
-                          padding: EdgeInsets.all(8),
-                          child: Text('创建时间', style: TextStyle(fontWeight: FontWeight.bold)),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.all(8),
-                          child: Text('Email', style: TextStyle(fontWeight: FontWeight.bold)),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.all(8),
-                          child: Text(
-                            '{${_detail?.dataSchema.join('},{')}}',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: const InputDecoration(
+                              labelText: 'Email地址',
+                              hintText: '请输入Email地址进行搜索',
+                              prefixIcon: Icon(Icons.search),
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                            ),
+                            onSubmitted: (value) => _onSearch(),
                           ),
                         ),
-                        Padding(
-                          padding: EdgeInsets.all(8),
-                          child: Text('操作', style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: _onSearch,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.blue,
+                            side: const BorderSide(color: Colors.blue),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          ),
+                          child: const Text('查询'),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton.icon(
+                          onPressed: _onCreate,
+                          icon: const Icon(Icons.add),
+                          label: const Text('新建'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 24),
+                    // 表格容器
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Column(
+                            children: [
+                              // 固定表头
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  border: Border(
+                                    bottom: BorderSide(
+                                      color: Colors.grey[300]!,
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
+                                child: Table(
+                                  columnWidths: columnWidths,
+                                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                                  children: [
+                                    TableRow(
+                                      children: [
+                                        _buildHeaderCell('创建时间'),
+                                        _buildHeaderCell('Email'),
+                                        _buildHeaderCell('{${_detail?.dataSchema.join('},{') ?? ''}}'),
+                                        _buildHeaderCell('操作', isRight: true),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // 可滚动的表体
+                              Expanded(
+                                child: _loading
+                                    ? const Center(child: CircularProgressIndicator())
+                                    : _filteredMembers.isEmpty
+                                        ? Center(
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(32.0),
+                                              child: Text(
+                                                _error ?? '暂无数据',
+                                                style: TextStyle(
+                                                  color: Colors.grey[600],
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                        : Scrollbar(
+                                            child: SingleChildScrollView(
+                                              child: Table(
+                                                columnWidths: columnWidths,
+                                                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                                                children: _filteredMembers.asMap().entries.map((entry) {
+                                                  final index = entry.key;
+                                                  final member = entry.value;
+                                                  final isLastRow = index == _filteredMembers.length - 1;
+                                                  
+                                                  return TableRow(
+                                                    decoration: BoxDecoration(
+                                                      color: index % 2 == 0 ? Colors.white : Colors.grey[50],
+                                                      border: isLastRow ? null : Border(
+                                                        bottom: BorderSide(
+                                                          color: Colors.grey[200]!,
+                                                          width: 1,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    children: [
+                                                      _buildDataCell(_formatBeijingTime(member.createTime) ?? ''),
+                                                      _buildDataCell(member.email ?? '', isEmail: true),
+                                                      _buildDataCell((member.data ?? '').split(',').join(', ')),
+                                                      _buildActionCell(
+                                                        onDelete: () => _onDelete(member.email ?? ''),
+                                                      ),
+                                                    ],
+                                                  );
+                                                }).toList(),
+                                              ),
+                                            ),
+                                          ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    // 加载更多按钮
+                    if (_hasMore) ...[
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: 150,
+                        child: ElevatedButton(
+                          onPressed: _loadingMore ? null : _onLoadMore,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.blue,
+                            side: const BorderSide(color: Colors.blue),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: _loadingMore
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Text('加载更多'),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
-              // 滚动内容
-              Expanded(
-                child: _loading
-                    ? Center(child: CircularProgressIndicator())
-                    : _filteredMembers.isEmpty
-                        ? Center(child: Text(_error ?? '暂无数据'))
-                        : SingleChildScrollView(
-                            child: Table(
-                              columnWidths: columnWidths,
-                              border: TableBorder(
-                                bottom: BorderSide(color: Colors.grey.shade300),
-                                horizontalInside: BorderSide(color: Colors.grey.shade300),
-                              ),
-                              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                              children: [
-                                ..._filteredMembers.map((member) {
-                                  return TableRow(
-                                    children: [
-                                      Padding(
-                                        padding: EdgeInsets.all(8),
-                                        child: Text(_formatBeijingTime(member.createTime) ?? '', overflow: TextOverflow.ellipsis),
-                                      ),
-                                      Padding(
-                                        padding: EdgeInsets.all(8),
-                                        child: Tooltip(
-                                          message: member.email ?? '',
-                                          child: SelectableText(
-                                            member.email ?? '',
-                                            maxLines: 1,
-                                            showCursor: false,
-                                            cursorWidth: 0,
-                                            style: TextStyle(overflow: TextOverflow.ellipsis),
-                                          ),
-                                        ),
-                                      ),
-                                      Padding(
-                                        padding: EdgeInsets.all(8),
-                                        child: Text(
-                                          (member.data ?? '').split(',').join(', '),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      Padding(
-                                        padding: EdgeInsets.all(8),
-                                        child: TextButton(
-                                          onPressed: () => _onDelete(member.email ?? ''),
-                                          child: Text('删除'),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                }),
-                              ],
-                            ),
-                          ),
-              ),
-              SizedBox(height: 8),
-              // 加载更多
-              if (_hasMore) 
-                ElevatedButton(
-                  onPressed: _loadingMore ? null : _onLoadMore,
-                  child: _loadingMore
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text('加载更多'),
-                ),
-            ],
-          ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-            widget.onClose?.call();
-          },
-          child: Text('关闭'),
+            ),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderCell(String text, {bool isRight = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+          color: Colors.black87,
+        ),
+        textAlign: isRight ? TextAlign.right : TextAlign.left,
+      ),
+    );
+  }
+
+  Widget _buildDataCell(String text, {bool isEmail = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: isEmail
+          ? Tooltip(
+              message: text,
+              child: SelectableText(
+                text,
+                maxLines: 1,
+                showCursor: false,
+                cursorWidth: 0,
+                style: const TextStyle(
+                  fontSize: 14,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            )
+          : Text(
+              text,
+              style: const TextStyle(fontSize: 14),
+              overflow: TextOverflow.ellipsis,
+            ),
+    );
+  }
+
+  Widget _buildActionCell({required VoidCallback onDelete}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      alignment: Alignment.centerRight,
+      child: TextButton(
+        onPressed: onDelete,
+        child: const Text('删除', style: TextStyle(fontSize: 12)),
+        style: TextButton.styleFrom(
+          foregroundColor: Colors.red,
+          minimumSize: const Size(40, 30),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+        ),
+      ),
     );
   }
 
