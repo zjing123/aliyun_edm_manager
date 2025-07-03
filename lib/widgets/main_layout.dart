@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 import '../pages/receiver_list_page.dart';
 import '../pages/overview_page.dart';
-import '../pages/sending_domain_page.dart';
 import '../pages/sending_address_page.dart';
-import '../pages/independent_ip_page.dart';
-import '../pages/email_tags_page.dart';
 import '../pages/template_management_page.dart';
-import '../pages/ip_protection_page.dart';
-import '../pages/event_distribution_page.dart';
 import '../pages/send_email_page.dart';
 import '../pages/invalid_addresses_page.dart';
 import '../pages/sending_data_page.dart';
@@ -34,13 +29,8 @@ class _MainLayoutState extends State<MainLayout> {
       title: '邮件设置',
       icon: Icons.settings,
       children: [
-        NavigationItem(title: '发信域名', route: '/sending-domain'),
         NavigationItem(title: '发信地址', route: '/sending-address'),
-        NavigationItem(title: '独立 IP', route: '/independent-ip'),
-        NavigationItem(title: '邮件标签', route: '/email-tags'),
         NavigationItem(title: '模板管理', route: '/template-management'),
-        NavigationItem(title: 'IP防护', route: '/ip-protection'),
-        NavigationItem(title: '事件分发', route: '/event-distribution'),
       ],
     ),
     NavigationItem(
@@ -178,20 +168,10 @@ class _MainLayoutState extends State<MainLayout> {
     switch (route) {
       case '/overview':
         return const OverviewPage();
-      case '/sending-domain':
-        return const SendingDomainPage();
       case '/sending-address':
         return const SendingAddressPage();
-      case '/independent-ip':
-        return const IndependentIPPage();
-      case '/email-tags':
-        return const EmailTagsPage();
       case '/template-management':
         return const TemplateManagementPage();
-      case '/ip-protection':
-        return const IPProtectionPage();
-      case '/event-distribution':
-        return const EventDistributionPage();
       case '/recipient-list':
         return const ReceiverListPage();
       case '/send-email':
