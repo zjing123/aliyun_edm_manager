@@ -5,6 +5,7 @@ class ReceiverListModel {
   final String? desc;
   final int count;
   final String createTime;
+  final bool isDeletable;
 
   ReceiverListModel({
     required this.receiverId,
@@ -13,6 +14,7 @@ class ReceiverListModel {
     this.desc,
     required this.count,
     required this.createTime,
+    this.isDeletable = true,
   });
 
   factory ReceiverListModel.fromMap(Map<String, dynamic> map) {
@@ -23,6 +25,7 @@ class ReceiverListModel {
       desc: map['Desc']?.toString(),
       count: map['Count'] as int? ?? 0,
       createTime: map['CreateTime']?.toString() ?? '',
+      isDeletable: map['IsDeletable'] as bool? ?? true,
     );
   }
 
@@ -34,12 +37,13 @@ class ReceiverListModel {
       'Desc': desc,
       'Count': count,
       'CreateTime': createTime,
+      'IsDeletable': isDeletable,
     };
   }
 
   @override
   String toString() {
-    return 'ReceiverListModel(receiverId: $receiverId, receiversName: $receiversName, receiversAlias: $receiversAlias, desc: $desc, count: $count, createTime: $createTime)';
+    return 'ReceiverListModel(receiverId: $receiverId, receiversName: $receiversName, receiversAlias: $receiversAlias, desc: $desc, count: $count, createTime: $createTime, isDeletable: $isDeletable)';
   }
 
   @override
@@ -53,5 +57,26 @@ class ReceiverListModel {
   @override
   int get hashCode {
     return receiverId.hashCode ^ receiversName.hashCode;
+  }
+  
+  // 添加copyWith方法
+  ReceiverListModel copyWith({
+    String? receiverId,
+    String? receiversName,
+    String? receiversAlias,
+    String? desc,
+    int? count,
+    String? createTime,
+    bool? isDeletable,
+  }) {
+    return ReceiverListModel(
+      receiverId: receiverId ?? this.receiverId,
+      receiversName: receiversName ?? this.receiversName,
+      receiversAlias: receiversAlias ?? this.receiversAlias,
+      desc: desc ?? this.desc,
+      count: count ?? this.count,
+      createTime: createTime ?? this.createTime,
+      isDeletable: isDeletable ?? this.isDeletable,
+    );
   }
 } 

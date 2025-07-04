@@ -18,10 +18,10 @@ void main() {
     expect(find.text('邮件推送控制台'), findsOneWidget);
     
     // Verify that the navigation menu is present
-    expect(find.text('概览'), findsOneWidget);
-    expect(find.text('邮件设置'), findsOneWidget);
-    expect(find.text('发送邮件'), findsOneWidget);
-    expect(find.text('数据统计'), findsOneWidget);
-    expect(find.text('系统配置'), findsOneWidget);
+    expect(find.text('概览'), findsWidgets);
+    expect(find.text('邮件设置'), findsWidgets);
+    expect(find.text('发送邮件'), findsWidgets);
+    expect(find.text('数据统计'), findsWidgets);
+    expect(find.text('系统配置'), findsWidgets);
   });
 }

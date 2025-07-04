@@ -2,22 +2,30 @@ import 'dart:math';
 import 'package:dio/dio.dart';
 import '../utils/aliyun_signer.dart';
 import '../models/receiver_detail.dart';
-import 'config_service.dart';
+import '../providers/global_config_provider.dart';
 
 class AliyunEDMService {
-  ConfigService? _configService;
+  GlobalConfigProvider? _globalConfigProvider;
 
   final Dio _dio = Dio(BaseOptions(baseUrl: 'https://dm.aliyuncs.com'));
 
-  // 初始化配置服务
-  Future<void> _initConfigService() async {
-    _configService ??= await ConfigService.getInstance();
+  // 设置全局配置Provider
+  void setGlobalConfigProvider(GlobalConfigProvider provider) {
+    _globalConfigProvider = provider;
+  }
+
+  // 检查配置是否完整
+  bool _isConfigured() {
+    return _globalConfigProvider?.isConfigured ?? false;
   }
   
   // 获取Access Key ID
-  Future<String> _getAccessKeyId() async {
-    await _initConfigService();
-    final accessKeyId = _configService!.getAccessKeyId();
+  String _getAccessKeyId() {
+    if (!_isConfigured()) {
+      throw Exception('阿里云AccessKey未配置，请先配置');
+    }
+    final accessKeyId = _globalConfigProvider!.accessKeyId;
+    print('AliyunEDMService._getAccessKeyId: $accessKeyId'); // 添加调试信息
     if (accessKeyId == null || accessKeyId.isEmpty) {
       throw Exception('Access Key ID未配置，请先在设置中配置阿里云AccessKey');
     }
@@ -25,9 +33,12 @@ class AliyunEDMService {
   }
   
   // 获取Access Key Secret
-  Future<String> _getAccessKeySecret() async {
-    await _initConfigService();
-    final accessKeySecret = _configService!.getAccessKeySecret();
+  String _getAccessKeySecret() {
+    if (!_isConfigured()) {
+      throw Exception('阿里云AccessKey未配置，请先配置');
+    }
+    final accessKeySecret = _globalConfigProvider!.accessKeySecret;
+    print('AliyunEDMService._getAccessKeySecret: ${accessKeySecret != null ? '已配置' : '未配置'}'); // 添加调试信息
     if (accessKeySecret == null || accessKeySecret.isEmpty) {
       throw Exception('Access Key Secret未配置，请先在设置中配置阿里云AccessKey');
     }
@@ -35,14 +46,13 @@ class AliyunEDMService {
   }
   
   // 检查配置是否完整
-  Future<bool> isConfigured() async {
-    await _initConfigService();
-    return _configService!.isConfigured();
+  bool isConfigured() {
+    return _isConfigured();
   }
 
   Future<List<Map<String, dynamic>>> queryReceivers() async {
     final params = await _buildCommonParams("QueryReceiverByParam");
-    final accessKeySecret = await _getAccessKeySecret();
+    final accessKeySecret = _getAccessKeySecret();
 
     final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
     params['Signature'] = signature;
@@ -61,7 +71,7 @@ class AliyunEDMService {
   Future<void> deleteReceiver(String receiverName) async {
     final params = await _buildCommonParams("DeleteReceiver");
     params['ReceiverId'] = receiverName;
-    final accessKeySecret = await _getAccessKeySecret();
+    final accessKeySecret = _getAccessKeySecret();
 
     final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
     params['Signature'] = signature;
@@ -90,7 +100,7 @@ class AliyunEDMService {
     params['PageSize'] = pageSize.toString();
     if (keyWord.isNotEmpty) params['KeyWord'] = keyWord;
     if (nextStart.isNotEmpty) params['NextStart'] = nextStart;
-    final accessKeySecret = await _getAccessKeySecret();
+    final accessKeySecret = _getAccessKeySecret();
 
     final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
     params['Signature'] = signature;
@@ -124,7 +134,7 @@ class AliyunEDMService {
       params['ReceiversAlias'] = alias;
     }
     params['Desc'] = desc ?? "新建收件人列表";
-    final accessKeySecret = await _getAccessKeySecret();
+    final accessKeySecret = _getAccessKeySecret();
 
     final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
     params['Signature'] = signature;
@@ -153,7 +163,7 @@ class AliyunEDMService {
     final params = await _buildCommonParams("DeleteReceiverDetail");
     params['ReceiverId'] = receiverId;
     params['Email'] = email;
-    final accessKeySecret = await _getAccessKeySecret();
+    final accessKeySecret = _getAccessKeySecret();
 
     final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
     params['Signature'] = signature;
@@ -165,7 +175,7 @@ class AliyunEDMService {
     final params = await _buildCommonParams("SaveReceiverDetail");
     params['ReceiverId'] = receiverId;
     params['Detail'] = receiverParams.toDetailJson();
-    final accessKeySecret = await _getAccessKeySecret();
+    final accessKeySecret = _getAccessKeySecret();
 
     final signature = AliyunSigner.sign(params, accessKeySecret, 'POST');
     params['Signature'] = signature;
@@ -194,7 +204,7 @@ class AliyunEDMService {
     final params = await _buildCommonParams("SaveReceiverDetail");
     params['ReceiverId'] = receiverId;
     params['Detail'] = ReceiverDetailParams.toBatchDetailJson(receiverParamsList);
-    final accessKeySecret = await _getAccessKeySecret();
+    final accessKeySecret = _getAccessKeySecret();
 
     final signature = AliyunSigner.sign(params, accessKeySecret, 'POST');
     params['Signature'] = signature;
@@ -220,7 +230,7 @@ class AliyunEDMService {
   }
 
   Future<Map<String, String>> _buildCommonParams(String action) async {
-    final accessKeyId = await _getAccessKeyId();
+    final accessKeyId = _getAccessKeyId();
     return {
       'Action': action,
       'Format': 'JSON',

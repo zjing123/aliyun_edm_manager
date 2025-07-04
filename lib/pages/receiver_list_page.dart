@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/aliyun_edm_service.dart';
 import '../utils/dialog_util.dart';
 import '../providers/receiver_list_provider.dart';
 import '../models/receiver_list_model.dart';
 import 'config_page.dart';
 import 'receiver_detail_page.dart';
 import 'batch_create_receiver_page.dart';
+import 'forbidden_delete_settings_page.dart';
 
 class ReceiverListPage extends StatefulWidget {
   const ReceiverListPage({super.key});
@@ -112,17 +112,28 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
         _selectAll = false;
       });
     } else {
-      // 获取所有receiverId并选中
-      final receiverIds = provider.receivers.map((item) => item.receiverId).toSet();
+      // 只获取可删除的receiverId并选中
+      final deletableReceiverIds = provider.receivers
+          .where((item) => item.isDeletable)
+          .map((item) => item.receiverId)
+          .toSet();
       setState(() {
-        _selectedReceivers.addAll(receiverIds);
-        _selectAll = true;
+        _selectedReceivers.addAll(deletableReceiverIds);
+        // 只有当所有可删除的项目都被选中时，才设置为全选状态
+        _selectAll = _selectedReceivers.length == deletableReceiverIds.length;
       });
     }
   }
 
   void _toggleReceiverSelection(String receiverId) {
     final provider = context.read<ReceiverListProvider>();
+    final receiver = provider.receivers.where((item) => item.receiverId == receiverId).firstOrNull;
+    
+    // 如果找不到收件人或收件人列表不可删除，则不允许选中
+    if (receiver == null || !receiver.isDeletable) {
+      return;
+    }
+    
     if (_selectedReceivers.contains(receiverId)) {
       setState(() {
         _selectedReceivers.remove(receiverId);
@@ -132,8 +143,9 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
       setState(() {
         _selectedReceivers.add(receiverId);
       });
-      // 检查是否所有项目都被选中
-      if (_selectedReceivers.length == provider.receivers.length) {
+      // 检查是否所有可删除的项目都被选中
+      final deletableReceivers = provider.receivers.where((item) => item.isDeletable);
+      if (_selectedReceivers.length == deletableReceivers.length) {
         setState(() {
           _selectAll = true;
         });
@@ -152,6 +164,7 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
           desc: result['desc']!,
           count: 0,
           createTime: DateTime.now().toIso8601String(),
+          isDeletable: true, // 新创建的列表默认可删除
         );
         
         await context.read<ReceiverListProvider>().addReceiver(receiver);
@@ -182,6 +195,16 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
     if (result == true) {
       _reloadList();
     }
+  }
+
+  void _openForbiddenDeleteSettingsPage() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ForbiddenDeleteSettingsPage()),
+    );
+    
+    // 返回时重新加载列表以更新数据
+    _reloadList();
   }
 
   void _openDetailPage(String receiverId, String receiverName) async {
@@ -286,6 +309,16 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
                         foregroundColor: Colors.white,
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: _openForbiddenDeleteSettingsPage,
+                      icon: const Icon(Icons.settings_applications, color: Colors.white),
+                      label: const Text('禁止删除设置'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -319,6 +352,10 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
                     '3. 支持txt、csv格式文件，不同字段间支持英文逗号分隔。',
                     style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                   ),
+                  Text(
+                    '4. 标记为"只读"的收件人列表无法删除，只能查看详情。',
+                    style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                  ),
                 ],
               ),
             ),
@@ -333,6 +370,8 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
                   
                   if (provider.error != null) {
                     final error = provider.error!;
+                    print('Provider错误: $error'); // 添加调试信息
+                    
                     if (error.contains('Access Key') && error.contains('未配置')) {
                       return Center(
                         child: Column(
@@ -363,7 +402,39 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
                         ),
                       );
                     }
-                    return Center(child: Text("加载失败: $error"));
+                    
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            '加载失败',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 32),
+                            child: Text(
+                              error,
+                              style: const TextStyle(color: Colors.grey),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _reloadList,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('重试'),
+                          ),
+                        ],
+                      ),
+                    );
                   }
                   
                   final receivers = provider.receivers;
@@ -482,14 +553,14 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
                                             ),
                                             children: [
                                               _buildCheckboxCell(item.receiverId),
-                                              _buildDataCell(item.receiversName),
+                                              _buildReceiverNameCell(item),
                                               _buildDataCell(item.receiversAlias),
                                               if (showDescription) _buildDataCell(item.desc ?? ''),
                                               _buildDataCell(item.count.toString()),
                                               _buildDataCell(item.createTime),
                                               _buildActionCell(
                                                 onDetail: () => _openDetailPage(item.receiverId, item.receiversName),
-                                                onDelete: () => _deleteReceiver(item.receiverId, item.receiversName),
+                                                onDelete: item.isDeletable ? () => _deleteReceiver(item.receiverId, item.receiversName) : null,
                                               ),
                                             ],
                                           );
@@ -543,6 +614,18 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
   }
 
   Widget _buildCheckboxHeaderCell() {
+    final provider = context.read<ReceiverListProvider>();
+    final deletableReceivers = provider.receivers.where((item) => item.isDeletable);
+    final hasDeletableReceivers = deletableReceivers.isNotEmpty;
+    
+    // 如果没有可删除的收件人列表，则不显示表头checkbox
+    if (!hasDeletableReceivers) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+        // 返回空的容器，不显示复选框
+      );
+    }
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
       child: Checkbox(
@@ -554,6 +637,17 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
   }
 
   Widget _buildCheckboxCell(String receiverId) {
+    final provider = context.read<ReceiverListProvider>();
+    final receiver = provider.receivers.where((item) => item.receiverId == receiverId).firstOrNull;
+    
+    // 如果找不到收件人或收件人列表不可删除，则不显示复选框
+    if (receiver == null || !receiver.isDeletable) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+        // 返回空的容器，不显示复选框
+      );
+    }
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       child: Checkbox(
@@ -590,9 +684,45 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
     );
   }
 
+  Widget _buildReceiverNameCell(ReceiverListModel receiver) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              receiver.receiversName,
+              style: const TextStyle(fontSize: 14),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (!receiver.isDeletable) ...[
+            const SizedBox(width: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.orange[100],
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.orange[300]!),
+              ),
+              child: Text(
+                '只读',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.orange[700],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildActionCell({
     required VoidCallback onDetail,
-    required VoidCallback onDelete,
+    VoidCallback? onDelete,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -603,22 +733,24 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
         children: [
           TextButton(
             onPressed: onDetail,
+            style: TextButton.styleFrom(
+              minimumSize: const Size(32, 28),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
             child: const Text('详情', style: TextStyle(fontSize: 11)),
-            style: TextButton.styleFrom(
-              minimumSize: const Size(32, 28),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-            ),
           ),
-          const SizedBox(width: 2),
-          TextButton(
-            onPressed: onDelete,
-            child: const Text('删除', style: TextStyle(fontSize: 11)),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-              minimumSize: const Size(32, 28),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+          if (onDelete != null) ...[
+            const SizedBox(width: 2),
+            TextButton(
+              onPressed: onDelete,
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+                minimumSize: const Size(32, 28),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+              ),
+              child: const Text('删除', style: TextStyle(fontSize: 11)),
             ),
-          ),
+          ],
         ],
       ),
     );

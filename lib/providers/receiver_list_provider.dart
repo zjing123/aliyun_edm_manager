@@ -1,14 +1,30 @@
 import 'package:flutter/foundation.dart';
 import '../models/receiver_list_model.dart';
 import '../services/aliyun_edm_service.dart';
+import 'global_config_provider.dart';
+import 'page_config_provider.dart';
 
 class ReceiverListProvider with ChangeNotifier {
-  final AliyunEDMService _service = AliyunEDMService();
+  AliyunEDMService? _service;
   
   List<ReceiverListModel> _receivers = [];
   bool _isLoading = false;
   String? _error;
   DateTime? _lastUpdated;
+
+  // 依赖注入的配置Provider
+  GlobalConfigProvider? _globalConfigProvider;
+  PageConfigProvider? _pageConfigProvider;
+
+  // 设置依赖
+  void setDependencies(GlobalConfigProvider globalConfig, PageConfigProvider pageConfig) {
+    _globalConfigProvider = globalConfig;
+    _pageConfigProvider = pageConfig;
+    
+    // 创建并配置AliyunEDMService
+    _service = AliyunEDMService();
+    _service!.setGlobalConfigProvider(globalConfig);
+  }
 
   // Getters
   List<ReceiverListModel> get receivers => _receivers;
@@ -38,17 +54,45 @@ class ReceiverListProvider with ChangeNotifier {
       return;
     }
 
+    if (_service == null) {
+      _error = '服务未初始化';
+      _setLoading(false);
+      return;
+    }
+
     _setLoading(true);
     _error = null;
 
     try {
-      final data = await _service.queryReceivers();
-      _receivers = data.map((map) => ReceiverListModel.fromMap(map)).toList();
+      print('开始加载收件人列表...');
+      final data = await _service!.queryReceivers();
+      print('API返回数据: ${data.length} 条记录');
+      
+      // 清除之前的错误状态
+      _error = null;
+      
+      // 使用页面配置Provider获取禁止删除的ID
+      final forbiddenIds = _pageConfigProvider?.forbiddenDeleteReceiverIds ?? {};
+      print('禁止删除的ID: $forbiddenIds');
+      
+      // 清理不存在的收件人列表ID
+      final existingIds = data.map((map) => map['ReceiverId']?.toString() ?? '').toList();
+      await _pageConfigProvider?.cleanNonExistentReceiverIds(existingIds);
+      
+      // 设置isDeletable字段
+      _receivers = data.map((map) {
+        final receiver = ReceiverListModel.fromMap(map);
+        final isDeletable = !forbiddenIds.contains(receiver.receiverId);
+        return receiver.copyWith(isDeletable: isDeletable);
+      }).toList();
+      
+      print('处理后的收件人列表: ${_receivers.length} 条记录');
       _lastUpdated = DateTime.now();
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     } catch (e) {
+      print('加载收件人列表失败: $e');
       _error = e.toString();
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     } finally {
       _setLoading(false);
     }
@@ -61,8 +105,12 @@ class ReceiverListProvider with ChangeNotifier {
 
   // 添加收件人列表
   Future<void> addReceiver(ReceiverListModel receiver) async {
+    if (_service == null) {
+      throw Exception('服务未初始化');
+    }
+    
     try {
-      final response = await _service.createReceiver(
+      final response = await _service!.createReceiver(
         receiver.receiversName,
         alias: receiver.receiversAlias,
         desc: receiver.desc,
@@ -81,44 +129,52 @@ class ReceiverListProvider with ChangeNotifier {
       // 添加到本地列表
       _receivers.add(newReceiver);
       _lastUpdated = DateTime.now();
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     } catch (e) {
       _error = e.toString();
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
       rethrow;
     }
   }
 
   // 删除收件人列表
   Future<void> deleteReceiver(String receiverId) async {
+    if (_service == null) {
+      throw Exception('服务未初始化');
+    }
+    
     try {
-      await _service.deleteReceiver(receiverId);
+      await _service!.deleteReceiver(receiverId);
       
       // 从本地列表移除
       _receivers.removeWhere((r) => r.receiverId == receiverId);
       _lastUpdated = DateTime.now();
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     } catch (e) {
       _error = e.toString();
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
       rethrow;
     }
   }
 
   // 批量删除收件人列表
   Future<void> deleteReceivers(List<String> receiverIds) async {
+    if (_service == null) {
+      throw Exception('服务未初始化');
+    }
+    
     try {
       for (final receiverId in receiverIds) {
-        await _service.deleteReceiver(receiverId);
+        await _service!.deleteReceiver(receiverId);
       }
       
       // 从本地列表移除
       _receivers.removeWhere((r) => receiverIds.contains(r.receiverId));
       _lastUpdated = DateTime.now();
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     } catch (e) {
       _error = e.toString();
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
       rethrow;
     }
   }
@@ -148,18 +204,19 @@ class ReceiverListProvider with ChangeNotifier {
     _receivers.clear();
     _lastUpdated = null;
     _error = null;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
   }
 
   // 设置加载状态
   void _setLoading(bool loading) {
     _isLoading = loading;
-    notifyListeners();
+    // 使用 Future.microtask 来避免在构建过程中调用 notifyListeners
+    Future.microtask(() => notifyListeners());
   }
 
   // 清除错误
   void clearError() {
     _error = null;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
   }
 } 

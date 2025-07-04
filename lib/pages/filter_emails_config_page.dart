@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/config_service.dart';
+import 'package:provider/provider.dart';
+import '../providers/page_config_provider.dart';
 import '../utils/dialog_util.dart';
 
 class FilterEmailsConfigPage extends StatefulWidget {
@@ -36,8 +37,8 @@ class _FilterEmailsConfigPageState extends State<FilterEmailsConfigPage> {
     });
 
     try {
-      final configService = await ConfigService.getInstance();
-      final emails = configService.getFilterEmails();
+      final pageConfig = context.read<PageConfigProvider>();
+      final emails = pageConfig.filterEmails;
       setState(() {
         _filterEmails.clear();
         _filterEmails.addAll(emails);
@@ -62,8 +63,8 @@ class _FilterEmailsConfigPageState extends State<FilterEmailsConfigPage> {
     });
 
     try {
-      final configService = await ConfigService.getInstance();
-      await configService.setFilterEmails(_filterEmails);
+      final pageConfig = context.read<PageConfigProvider>();
+      await pageConfig.setFilterEmails(_filterEmails);
       setState(() {
         _isSaving = false;
       });

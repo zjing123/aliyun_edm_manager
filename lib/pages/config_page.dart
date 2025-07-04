@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/config_service.dart';
+import 'package:provider/provider.dart';
+import '../providers/global_config_provider.dart';
 import 'filter_emails_config_page.dart';
 
 class ConfigPage extends StatefulWidget {
@@ -31,11 +32,16 @@ class _ConfigPageState extends State<ConfigPage> {
   }
   
   Future<void> _loadExistingConfig() async {
-    final configService = await ConfigService.getInstance();
+    final globalConfig = context.read<GlobalConfigProvider>();
+    
+    // 等待全局配置初始化完成
+    if (!globalConfig.isInitialized) {
+      await globalConfig.initialize();
+    }
     
     setState(() {
-      _accessKeyIdController.text = configService.getAccessKeyId() ?? '';
-      _accessKeySecretController.text = configService.getAccessKeySecret() ?? '';
+      _accessKeyIdController.text = globalConfig.accessKeyId ?? '';
+      _accessKeySecretController.text = globalConfig.accessKeySecret ?? '';
     });
   }
   
@@ -49,8 +55,8 @@ class _ConfigPageState extends State<ConfigPage> {
     });
     
     try {
-      final configService = await ConfigService.getInstance();
-      final success = await configService.saveConfig(
+      final globalConfig = context.read<GlobalConfigProvider>();
+      final success = await globalConfig.saveConfig(
         _accessKeyIdController.text.trim(),
         _accessKeySecretController.text.trim(),
       );
@@ -111,8 +117,8 @@ class _ConfigPageState extends State<ConfigPage> {
     });
     
     try {
-      final configService = await ConfigService.getInstance();
-      final success = await configService.clearConfig();
+      final globalConfig = context.read<GlobalConfigProvider>();
+      final success = await globalConfig.clearConfig();
       
       if (success) {
         setState(() {
