@@ -97,6 +97,31 @@ class ReceiverDetailParams {
     return '[{${detailMap.entries.map((e) => '"${e.key}":"${e.value}"').join(',')}}]';
   }
 
+  /// 批量转换为API需要的Detail JSON格式
+  static String toBatchDetailJson(List<ReceiverDetailParams> paramsList) {
+    final details = paramsList.map((params) {
+      final detailMap = <String, String>{'e': params.email};
+      
+      // 处理所有字段值
+      params.fieldValues.forEach((fieldName, value) {
+        if (value.isNotEmpty) {
+          final field = getField(fieldName);
+          if (field != null) {
+            // 标准字段使用API映射
+            detailMap[field.apiKey] = value;
+          } else {
+            // 自定义字段直接使用字段名
+            detailMap[fieldName] = value;
+          }
+        }
+      });
+      
+      return '{${detailMap.entries.map((e) => '"${e.key}":"${e.value}"').join(',')}}';
+    }).toList();
+    
+    return '[${details.join(',')}]';
+  }
+
   /// 从Map创建
   factory ReceiverDetailParams.fromMap(String email, Map<String, String> data) {
     return ReceiverDetailParams(
@@ -190,7 +215,7 @@ class SaveReceiverDetailResponse {
 
   factory SaveReceiverDetailResponse.fromJson(Map<String, dynamic> json) {
     return SaveReceiverDetailResponse(
-      requestId: json['RequestId'] as String,
+      requestId: json['RequestId'] as String? ?? '',
       successCount: json['SuccessCount'] as int? ?? 0,
       errorCount: json['ErrorCount'] as int? ?? 0,
       successList: json['SuccessList'] != null 
@@ -232,5 +257,23 @@ class SaveReceiverDetailResponse {
   @override
   String toString() {
     return 'SaveReceiverDetailResponse(requestId: $requestId, success: $successCount, error: $errorCount)';
+  }
+}
+
+/// CreateReceiver API 响应模型
+class CreateReceiverResponse {
+  final String requestId;
+  final String receiverId;
+
+  CreateReceiverResponse({
+    required this.requestId,
+    required this.receiverId,
+  });
+
+  factory CreateReceiverResponse.fromJson(Map<String, dynamic> json) {
+    return CreateReceiverResponse(
+      requestId: json['RequestId'] as String? ?? '',
+      receiverId: json['ReceiverId'] as String? ?? '',
+    );
   }
 }

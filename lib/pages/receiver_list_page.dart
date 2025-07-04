@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services/aliyun_edm_service.dart';
 import '../utils/dialog_util.dart';
+import '../providers/receiver_list_provider.dart';
+import '../models/receiver_list_model.dart';
 import 'config_page.dart';
 import 'receiver_detail_page.dart';
 import 'batch_create_receiver_page.dart';
@@ -12,29 +15,54 @@ class ReceiverListPage extends StatefulWidget {
   State<ReceiverListPage> createState() => _ReceiverListPageState();
 }
 
-class _ReceiverListPageState extends State<ReceiverListPage> {
-  final AliyunEDMService _service = AliyunEDMService();
-  late Future<List<Map<String, dynamic>>> _receiverFuture;
+class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepAliveClientMixin {
   final Set<String> _selectedReceivers = <String>{};
   bool _selectAll = false;
 
   @override
+  bool get wantKeepAlive => false; // 不保持页面状态，每次都会重新创建
+
+  @override
   void initState() {
     super.initState();
-    _reloadList();
+    // 在页面初始化时强制刷新数据
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ReceiverListProvider>().forceRefresh();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 当依赖项改变时（比如从其他页面返回），强制刷新数据
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ReceiverListProvider>().forceRefresh();
+    });
   }
 
   void _reloadList() {
-    setState(() {
-      _receiverFuture = _service.queryReceivers();
-    });
+    context.read<ReceiverListProvider>().forceRefresh();
   }
 
   void _deleteReceiver(String receiverId, String receiverName) async {
     final confirm = await DialogUtil.confirm(context, "确认删除收件人列表 \"$receiverName\" 吗？\n\n删除后该列表及其所有收件人数据将无法恢复。");
     if (confirm) {
-      await _service.deleteReceiver(receiverId);
-      _reloadList();
+      try {
+        await context.read<ReceiverListProvider>().deleteReceiver(receiverId);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('删除成功'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('删除失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -56,12 +84,9 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
     
     if (confirm) {
       try {
-        for (final receiverId in _selectedReceivers) {
-          await _service.deleteReceiver(receiverId);
-        }
+        await context.read<ReceiverListProvider>().deleteReceivers(_selectedReceivers.toList());
         _selectedReceivers.clear();
         _selectAll = false;
-        _reloadList();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('成功删除 ${_selectedReceivers.length} 个收件人列表'),
@@ -80,24 +105,24 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
   }
 
   void _toggleSelectAll() {
+    final provider = context.read<ReceiverListProvider>();
     if (_selectAll) {
       setState(() {
         _selectedReceivers.clear();
         _selectAll = false;
       });
     } else {
-      // 异步获取所有receiverId并选中
-      _receiverFuture.then((data) {
-        final receiverIds = data.map((item) => item['ReceiverId'] as String).toSet();
-        setState(() {
-          _selectedReceivers.addAll(receiverIds);
-          _selectAll = true;
-        });
+      // 获取所有receiverId并选中
+      final receiverIds = provider.receivers.map((item) => item.receiverId).toSet();
+      setState(() {
+        _selectedReceivers.addAll(receiverIds);
+        _selectAll = true;
       });
     }
   }
 
   void _toggleReceiverSelection(String receiverId) {
+    final provider = context.read<ReceiverListProvider>();
     if (_selectedReceivers.contains(receiverId)) {
       setState(() {
         _selectedReceivers.remove(receiverId);
@@ -108,13 +133,11 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
         _selectedReceivers.add(receiverId);
       });
       // 检查是否所有项目都被选中
-      _receiverFuture.then((data) {
-        if (_selectedReceivers.length == data.length) {
-          setState(() {
-            _selectAll = true;
-          });
-        }
-      });
+      if (_selectedReceivers.length == provider.receivers.length) {
+        setState(() {
+          _selectAll = true;
+        });
+      }
     }
   }
 
@@ -122,12 +145,16 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
     final result = await DialogUtil.inputReceiverName(context);
     if (result != null) {
       try {
-        await _service.createReceiver(
-          result['name']!,
-          alias: result['alias']!,
+        final receiver = ReceiverListModel(
+          receiverId: '', // 创建时ID为空，服务端会生成
+          receiversName: result['name']!,
+          receiversAlias: result['alias']!,
           desc: result['desc']!,
+          count: 0,
+          createTime: DateTime.now().toIso8601String(),
         );
-        _reloadList();
+        
+        await context.read<ReceiverListProvider>().addReceiver(receiver);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('创建成功'),
@@ -186,6 +213,11 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // 必须调用super.build
+    return _buildPage();
+  }
+
+  Widget _buildPage() {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -198,6 +230,11 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
             icon: const Icon(Icons.settings),
             onPressed: _openConfigPage,
             tooltip: '配置',
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _reloadList,
+            tooltip: '刷新列表',
           ),
         ],
       ),
@@ -288,14 +325,14 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
             const SizedBox(height: 24),
             // 数据表格
             Expanded(
-              child: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _receiverFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-                    final error = snapshot.error.toString();
+              child: Consumer<ReceiverListProvider>(
+                builder: (context, provider, child) {
+                  if (provider.isLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  
+                  if (provider.error != null) {
+                    final error = provider.error!;
                     if (error.contains('Access Key') && error.contains('未配置')) {
                       return Center(
                         child: Column(
@@ -326,9 +363,10 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
                         ),
                       );
                     }
-            return Center(child: Text("加载失败: ${snapshot.error}"));
-          }
-          final receivers = snapshot.data!;
+                    return Center(child: Text("加载失败: $error"));
+                  }
+                  
+                  final receivers = provider.receivers;
                   final screenWidth = MediaQuery.of(context).size.width;
                   final showDescription = screenWidth >= 1000;
                   
@@ -431,7 +469,6 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
                                           final index = entry.key;
                                           final item = entry.value;
                                           final isLastRow = index == receivers.length - 1;
-                                          final receiverId = item['ReceiverId'] as String? ?? '';
                                           
                                           return TableRow(
                                             decoration: BoxDecoration(
@@ -444,15 +481,15 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
                                               ),
                                             ),
                                             children: [
-                                              _buildCheckboxCell(receiverId),
-                                              _buildDataCell(item['ReceiversName'] ?? ''),
-                                              _buildDataCell(item['ReceiversAlias'] ?? ''),
-                                              if (showDescription) _buildDataCell(item['Desc'] ?? ''),
-                                              _buildDataCell(item['Count']?.toString() ?? ''),
-                                              _buildDataCell(item['CreateTime'] ?? ''),
+                                              _buildCheckboxCell(item.receiverId),
+                                              _buildDataCell(item.receiversName),
+                                              _buildDataCell(item.receiversAlias),
+                                              if (showDescription) _buildDataCell(item.desc ?? ''),
+                                              _buildDataCell(item.count.toString()),
+                                              _buildDataCell(item.createTime),
                                               _buildActionCell(
-                                                onDetail: () => _openDetailPage(item['ReceiverId'] ?? '', item['ReceiversName'] ?? ''),
-                                                onDelete: () => _deleteReceiver(item['ReceiverId'] ?? '', item['ReceiversName'] ?? ''),
+                                                onDetail: () => _openDetailPage(item.receiverId, item.receiversName),
+                                                onDelete: () => _deleteReceiver(item.receiverId, item.receiversName),
                                               ),
                                             ],
                                           );
@@ -549,7 +586,7 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
         text,
         style: const TextStyle(fontSize: 14),
         overflow: TextOverflow.ellipsis,
-                    ),
+      ),
     );
   }
 
@@ -564,7 +601,7 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-                    TextButton(
+          TextButton(
             onPressed: onDetail,
             child: const Text('详情', style: TextStyle(fontSize: 11)),
             style: TextButton.styleFrom(
@@ -580,7 +617,7 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
               foregroundColor: Colors.red,
               minimumSize: const Size(32, 28),
               padding: const EdgeInsets.symmetric(horizontal: 4),
-                ),
+            ),
           ),
         ],
       ),

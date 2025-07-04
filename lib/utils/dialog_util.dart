@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../models/receiver_detail.dart';
 import '../services/aliyun_edm_service.dart';
+import '../providers/receiver_list_provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
 
@@ -108,6 +110,10 @@ class DialogUtil {
     final descController = TextEditingController();
     String? nameError;
     String? aliasError;
+    
+    // 从Provider获取现有的收件人列表名称用于重复检查
+    final provider = Provider.of<ReceiverListProvider>(context, listen: false);
+    final existingNames = provider.receiverNames;
     
     return showDialog<Map<String, String>>(
       context: context,
@@ -221,10 +227,13 @@ class DialogUtil {
                             autofocus: true,
                             onChanged: (value) {
                               setState(() {
-                                if (value.trim().isEmpty) {
+                                final trimmedValue = value.trim();
+                                if (trimmedValue.isEmpty) {
                                   nameError = '列表名称不能为空';
-                                } else if (value.trim().length > 30) {
+                                } else if (trimmedValue.length > 30) {
                                   nameError = '列表名称长度不能超过30个字符';
+                                } else if (existingNames.contains(trimmedValue.toLowerCase())) {
+                                  nameError = '列表名称已存在，请使用其他名称';
                                 } else {
                                   nameError = null;
                                 }

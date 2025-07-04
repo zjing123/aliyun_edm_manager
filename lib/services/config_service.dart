@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ConfigService {
   static const String _accessKeyIdKey = 'aliyun_access_key_id';
   static const String _accessKeySecretKey = 'aliyun_access_key_secret';
+  static const String _filterEmailsKey = 'default_filter_emails';
   
   static ConfigService? _instance;
   SharedPreferences? _prefs;
@@ -46,6 +47,46 @@ class ConfigService {
     final result1 = await setAccessKeyId(accessKeyId);
     final result2 = await setAccessKeySecret(accessKeySecret);
     return result1 && result2;
+  }
+  
+  // 获取默认过滤邮箱列表
+  List<String> getFilterEmails() {
+    final emailsStr = _prefs?.getString(_filterEmailsKey);
+    if (emailsStr == null || emailsStr.isEmpty) {
+      return [];
+    }
+    return emailsStr.split('\n')
+        .map((email) => email.trim())
+        .where((email) => email.isNotEmpty)
+        .toList();
+  }
+  
+  // 保存默认过滤邮箱列表
+  Future<bool> setFilterEmails(List<String> emails) async {
+    final emailsStr = emails.join('\n');
+    return await _prefs?.setString(_filterEmailsKey, emailsStr) ?? false;
+  }
+  
+  // 添加单个过滤邮箱
+  Future<bool> addFilterEmail(String email) async {
+    final currentEmails = getFilterEmails();
+    if (!currentEmails.contains(email.trim())) {
+      currentEmails.add(email.trim());
+      return await setFilterEmails(currentEmails);
+    }
+    return true;
+  }
+  
+  // 删除单个过滤邮箱
+  Future<bool> removeFilterEmail(String email) async {
+    final currentEmails = getFilterEmails();
+    currentEmails.remove(email.trim());
+    return await setFilterEmails(currentEmails);
+  }
+  
+  // 清空过滤邮箱列表
+  Future<bool> clearFilterEmails() async {
+    return await _prefs?.remove(_filterEmailsKey) ?? false;
   }
   
   // 检查配置是否完整

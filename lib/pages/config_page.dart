@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/config_service.dart';
+import 'filter_emails_config_page.dart';
 
 class ConfigPage extends StatefulWidget {
   const ConfigPage({super.key});
@@ -234,6 +235,59 @@ class _ConfigPageState extends State<ConfigPage> {
                 ),
               ),
               const SizedBox(height: 24),
+              
+              // 过滤邮箱配置卡片
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '过滤邮箱配置',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        '配置默认的过滤邮箱列表，在批量创建收件人时自动应用',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const FilterEmailsConfigPage(),
+                              ),
+                            );
+                            if (result == true) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('过滤邮箱配置已更新'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.filter_list),
+                          label: const Text('配置过滤邮箱'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              
               Row(
                 children: [
                   Expanded(

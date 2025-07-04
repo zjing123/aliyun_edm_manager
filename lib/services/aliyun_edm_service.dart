@@ -117,7 +117,7 @@ class AliyunEDMService {
     return null;
   }
 
-  Future<void> createReceiver(String name, {String? alias, String? desc}) async {
+  Future<CreateReceiverResponse> createReceiver(String name, {String? alias, String? desc}) async {
     final params = await _buildCommonParams("CreateReceiver");
     params['ReceiversName'] = name;
     if (alias != null && alias.isNotEmpty) {
@@ -137,6 +137,7 @@ class AliyunEDMService {
     try {
       final response = await _dio.get('', queryParameters: params);
       print('CreateReceiver 响应: ${response.data}');
+      return CreateReceiverResponse.fromJson(response.data as Map<String, dynamic>);
     } catch (e) {
       print('CreateReceiver 错误: $e');
       if (e is DioException) {
@@ -180,6 +181,35 @@ class AliyunEDMService {
       return SaveReceiverDetailResponse.fromJson(response.data as Map<String, dynamic>);
     } catch (e) {
       print('SaveReceiverDetail 错误: $e');
+      if (e is DioException) {
+        print('错误详情: ${e.response?.data}');
+        print('状态码: ${e.response?.statusCode}');
+        print('错误信息: ${e.message}');
+      }
+      rethrow;
+    }
+  }
+
+  Future<SaveReceiverDetailResponse> saveReceiverDetails(String receiverId, List<ReceiverDetailParams> receiverParamsList) async {
+    final params = await _buildCommonParams("SaveReceiverDetail");
+    params['ReceiverId'] = receiverId;
+    params['Detail'] = ReceiverDetailParams.toBatchDetailJson(receiverParamsList);
+    final accessKeySecret = await _getAccessKeySecret();
+
+    final signature = AliyunSigner.sign(params, accessKeySecret, 'POST');
+    params['Signature'] = signature;
+
+    print('SaveReceiverDetail 批量请求参数:');
+    params.forEach((key, value) {
+      print('  $key: $value');
+    });
+
+    try {
+      final response = await _dio.post('', queryParameters: params);
+      print('SaveReceiverDetail 批量响应: ${response.data}');
+      return SaveReceiverDetailResponse.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      print('SaveReceiverDetail 批量错误: $e');
       if (e is DioException) {
         print('错误详情: ${e.response?.data}');
         print('状态码: ${e.response?.statusCode}');
