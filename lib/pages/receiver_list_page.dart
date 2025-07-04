@@ -232,7 +232,7 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
                     if (_selectedReceivers.isNotEmpty) const SizedBox(width: 12),
                     ElevatedButton.icon(
                       onPressed: _createReceiver,
-                      icon: const Icon(Icons.add),
+                      icon: const Icon(Icons.add, color: Colors.white),
                       label: const Text('新建收件人列表'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
@@ -242,7 +242,7 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
                     const SizedBox(width: 12),
                     ElevatedButton.icon(
                       onPressed: _openBatchCreatePage,
-                      icon: const Icon(Icons.upload_file),
+                      icon: const Icon(Icons.upload_file, color: Colors.white),
                       label: const Text('批量创建收件人列表'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
@@ -549,7 +549,7 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
         text,
         style: const TextStyle(fontSize: 14),
         overflow: TextOverflow.ellipsis,
-      ),
+                    ),
     );
   }
 
@@ -564,7 +564,7 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          TextButton(
+                    TextButton(
             onPressed: onDetail,
             child: const Text('详情', style: TextStyle(fontSize: 11)),
             style: TextButton.styleFrom(
@@ -580,7 +580,7 @@ class _ReceiverListPageState extends State<ReceiverListPage> {
               foregroundColor: Colors.red,
               minimumSize: const Size(32, 28),
               padding: const EdgeInsets.symmetric(horizontal: 4),
-            ),
+                ),
           ),
         ],
       ),

@@ -536,3 +536,4 @@ class _ReceiverDetailPageState extends State<ReceiverDetailPage> {
     });
   }
 }
+ 

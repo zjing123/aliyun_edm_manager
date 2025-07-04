@@ -123,7 +123,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
                       const SizedBox(height: 24),
                       ElevatedButton.icon(
                         onPressed: _pickFile,
-                        icon: const Icon(Icons.upload_file),
+                        icon: const Icon(Icons.upload_file, color: Colors.white),
                         label: const Text('选择文件'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue,
@@ -164,7 +164,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
                                 _selectedFile = null;
                               });
                             },
-                            icon: const Icon(Icons.delete),
+                            icon: const Icon(Icons.delete, color: Colors.white),
                             label: const Text('重新选择'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.grey,
@@ -183,7 +183,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
                                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                   ),
                                 )
-                              : const Icon(Icons.cloud_upload),
+                              : const Icon(Icons.cloud_upload, color: Colors.white),
                             label: Text(_isUploading ? '上传中...' : '开始上传'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green,
