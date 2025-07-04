@@ -4,6 +4,8 @@ import '../pages/overview_page.dart';
 import '../pages/sending_address_page.dart';
 import '../pages/template_management_page.dart';
 import '../pages/send_email_page.dart';
+import '../pages/batch_send_task_list_page.dart';
+import '../pages/batch_send_task_create_page.dart';
 import '../pages/invalid_addresses_page.dart';
 import '../pages/sending_data_page.dart';
 import '../pages/sending_details_page.dart';
@@ -39,6 +41,7 @@ class _MainLayoutState extends State<MainLayout> {
       children: [
         NavigationItem(title: '收件人列表', route: '/recipient-list'),
         NavigationItem(title: '发送邮件', route: '/send-email'),
+        NavigationItem(title: '批量发送任务', route: '/batch-send-tasks'),
         NavigationItem(title: '无效地址', route: '/invalid-addresses'),
       ],
     ),
@@ -176,6 +179,8 @@ class _MainLayoutState extends State<MainLayout> {
         return const ReceiverListPage();
       case '/send-email':
         return const SendEmailPage();
+      case '/batch-send-tasks':
+        return const BatchSendTaskListPage();
       case '/invalid-addresses':
         return const InvalidAddressesPage();
       case '/sending-data':

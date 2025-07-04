@@ -2,9 +2,10 @@ import 'dart:math';
 import 'package:dio/dio.dart';
 import '../utils/aliyun_signer.dart';
 import '../models/receiver_detail.dart';
+import '../models/batch_send_task_model.dart';
 import '../providers/global_config_provider.dart';
 
-class AliyunEDMService {
+class AliyunEdmService {
   GlobalConfigProvider? _globalConfigProvider;
 
   final Dio _dio = Dio(BaseOptions(baseUrl: 'https://dm.aliyuncs.com'));
@@ -241,5 +242,30 @@ class AliyunEDMService {
       'SignatureVersion': '1.0',
       'SignatureNonce': Random().nextInt(999999).toString(),
     };
+  }
+
+  // 批量发送任务相关方法
+  Future<List<BatchSendTaskModel>> getBatchSendTasks() async {
+    // 这里应该调用阿里云API获取批量发送任务列表
+    // 目前返回空列表，实际实现时需要调用相应的API
+    return [];
+  }
+
+  Future<bool> createBatchSendTask(BatchSendTaskModel task) async {
+    // 这里应该调用阿里云API创建批量发送任务
+    // 目前返回true，实际实现时需要调用相应的API
+    return true;
+  }
+
+  Future<bool> deleteBatchSendTask(String taskId) async {
+    // 这里应该调用阿里云API删除批量发送任务
+    // 目前返回true，实际实现时需要调用相应的API
+    return true;
+  }
+
+  Future<bool> updateBatchSendTaskStatus(String taskId, String status) async {
+    // 这里应该调用阿里云API更新批量发送任务状态
+    // 目前返回true，实际实现时需要调用相应的API
+    return true;
   }
 }

@@ -725,7 +725,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
     }
 
     // 检查阿里云配置
-    final edmService = AliyunEDMService();
+    final edmService = AliyunEdmService();
     if (!await edmService.isConfigured()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -765,7 +765,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
   }
 
   Future<void> _processFile(int countPerList) async {
-    final edmService = AliyunEDMService();
+    final edmService = AliyunEdmService();
     
     // 从Provider获取现有的收件人列表名称用于重复检查
     setState(() {

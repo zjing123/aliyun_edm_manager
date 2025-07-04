@@ -5,7 +5,7 @@ import 'global_config_provider.dart';
 import 'page_config_provider.dart';
 
 class ReceiverListProvider with ChangeNotifier {
-  AliyunEDMService? _service;
+  AliyunEdmService? _service;
   
   List<ReceiverListModel> _receivers = [];
   bool _isLoading = false;
@@ -22,7 +22,7 @@ class ReceiverListProvider with ChangeNotifier {
     _pageConfigProvider = pageConfig;
     
     // 创建并配置AliyunEDMService
-    _service = AliyunEDMService();
+    _service = AliyunEdmService();
     _service!.setGlobalConfigProvider(globalConfig);
   }
 

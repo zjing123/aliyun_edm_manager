@@ -660,7 +660,7 @@ class ReceiverDetailDialog extends StatefulWidget {
 }
 
 class _ReceiverDetailDialogState extends State<ReceiverDetailDialog> {
-  final AliyunEDMService _service = AliyunEDMService();
+  final AliyunEdmService _service = AliyunEdmService();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   ReceiverDetail? _detail;

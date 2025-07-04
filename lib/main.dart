@@ -4,6 +4,7 @@ import 'app.dart';
 import 'providers/global_config_provider.dart';
 import 'providers/page_config_provider.dart';
 import 'providers/receiver_list_provider.dart';
+import 'providers/batch_send_task_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,6 +38,21 @@ void main() async {
             receiverList.setDependencies(globalConfig, pageConfig);
             
             return receiverList;
+          },
+        ),
+        
+        // 批量发送任务Provider - 依赖全局配置
+        ChangeNotifierProxyProvider<GlobalConfigProvider, BatchSendTaskProvider>(
+          create: (_) => BatchSendTaskProvider(),
+          update: (_, globalConfig, batchSendTask) {
+            batchSendTask ??= BatchSendTaskProvider();
+            
+            // 设置全局配置
+            if (globalConfig.isInitialized && globalConfig.configService != null) {
+              batchSendTask.setGlobalConfigProvider(globalConfig);
+            }
+            
+            return batchSendTask;
           },
         ),
       ],
