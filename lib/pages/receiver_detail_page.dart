@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/receiver_detail.dart';
 import '../services/aliyun_edm_service.dart';
+import '../providers/global_config_provider.dart';
 import '../utils/dialog_util.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
@@ -20,7 +22,7 @@ class ReceiverDetailPage extends StatefulWidget {
 }
 
 class _ReceiverDetailPageState extends State<ReceiverDetailPage> {
-  final AliyunEdmService _service = AliyunEdmService();
+  AliyunEdmService? _service;
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   ReceiverDetail? _detail;
@@ -77,7 +79,23 @@ class _ReceiverDetailPageState extends State<ReceiverDetailPage> {
     });
 
     try {
-      final detail = await _service.getReceiverDetail(
+      // 初始化服务
+      if (_service == null) {
+        final globalConfig = context.read<GlobalConfigProvider>();
+        if (!globalConfig.isConfigured) {
+          setState(() {
+            _error = '阿里云AccessKey未配置，请先配置';
+            _loading = false;
+            _loadingMore = false;
+          });
+          return;
+        }
+        
+        _service = AliyunEdmService();
+        _service!.setGlobalConfigProvider(globalConfig);
+      }
+
+      final detail = await _service!.getReceiverDetail(
         widget.receiverId,
         keyWord: keyWord,
         nextStart: nextStart,
@@ -461,8 +479,25 @@ class _ReceiverDetailPageState extends State<ReceiverDetailPage> {
     }
 
     try {
+      // 确保服务已初始化
+      if (_service == null) {
+        final globalConfig = context.read<GlobalConfigProvider>();
+        if (!globalConfig.isConfigured) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('阿里云AccessKey未配置，请先配置'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+        
+        _service = AliyunEdmService();
+        _service!.setGlobalConfigProvider(globalConfig);
+      }
+
       final receiverParams = ReceiverDetailParams.fromMap(email, dataMap);
-      final response = await _service.saveReceiverDetail(widget.receiverId, receiverParams);
+      final response = await _service!.saveReceiverDetail(widget.receiverId, receiverParams);
       
       if (response.isSuccess) {
         final newMember = MemberDetail(
@@ -509,7 +544,24 @@ class _ReceiverDetailPageState extends State<ReceiverDetailPage> {
     if (!confirm) return;
 
     try {
-      await _service.deleteReceiverDetail(widget.receiverId, email);
+      // 确保服务已初始化
+      if (_service == null) {
+        final globalConfig = context.read<GlobalConfigProvider>();
+        if (!globalConfig.isConfigured) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('阿里云AccessKey未配置，请先配置'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+        
+        _service = AliyunEdmService();
+        _service!.setGlobalConfigProvider(globalConfig);
+      }
+
+      await _service!.deleteReceiverDetail(widget.receiverId, email);
       
       setState(() {
         _allMembers.removeWhere((member) => member.email == email);
