@@ -3,7 +3,10 @@ import 'package:dio/dio.dart';
 import '../utils/aliyun_signer.dart';
 import '../models/receiver_detail.dart';
 import '../models/batch_send_task_model.dart';
+import '../models/template_model.dart';
+import '../models/sender_address_model.dart';
 import '../providers/global_config_provider.dart';
+import '../constants/template_constants.dart';
 
 class AliyunEdmService {
   GlobalConfigProvider? _globalConfigProvider;
@@ -242,6 +245,206 @@ class AliyunEdmService {
       'SignatureVersion': '1.0',
       'SignatureNonce': Random().nextInt(999999).toString(),
     };
+  }
+
+  // 查询邮件模板
+  Future<QueryTemplateResponse> queryTemplateByParam({
+    String? templateName,
+    String? templateStatus,
+    String? templateType,
+    int pageNo = 1,
+    int pageSize = 10,
+  }) async {
+    // 参数验证
+    if (pageNo < 1) {
+      pageNo = 1;
+    }
+    if (pageSize > 50) {
+      pageSize = 50;
+    }
+    if (pageSize < 1) {
+      pageSize = 10;
+    }
+
+    final params = await _buildCommonParams("QueryTemplateByParam");
+    
+    // 添加可选参数
+    if (templateName != null && templateName.isNotEmpty) {
+      params['TemplateName'] = templateName;
+    }
+    if (templateStatus != null && templateStatus.isNotEmpty) {
+      params['TemplateStatus'] = templateStatus;
+    }
+    if (templateType != null && templateType.isNotEmpty) {
+      params['TemplateType'] = templateType;
+    }
+    
+    params['PageNo'] = pageNo.toString();
+    params['PageSize'] = pageSize.toString();
+    
+    final accessKeySecret = _getAccessKeySecret();
+    final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
+    params['Signature'] = signature;
+
+    print('QueryTemplateByParam 请求参数:');
+    params.forEach((key, value) {
+      print('  $key: $value');
+    });
+
+    try {
+      final response = await _dio.get('', queryParameters: params);
+      print('QueryTemplateByParam 响应: ${response.data}');
+      return QueryTemplateResponse.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      print('QueryTemplateByParam 错误: $e');
+      if (e is DioException) {
+        print('错误详情: ${e.response?.data}');
+        print('状态码: ${e.response?.statusCode}');
+        print('错误信息: ${e.message}');
+      }
+      rethrow;
+    }
+  }
+
+  // 获取所有模板（包括审核中、审核通过、审核未通过）
+  Future<List<TemplateModel>> getAllTemplates({
+    String? templateName,
+    String? templateStatus = TemplateConstants.STATUS_APPROVED, // 默认只获取审核通过的模板
+    String? templateType,
+    int pageNo = 1,
+    int pageSize = 10,
+  }) async {
+    try {
+      final response = await queryTemplateByParam(
+        templateName: templateName,
+        templateStatus: templateStatus,
+        templateType: templateType,
+        pageNo: pageNo,
+        pageSize: pageSize,
+      );
+      
+      return response.templates;
+    } catch (e) {
+      print('获取可用模板失败: $e');
+      return [];
+    }
+  }
+
+  // 获取可用的邮件模板
+  Future<List<TemplateModel>> getAvailableTemplates({
+    String? templateName,
+    String? templateType,
+    int pageNo = 1,
+    int pageSize = 50,
+  }) async {
+    return await getAllTemplates(
+      templateName: templateName,
+      templateStatus: TemplateConstants.STATUS_APPROVED, // 过滤审核通过的模板
+      templateType: templateType,
+      pageNo: pageNo,
+      pageSize: pageSize,
+    );
+  }
+
+  // 查询发信地址
+  Future<QuerySenderAddressResponse> queryMailAddressByParam({
+    String? keyWord,
+    String? sendType,
+    int pageNo = 1,
+    int pageSize = 10,
+  }) async {
+    // 参数验证
+    if (pageNo < 1) {
+      pageNo = 1;
+    }
+    if (pageSize > 50) {
+      pageSize = 50;
+    }
+    if (pageSize < 1) {
+      pageSize = 10;
+    }
+
+    final params = await _buildCommonParams("QueryMailAddressByParam");
+    
+    // 必填参数
+    params['PageNo'] = pageNo.toString();
+    params['PageSize'] = pageSize.toString();
+    
+    // 可选参数
+    if (keyWord != null && keyWord.isNotEmpty) {
+      params['KeyWord'] = keyWord;
+    }
+    if (sendType != null && sendType.isNotEmpty) {
+      params['SendType'] = sendType;
+    }
+    
+    final accessKeySecret = _getAccessKeySecret();
+    final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
+    params['Signature'] = signature;
+
+    print('QueryMailAddressByParam 请求参数:');
+    params.forEach((key, value) {
+      print('  $key: $value');
+    });
+
+    try {
+      final response = await _dio.get('', queryParameters: params);
+      print('QueryMailAddressByParam 响应: ${response.data}');
+      return QuerySenderAddressResponse.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      print('QueryMailAddressByParam 错误: $e');
+      if (e is DioException) {
+        print('错误详情: ${e.response?.data}');
+        print('状态码: ${e.response?.statusCode}');
+        print('错误信息: ${e.message}');
+      }
+      rethrow;
+    }
+  }
+
+  // 获取所有发信地址
+  Future<List<SenderAddressModel>> getAllSenderAddresses({
+    String? keyWord,
+    String? sendType,
+    int pageNo = 1,
+    int pageSize = 50,
+  }) async {
+    try {
+      final response = await queryMailAddressByParam(
+        keyWord: keyWord,
+        sendType: sendType,
+        pageNo: pageNo,
+        pageSize: pageSize,
+      );
+      
+      return response.addresses;
+    } catch (e) {
+      print('获取发信地址失败: $e');
+      return [];
+    }
+  }
+
+  // 获取可用的发信地址（状态为正常的）
+  Future<List<SenderAddressModel>> getAvailableSenderAddresses({
+    String? keyWord,
+    String? sendType,
+    int pageNo = 1,
+    int pageSize = 50,
+  }) async {
+    try {
+      final allAddresses = await getAllSenderAddresses(
+        keyWord: keyWord,
+        sendType: sendType,
+        pageNo: pageNo,
+        pageSize: pageSize,
+      );
+      
+      // 过滤状态为正常的发信地址
+      return allAddresses.where((address) => address.status == '1').toList();
+    } catch (e) {
+      print('获取可用发信地址失败: $e');
+      return [];
+    }
   }
 
   // 批量发送任务相关方法

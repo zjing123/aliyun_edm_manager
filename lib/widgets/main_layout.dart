@@ -5,7 +5,6 @@ import '../pages/sending_address_page.dart';
 import '../pages/template_management_page.dart';
 import '../pages/send_email_page.dart';
 import '../pages/batch_send_task_list_page.dart';
-import '../pages/batch_send_task_create_page.dart';
 import '../pages/invalid_addresses_page.dart';
 import '../pages/sending_data_page.dart';
 import '../pages/sending_details_page.dart';
@@ -19,7 +18,7 @@ class MainLayout extends StatefulWidget {
 }
 
 class _MainLayoutState extends State<MainLayout> {
-  int _selectedIndex = 0;
+  String _currentRoute = '/overview';
 
   final List<NavigationItem> _navigationItems = [
     NavigationItem(
@@ -90,7 +89,7 @@ class _MainLayoutState extends State<MainLayout> {
                   child: ListView.builder(
                     itemCount: _navigationItems.length,
                     itemBuilder: (context, index) {
-                      return _buildNavigationItem(_navigationItems[index], index);
+                      return _buildNavigationItem(_navigationItems[index]);
                     },
                   ),
                 ),
@@ -134,37 +133,135 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
-  Widget _buildNavigationItem(NavigationItem item, int index) {
+  Widget _buildNavigationItem(NavigationItem item) {
+    // 检查是否是当前路由的父级菜单
+    bool isParentSelected = false;
+    bool hasSelectedChild = false;
+    
+    if (item.children != null && item.children!.isNotEmpty) {
+      hasSelectedChild = item.children!.any((child) => child.route == _currentRoute);
+      isParentSelected = hasSelectedChild;
+    }
+
     if (item.children != null && item.children!.isNotEmpty) {
       return Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          leading: Icon(item.icon, size: 20),
-          title: Text(item.title),
-          children: item.children!
-              .map((child) => ListTile(
-                    contentPadding: const EdgeInsets.only(left: 56),
-                    title: Text(child.title, style: const TextStyle(fontSize: 14)),
-                    onTap: () {
-                      navigatorKey.currentState?.pushReplacementNamed(child.route!);
-                    },
-                  ))
-              .toList(),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isParentSelected ? Colors.blue[50] : null,
+            borderRadius: isParentSelected ? BorderRadius.circular(8) : null,
+          ),
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          child: ExpansionTile(
+            leading: Icon(
+              item.icon, 
+              size: 20,
+              color: isParentSelected ? Colors.blue[700] : Colors.grey[600],
+            ),
+            title: Text(
+              item.title,
+              style: TextStyle(
+                color: isParentSelected ? Colors.blue[700] : Colors.grey[800],
+                fontWeight: isParentSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+            initiallyExpanded: hasSelectedChild,
+            children: item.children!
+                .map((child) => _buildChildNavigationItem(child))
+                .toList(),
+          ),
         ),
       );
     }
 
-    return ListTile(
-      leading: Icon(item.icon, size: 20),
-      title: Text(item.title),
-      selected: _selectedIndex == index,
-      onTap: () {
-        setState(() {
-          _selectedIndex = index;
-        });
-        navigatorKey.currentState?.pushReplacementNamed(item.route!);
-      },
+    final isSelected = item.route == _currentRoute;
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: isSelected ? Colors.blue[600] : null,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: isSelected ? [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ] : null,
+      ),
+      child: ListTile(
+        leading: Icon(
+          item.icon, 
+          size: 20,
+          color: isSelected ? Colors.white : Colors.grey[600],
+        ),
+        title: Text(
+          item.title,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey[800],
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+        onTap: () {
+          _navigateToRoute(item.route!);
+        },
+      ),
     );
+  }
+
+  Widget _buildChildNavigationItem(NavigationItem child) {
+    final isSelected = child.route == _currentRoute;
+    
+    return Container(
+      margin: const EdgeInsets.only(left: 16, right: 8, top: 2, bottom: 2),
+      decoration: BoxDecoration(
+        color: isSelected ? Colors.blue[600] : null,
+        borderRadius: BorderRadius.circular(6),
+        boxShadow: isSelected ? [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.3),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
+          ),
+        ] : null,
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.only(left: 40, right: 16),
+        title: Row(
+          children: [
+            Container(
+              width: 4,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.white : Colors.grey[400],
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                child.title, 
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isSelected ? Colors.white : Colors.grey[700],
+                  fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+                ),
+              ),
+            ),
+          ],
+        ),
+        onTap: () {
+          _navigateToRoute(child.route!);
+        },
+      ),
+    );
+  }
+
+  void _navigateToRoute(String route) {
+    setState(() {
+      _currentRoute = route;
+    });
+    navigatorKey.currentState?.pushReplacementNamed(route);
   }
 
   Widget _getPageByRoute(String route) {

@@ -206,6 +206,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
     return Row(
       children: [
         Expanded(
+          flex: 3,
           child: TextField(
             decoration: InputDecoration(
               hintText: '搜索任务名称、模板名称或发件人',
@@ -223,28 +224,31 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
           ),
         ),
         const SizedBox(width: 16),
-        DropdownButtonFormField<String>(
-          decoration: InputDecoration(
-            labelText: '状态筛选',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+        SizedBox(
+          width: 150,
+          child: DropdownButtonFormField<String>(
+            decoration: InputDecoration(
+              labelText: '状态筛选',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            value: _statusFilter,
+            items: const [
+              DropdownMenuItem(value: 'all', child: Text('全部状态')),
+              DropdownMenuItem(value: 'pending', child: Text('等待中')),
+              DropdownMenuItem(value: 'running', child: Text('运行中')),
+              DropdownMenuItem(value: 'completed', child: Text('已完成')),
+              DropdownMenuItem(value: 'failed', child: Text('失败')),
+              DropdownMenuItem(value: 'paused', child: Text('已暂停')),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _statusFilter = value ?? 'all';
+              });
+            },
           ),
-          value: _statusFilter,
-          items: const [
-            DropdownMenuItem(value: 'all', child: Text('全部状态')),
-            DropdownMenuItem(value: 'pending', child: Text('等待中')),
-            DropdownMenuItem(value: 'running', child: Text('运行中')),
-            DropdownMenuItem(value: 'completed', child: Text('已完成')),
-            DropdownMenuItem(value: 'failed', child: Text('失败')),
-            DropdownMenuItem(value: 'paused', child: Text('已暂停')),
-          ],
-          onChanged: (value) {
-            setState(() {
-              _statusFilter = value ?? 'all';
-            });
-          },
         ),
       ],
     );
