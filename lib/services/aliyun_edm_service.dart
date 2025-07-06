@@ -5,6 +5,7 @@ import '../models/receiver_detail.dart';
 import '../models/batch_send_task_model.dart';
 import '../models/template_model.dart';
 import '../models/sender_address_model.dart';
+import '../models/mail_task_model.dart';
 import '../providers/global_config_provider.dart';
 import '../constants/template_constants.dart';
 
@@ -470,5 +471,99 @@ class AliyunEdmService {
     // 这里应该调用阿里云API更新批量发送任务状态
     // 目前返回true，实际实现时需要调用相应的API
     return true;
+  }
+
+  // 查询邮件任务
+  Future<MailTaskResponse> queryTaskByParam({
+    String? keyWord,
+    String? status,
+    int pageNo = 1,
+    int pageSize = 10,
+  }) async {
+    // 参数验证
+    if (pageNo < 1) {
+      pageNo = 1;
+    }
+    if (pageSize > 50) {
+      pageSize = 50;
+    }
+    if (pageSize < 1) {
+      pageSize = 10;
+    }
+
+    final params = await _buildCommonParams("QueryTaskByParam");
+    
+    // 必填参数
+    params['PageNo'] = pageNo.toString();
+    params['PageSize'] = pageSize.toString();
+    
+    // 可选参数
+    if (keyWord != null && keyWord.isNotEmpty) {
+      params['KeyWord'] = keyWord;
+    }
+    if (status != null && status.isNotEmpty) {
+      params['Status'] = status;
+    }
+    
+    final accessKeySecret = _getAccessKeySecret();
+    final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
+    params['Signature'] = signature;
+
+    print('QueryTaskByParam 请求参数:');
+    params.forEach((key, value) {
+      print('  $key: $value');
+    });
+
+    try {
+      final response = await _dio.get('', queryParameters: params);
+      print('QueryTaskByParam 响应: ${response.data}');
+      
+      return MailTaskResponse.fromJson(response.data);
+    } catch (e) {
+      print('QueryTaskByParam 错误: $e');
+      if (e is DioException) {
+        print('错误详情: ${e.response?.data}');
+        print('状态码: ${e.response?.statusCode}');
+        print('错误信息: ${e.message}');
+      }
+      rethrow;
+    }
+  }
+
+  // 批量发送邮件
+  Future<bool> batchSendMail(BatchSendMailRequest request) async {
+    final params = await _buildCommonParams("BatchSendMail");
+    
+    // 设置请求参数
+    final requestData = request.toJson();
+    requestData.forEach((key, value) {
+      params[key] = value.toString();
+    });
+    
+    final accessKeySecret = _getAccessKeySecret();
+    final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
+    params['Signature'] = signature;
+
+    print('BatchSendMail 请求参数:');
+    params.forEach((key, value) {
+      print('  $key: $value');
+    });
+
+    try {
+      final response = await _dio.get('', queryParameters: params);
+      print('BatchSendMail 响应: ${response.data}');
+      
+      // 检查响应是否成功
+      final responseData = response.data;
+      return responseData != null && responseData['RequestId'] != null;
+    } catch (e) {
+      print('BatchSendMail 错误: $e');
+      if (e is DioException) {
+        print('错误详情: ${e.response?.data}');
+        print('状态码: ${e.response?.statusCode}');
+        print('错误信息: ${e.message}');
+      }
+      rethrow;
+    }
   }
 }

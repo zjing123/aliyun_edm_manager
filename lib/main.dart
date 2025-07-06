@@ -5,6 +5,8 @@ import 'providers/global_config_provider.dart';
 import 'providers/page_config_provider.dart';
 import 'providers/receiver_list_provider.dart';
 import 'providers/batch_send_task_provider.dart';
+import 'providers/mail_task_provider.dart';
+import 'services/aliyun_edm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,6 +55,27 @@ void main() async {
             }
             
             return batchSendTask;
+          },
+        ),
+        
+        // 邮件任务Provider - 依赖全局配置
+        ChangeNotifierProxyProvider<GlobalConfigProvider, MailTaskProvider>(
+          create: (context) {
+            final edmService = AliyunEdmService();
+            return MailTaskProvider(edmService);
+          },
+          update: (_, globalConfig, mailTask) {
+            if (mailTask == null) {
+              final edmService = AliyunEdmService();
+              mailTask = MailTaskProvider(edmService);
+            }
+            
+            // 设置全局配置
+            if (globalConfig.isInitialized) {
+              mailTask.setGlobalConfigProvider(globalConfig);
+            }
+            
+            return mailTask;
           },
         ),
       ],
