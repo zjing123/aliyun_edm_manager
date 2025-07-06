@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/batch_send_task_model.dart';
-import '../models/receiver_list_model.dart';
+
 import '../models/template_model.dart';
 import '../models/sender_address_model.dart';
 import '../providers/batch_send_task_provider.dart';
@@ -26,7 +26,12 @@ class SenderTypeConstants {
 }
 
 class BatchSendTaskCreatePage extends StatefulWidget {
-  const BatchSendTaskCreatePage({super.key});
+  final BatchSendTaskModel? taskToEdit;
+  
+  const BatchSendTaskCreatePage({
+    super.key,
+    this.taskToEdit,
+  });
 
   @override
   State<BatchSendTaskCreatePage> createState() => _BatchSendTaskCreatePageState();
@@ -77,7 +82,46 @@ class _BatchSendTaskCreatePageState extends State<BatchSendTaskCreatePage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ReceiverListProvider>().loadReceivers();
+      // 如果是编辑模式，预填充数据
+      if (widget.taskToEdit != null) {
+        _initializeEditMode();
+      }
     });
+  }
+
+  // 初始化编辑模式数据
+  void _initializeEditMode() {
+    final task = widget.taskToEdit!;
+    
+    // 填充基本信息
+    _taskNameController.text = task.taskName;
+    _selectedTemplateId = task.templateId;
+    _selectedTemplateName = task.templateName;
+    _selectedSenderType = task.senderType;
+    _selectedSenderAddress = task.senderAddress;
+    _senderAddressController.text = task.senderAddress;
+    _selectedEmailTag = task.tag;
+    _enableTracking = task.enableTracking;
+    
+    // 填充收件人列表
+    _selectedReceiverIds = task.receiverLists.map((e) => e.receiverId).toList();
+    _selectedReceiverNames = Map.fromEntries(
+      task.receiverLists.map((e) => MapEntry(e.receiverId, e.receiverName))
+    );
+    
+    // 填充定时发送信息
+    if (task.scheduledStartTime != null) {
+      _enableScheduledSend = true;
+      _startSendTime = task.scheduledStartTime;
+    }
+    
+    // 填充发送间隔
+    if (task.sendIntervalMinutes != null) {
+      _sendIntervalValue = task.sendIntervalMinutes;
+      _sendIntervalController.text = task.sendIntervalMinutes.toString();
+    }
+    
+    setState(() {});
   }
 
   @override
@@ -193,7 +237,7 @@ class _BatchSendTaskCreatePageState extends State<BatchSendTaskCreatePage> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('新建批量发送任务'),
+        title: Text(widget.taskToEdit != null ? '编辑批量发送任务' : '新建批量发送任务'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0,
@@ -1789,7 +1833,7 @@ class _BatchSendTaskCreatePageState extends State<BatchSendTaskCreatePage> {
           const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton(
-              onPressed: _createTask,
+              onPressed: _submitTask,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue[600],
                 foregroundColor: Colors.white,
@@ -1799,9 +1843,9 @@ class _BatchSendTaskCreatePageState extends State<BatchSendTaskCreatePage> {
                 ),
                 elevation: 2,
               ),
-              child: const Text(
-                '创建任务',
-                style: TextStyle(fontWeight: FontWeight.w500),
+              child: Text(
+                widget.taskToEdit != null ? '更新任务' : '创建任务',
+                style: const TextStyle(fontWeight: FontWeight.w500),
               ),
             ),
           ),
@@ -1810,43 +1854,33 @@ class _BatchSendTaskCreatePageState extends State<BatchSendTaskCreatePage> {
     );
   }
 
-  Future<void> _createTask() async {
+  Future<void> _submitTask() async {
     // 重置验证错误状态
     setState(() {
       _showValidationError = false;
     });
 
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    // 使用新的验证逻辑
+    final provider = context.read<BatchSendTaskProvider>();
+    final validationError = provider.validateTaskData(
+      taskName: _taskNameController.text,
+      selectedReceiverIds: _selectedReceiverIds,
+      selectedTemplateId: _selectedTemplateId,
+      selectedSenderAddress: _selectedSenderAddress,
+      selectedSenderType: _selectedSenderType,
+      selectedEmailTag: _selectedEmailTag,
+      enableScheduledSend: _enableScheduledSend,
+      startSendTime: _startSendTime,
+      sendIntervalText: _sendIntervalController.text,
+    );
 
-    if (_selectedTemplateId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('请选择邮件模板'),
-          backgroundColor: Colors.red[400],
-        ),
-      );
-      return;
-    }
-
-    if (_selectedReceiverIds.isEmpty) {
+    if (validationError != null) {
       setState(() {
         _showValidationError = true;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('请选择收件人列表'),
-          backgroundColor: Colors.red[400],
-        ),
-      );
-      return;
-    }
-
-    if (_selectedSenderAddress == null || _selectedSenderAddress!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('请选择发信地址'),
+          content: Text(validationError),
           backgroundColor: Colors.red[400],
         ),
       );
@@ -1854,41 +1888,107 @@ class _BatchSendTaskCreatePageState extends State<BatchSendTaskCreatePage> {
     }
 
     try {
-      final task = BatchSendTaskModel(
-        taskId: DateTime.now().millisecondsSinceEpoch.toString(),
-        taskName: _taskNameController.text,
-        templateId: _selectedTemplateId!,
-        templateName: _selectedTemplateName!,
-        receiverLists: _selectedReceiverIds.map((id) => ReceiverListConfig(
-          receiverId: id,
-          receiverName: _selectedReceiverNames[id] ?? '',
-          intervalMinutes: 5,
-          emailCount: 0,
-        )).toList(),
-        senderAddress: _selectedSenderAddress!,
-        senderName: '',
-        tag: _selectedEmailTag,
-        enableTracking: _enableTracking,
-        createdAt: DateTime.now(),
-      );
+      // 计算发送间隔
+      int? sendIntervalMinutes;
+      if (_enableScheduledSend && _sendIntervalController.text.isNotEmpty) {
+        final intervalValue = int.tryParse(_sendIntervalController.text);
+        if (intervalValue != null && intervalValue > 0) {
+          // 根据单位转换为分钟
+          sendIntervalMinutes = _sendIntervalUnit == 'hour' ? intervalValue * 60 : intervalValue;
+        }
+      }
 
-      await context.read<BatchSendTaskProvider>().addTask(task);
+             // 获取发信地址名称
+       String senderName = '';
+       if (_selectedSenderAddress != null) {
+         final senderAddress = _senderAddresses.firstWhere(
+           (address) => address.mailAddress == _selectedSenderAddress,
+           orElse: () => SenderAddressModel(
+             mailAddress: _selectedSenderAddress!,
+             accountName: _selectedSenderAddress!,
+             sendType: 'batch',
+             dailyCount: '0',
+             monthCount: '0',
+             status: '0',
+             createTime: DateTime.now().toIso8601String(),
+             domainStatus: '0',
+             mailAddressId: '',
+             dailyReqCount: '0',
+             monthReqCount: '0',
+           ),
+         );
+         senderName = senderAddress.accountName;
+       }
+
+      // 根据模式调用不同的方法
+      final bool success;
+      final String successMessage;
+      final String errorMessage;
       
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('任务创建成功'),
-            backgroundColor: Colors.green[400],
-            behavior: SnackBarBehavior.floating,
-          ),
+      if (widget.taskToEdit != null) {
+        // 编辑模式
+        success = await provider.updateBatchSendTask(
+          taskId: widget.taskToEdit!.taskId,
+          taskName: _taskNameController.text.trim(),
+          selectedReceiverIds: _selectedReceiverIds,
+          templateId: _selectedTemplateId!,
+          templateName: _selectedTemplateName!,
+          senderAddress: _selectedSenderAddress!,
+          senderName: senderName,
+          senderType: _selectedSenderType!,
+          emailTag: _selectedEmailTag!,
+          enableTracking: _enableTracking,
+          enableScheduledSend: _enableScheduledSend,
+          startSendTime: _startSendTime,
+          sendInterval: sendIntervalMinutes,
         );
+        successMessage = '任务更新成功';
+        errorMessage = '更新任务失败';
+      } else {
+        // 创建模式
+        success = await provider.createBatchSendTask(
+          taskName: _taskNameController.text.trim(),
+          selectedReceiverIds: _selectedReceiverIds,
+          templateId: _selectedTemplateId!,
+          templateName: _selectedTemplateName!,
+          senderAddress: _selectedSenderAddress!,
+          senderName: senderName,
+          senderType: _selectedSenderType!,
+          emailTag: _selectedEmailTag!,
+          enableTracking: _enableTracking,
+          enableScheduledSend: _enableScheduledSend,
+          startSendTime: _startSendTime,
+          sendInterval: sendIntervalMinutes,
+        );
+        successMessage = '任务创建成功';
+        errorMessage = '创建任务失败';
+      }
+
+      if (mounted) {
+        if (success) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(successMessage),
+              backgroundColor: Colors.green[400],
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('$errorMessage: ${provider.error ?? '未知错误'}'),
+              backgroundColor: Colors.red[400],
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
+        final errorPrefix = widget.taskToEdit != null ? '更新任务失败' : '创建任务失败';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('创建任务失败: $e'),
+            content: Text('$errorPrefix: $e'),
             backgroundColor: Colors.red[400],
           ),
         );

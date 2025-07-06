@@ -439,8 +439,8 @@ class AliyunEdmService {
         pageSize: pageSize,
       );
       
-      // 过滤状态为正常的发信地址
-      return allAddresses.where((address) => address.status == '1').toList();
+      // 过滤状态为正常的发信地址（AccountStatus为0表示正常）
+      return allAddresses.where((address) => address.status == '0').toList();
     } catch (e) {
       print('获取可用发信地址失败: $e');
       return [];

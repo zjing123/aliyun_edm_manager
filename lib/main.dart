@@ -43,9 +43,9 @@ void main() async {
         
         // 批量发送任务Provider - 依赖全局配置
         ChangeNotifierProxyProvider<GlobalConfigProvider, BatchSendTaskProvider>(
-          create: (_) => BatchSendTaskProvider(),
+          create: (context) => BatchSendTaskProvider(context.read<GlobalConfigProvider>()),
           update: (_, globalConfig, batchSendTask) {
-            batchSendTask ??= BatchSendTaskProvider();
+            batchSendTask ??= BatchSendTaskProvider(globalConfig);
             
             // 设置全局配置
             if (globalConfig.isInitialized && globalConfig.configService != null) {

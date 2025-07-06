@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/batch_send_task_provider.dart';
+import '../providers/receiver_list_provider.dart';
 import '../models/batch_send_task_model.dart';
 import 'batch_send_task_create_page.dart';
 
@@ -19,7 +20,9 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 同时加载批量发送任务和收件人列表数据
       context.read<BatchSendTaskProvider>().fetchTasks();
+      context.read<ReceiverListProvider>().loadReceivers();
     });
   }
 
@@ -132,20 +135,29 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
   Widget _buildStatisticsCards() {
     return Consumer<BatchSendTaskProvider>(
       builder: (context, provider, child) {
-        final stats = provider.getTaskStatistics();
-        
-        return Row(
-          children: [
-            _buildStatCard('总任务', stats['total'] ?? 0, Icons.task, Colors.blue),
-            const SizedBox(width: 16),
-            _buildStatCard('运行中', stats['running'] ?? 0, Icons.play_circle, Colors.green),
-            const SizedBox(width: 16),
-            _buildStatCard('已完成', stats['completed'] ?? 0, Icons.check_circle, Colors.orange),
-            const SizedBox(width: 16),
-            _buildStatCard('已暂停', stats['paused'] ?? 0, Icons.pause_circle, Colors.yellow),
-            const SizedBox(width: 16),
-            _buildStatCard('失败', stats['failed'] ?? 0, Icons.error, Colors.red),
-          ],
+        return FutureBuilder<Map<String, int>>(
+          future: provider.getTaskStatistics(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            
+            final stats = snapshot.data ?? {};
+            
+            return Row(
+              children: [
+                _buildStatCard('总任务', stats['total'] ?? 0, Icons.task, Colors.blue),
+                const SizedBox(width: 16),
+                _buildStatCard('运行中', stats['processing'] ?? 0, Icons.play_circle, Colors.green),
+                const SizedBox(width: 16),
+                _buildStatCard('已完成', stats['completed'] ?? 0, Icons.check_circle, Colors.orange),
+                const SizedBox(width: 16),
+                _buildStatCard('已暂停', stats['paused'] ?? 0, Icons.pause_circle, Colors.yellow),
+                const SizedBox(width: 16),
+                _buildStatCard('失败', stats['failed'] ?? 0, Icons.error, Colors.red),
+              ],
+            );
+          },
         );
       },
     );
@@ -297,7 +309,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
                     ],
                   ),
                 ),
-                _buildStatusChip(task.status),
+                _buildStatusChip(task),
               ],
             ),
             const SizedBox(height: 16),
@@ -307,26 +319,26 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
                   child: _buildInfoItem('发件人', '${task.senderName} <${task.senderAddress}>'),
                 ),
                 Expanded(
-                  child: _buildInfoItem('收件人列表', '${task.receiverLists.length} 个列表'),
+                  child: Consumer<ReceiverListProvider>(
+                    builder: (context, receiverProvider, child) {
+                      return _buildInfoItem('收件人列表', _getReceiverListNames(task.receiverLists, receiverProvider));
+                    },
+                  ),
                 ),
                 Expanded(
-                  child: _buildInfoItem('总邮件数', '${task.totalEmails}'),
+                  child: Consumer<ReceiverListProvider>(
+                    builder: (context, receiverProvider, child) {
+                      return _buildInfoItem('收件人数量', '${_getTotalReceiverCount(task.receiverLists, receiverProvider)}');
+                    },
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            _buildProgressBar(task),
-            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    '创建时间: ${_formatDateTime(task.createdAt)}',
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 12,
-                    ),
-                  ),
+                  child: _buildTimeDisplay(task),
                 ),
                 _buildActionButtons(task, provider),
               ],
@@ -337,41 +349,56 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
     );
   }
 
-  Widget _buildStatusChip(String status) {
+  Widget _buildStatusChip(BatchSendTaskModel task) {
+    final now = DateTime.now();
+    
+    // 检查任务是否已过期
+    final isExpired = task.scheduledStartTime != null && 
+                      task.scheduledStartTime!.isBefore(now) && 
+                      (task.status == 'pending' || task.status == 'paused');
+    
     Color color;
     String text;
     IconData icon;
-
-    switch (status) {
-      case 'pending':
-        color = Colors.blue;
-        text = '等待中';
-        icon = Icons.schedule;
-        break;
-      case 'running':
-        color = Colors.green;
-        text = '运行中';
-        icon = Icons.play_circle;
-        break;
-      case 'completed':
-        color = Colors.orange;
-        text = '已完成';
-        icon = Icons.check_circle;
-        break;
-      case 'failed':
-        color = Colors.red;
-        text = '失败';
-        icon = Icons.error;
-        break;
-      case 'paused':
-        color = Colors.yellow;
-        text = '已暂停';
-        icon = Icons.pause_circle;
-        break;
-      default:
-        color = Colors.grey;
-        text = '未知';
-        icon = Icons.help;
+    
+    // 如果任务过期，优先显示过期状态
+    if (isExpired) {
+      color = Colors.red;
+      text = '已过期';
+      icon = Icons.schedule_outlined;
+    } else {
+      // 根据任务状态显示
+      switch (task.status) {
+        case 'pending':
+          color = Colors.blue;
+          text = '等待中';
+          icon = Icons.schedule;
+          break;
+        case 'running':
+          color = Colors.green;
+          text = '运行中';
+          icon = Icons.play_circle;
+          break;
+        case 'completed':
+          color = Colors.orange;
+          text = '已完成';
+          icon = Icons.check_circle;
+          break;
+        case 'failed':
+          color = Colors.red;
+          text = '失败';
+          icon = Icons.error;
+          break;
+        case 'paused':
+          color = Colors.yellow;
+          text = '已暂停';
+          icon = Icons.pause_circle;
+          break;
+        default:
+          color = Colors.grey;
+          text = '未知';
+          icon = Icons.help;
+      }
     }
 
     return Container(
@@ -422,52 +449,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
     );
   }
 
-  Widget _buildProgressBar(BatchSendTaskModel task) {
-    final progress = task.totalEmails > 0 ? task.sentEmails / task.totalEmails : 0.0;
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '发送进度',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-              ),
-            ),
-            Text(
-              '${task.sentEmails}/${task.totalEmails} (${(progress * 100).toStringAsFixed(1)}%)',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        LinearProgressIndicator(
-          value: progress,
-          backgroundColor: Colors.grey[200],
-          valueColor: AlwaysStoppedAnimation<Color>(
-            task.status == 'failed' ? Colors.red : Colors.blue,
-          ),
-        ),
-        if (task.failedEmails > 0) ...[
-          const SizedBox(height: 4),
-          Text(
-            '失败: ${task.failedEmails}',
-            style: TextStyle(
-              color: Colors.red[600],
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
+
 
   Widget _buildActionButtons(BatchSendTaskModel task, BatchSendTaskProvider provider) {
     return Row(
@@ -541,7 +523,77 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
   }
 
   String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}:${dateTime.second.toString().padLeft(2, '0')}';
+  }
+
+  String _getTaskStartTimeText(BatchSendTaskModel task) {
+    // 如果有定时发送时间，直接显示时间
+    if (task.scheduledStartTime != null) {
+      return _formatDateTime(task.scheduledStartTime!);
+    }
+    
+    // 如果任务已经开始，显示实际开始时间
+    if (task.startedAt != null) {
+      return _formatDateTime(task.startedAt!);
+    }
+    
+    // 如果都没有，根据任务状态显示相应文本
+    switch (task.status) {
+      case 'pending':
+        return '等待开始';
+      case 'running':
+        return '运行中';
+      case 'completed':
+        return '已完成';
+      case 'failed':
+        return '任务失败';
+      case 'paused':
+        return '已暂停';
+      default:
+        return '未知状态';
+    }
+  }
+
+  Widget _buildTimeDisplay(BatchSendTaskModel task) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWideScreen = screenWidth >= 800;
+    
+    final createdTimeText = Text(
+      '创建时间: ${_formatDateTime(task.createdAt)}',
+      style: TextStyle(
+        color: Colors.grey[500],
+        fontSize: 12,
+      ),
+    );
+    
+    final startTimeText = Text(
+      '任务开始时间: ${_getTaskStartTimeText(task)}',
+      style: TextStyle(
+        color: Colors.grey[500],
+        fontSize: 12,
+      ),
+    );
+    
+    if (isWideScreen) {
+      // 宽屏显示在一行
+      return Row(
+        children: [
+          createdTimeText,
+          const SizedBox(width: 24), // 增加间距
+          startTimeText,
+        ],
+      );
+    } else {
+      // 窄屏分行显示
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          createdTimeText,
+          const SizedBox(height: 4),
+          startTimeText,
+        ],
+      );
+    }
   }
 
   void _navigateToCreateTask() {
@@ -618,8 +670,263 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
   }
 
   void _viewTaskDetail(BatchSendTaskModel task) {
-    // TODO: 实现任务详情页面
-    _showSnackBar('任务详情功能开发中...');
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Container(
+            width: 500,
+            constraints: BoxConstraints(
+              maxWidth: 500,
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 标题栏
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.blue[600], size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '任务详情',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: Icon(Icons.close, size: 20, color: Colors.grey[600]),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                      ),
+                    ],
+                  ),
+                ),
+                // 内容区域
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildDetailItem('任务名称', task.taskName),
+                        _buildDetailItem('模板名称', task.templateName),
+                        _buildDetailItem('发送方地址', task.senderAddress),
+                        _buildDetailItem('发送方名称', task.senderName),
+                        Consumer<ReceiverListProvider>(
+                          builder: (context, receiverProvider, child) {
+                            return _buildDetailItem('收件人列表', _getReceiverListNames(task.receiverLists, receiverProvider));
+                          },
+                        ),
+                        Consumer<ReceiverListProvider>(
+                          builder: (context, receiverProvider, child) {
+                            return _buildDetailItem('收件人数量', '${_getTotalReceiverCount(task.receiverLists, receiverProvider)}');
+                          },
+                        ),
+                        _buildDetailItem('发送类型', task.senderType == '0' ? '随机发送' : '固定发送'),
+                        if (task.tag != null && task.tag!.isNotEmpty)
+                          _buildDetailItem('标签', task.tag!),
+                        _buildDetailItem('启用追踪', task.enableTracking ? '是' : '否'),
+                        _buildDetailItem('任务状态', _getStatusText(task.status)),
+                        _buildDetailItem('创建时间', _formatDateTime(task.createdAt)),
+                        if (task.scheduledStartTime != null)
+                          _buildDetailItem('定时发送时间', _formatDateTime(task.scheduledStartTime!)),
+                        if (task.startedAt != null)
+                          _buildDetailItem('开始时间', _formatDateTime(task.startedAt!)),
+                        if (task.completedAt != null)
+                          _buildDetailItem('完成时间', _formatDateTime(task.completedAt!)),
+                        if (task.sendIntervalMinutes != null)
+                          _buildDetailItem('发送间隔', '${task.sendIntervalMinutes}分钟'),
+                        if (task.errorMessage != null && task.errorMessage!.isNotEmpty)
+                          _buildDetailItem('错误信息', task.errorMessage!, isError: true),
+                      ],
+                    ),
+                  ),
+                ),
+                // 按钮区域
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(12),
+                      bottomRight: Radius.circular(12),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _editTask(task);
+                        },
+                        icon: const Icon(Icons.edit, size: 16),
+                        label: const Text('编辑'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.blue[600],
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _deleteTask(task.taskId, Provider.of<BatchSendTaskProvider>(context, listen: false));
+                        },
+                        icon: const Icon(Icons.delete, size: 16),
+                        label: const Text('删除'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red[600],
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailItem(String label, String value, {bool isError = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 90,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[700],
+                fontSize: 13,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 13,
+                color: isError ? Colors.red[600] : Colors.grey[800],
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getStatusText(String status) {
+    switch (status) {
+      case 'pending':
+        return '等待中';
+      case 'running':
+        return '运行中';
+      case 'completed':
+        return '已完成';
+      case 'failed':
+        return '失败';
+      case 'paused':
+        return '已暂停';
+      default:
+        return '未知';
+    }
+  }
+
+  void _editTask(BatchSendTaskModel task) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => BatchSendTaskCreatePage(taskToEdit: task),
+      ),
+    );
+  }
+
+  // 获取收件人列表名称
+  String _getReceiverListNames(List<ReceiverListConfig> receiverLists, ReceiverListProvider receiverListProvider) {
+    if (receiverLists.isEmpty) {
+      return '无收件人列表';
+    }
+    
+    // 调试信息
+    print('收件人列表配置数量: ${receiverLists.length}');
+    print('可用收件人列表数量: ${receiverListProvider.receivers.length}');
+    
+    if (receiverLists.length == 1) {
+      // 单个列表，通过ID查找真实名称
+      final list = receiverLists.first;
+      print('查找收件人ID: ${list.receiverId}');
+      
+      final realReceiver = receiverListProvider.findReceiverById(list.receiverId);
+      if (realReceiver != null) {
+        print('找到真实收件人列表: ${realReceiver.receiversName}');
+        return realReceiver.receiversName;
+      }
+      
+      print('未找到真实收件人列表，使用备用名称');
+      // 如果找不到，使用备用名称
+      return list.listName?.isNotEmpty == true ? list.listName! : list.receiverName;
+    } else {
+      // 多个列表，显示第一个列表名称 + 数量
+      final firstList = receiverLists.first;
+      print('查找第一个收件人ID: ${firstList.receiverId}');
+      
+      final realReceiver = receiverListProvider.findReceiverById(firstList.receiverId);
+      String firstName;
+      if (realReceiver != null) {
+        firstName = realReceiver.receiversName;
+        print('找到第一个真实收件人列表: $firstName');
+      } else {
+        firstName = firstList.listName?.isNotEmpty == true 
+            ? firstList.listName! 
+            : firstList.receiverName;
+        print('使用第一个备用名称: $firstName');
+      }
+      return '$firstName 等${receiverLists.length}个列表';
+    }
+  }
+
+  // 获取总收件人数量
+  int _getTotalReceiverCount(List<ReceiverListConfig> receiverLists, ReceiverListProvider receiverListProvider) {
+    if (receiverLists.isEmpty) {
+      return 0;
+    }
+    
+    return receiverLists.fold<int>(0, (total, list) {
+      // 优先使用真实的收件人列表数据
+      final realReceiver = receiverListProvider.findReceiverById(list.receiverId);
+      if (realReceiver != null) {
+        return total + realReceiver.count;
+      }
+      // 如果找不到真实数据，使用任务配置中的数据
+      return total + (list.receiverCount ?? list.emailCount);
+    });
   }
 
   void _showSnackBar(String message, {bool isError = false}) {

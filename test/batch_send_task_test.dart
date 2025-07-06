@@ -19,6 +19,7 @@ void main() {
         ],
         senderAddress: 'test@example.com',
         senderName: '测试发件人',
+        senderType: '1',
         createdAt: DateTime.now(),
       );
 
@@ -45,6 +46,7 @@ void main() {
         receiverLists: [],
         senderAddress: 'test2@example.com',
         senderName: '测试发件人2',
+        senderType: '1',
         tag: 'test-tag',
         enableTracking: true,
         status: 'running',
@@ -80,6 +82,7 @@ void main() {
         ],
         'SenderAddress': 'test3@example.com',
         'SenderName': '测试发件人3',
+        'SenderType': '1',
         'Tag': 'test-tag-3',
         'EnableTracking': true,
         'Status': 'completed',
@@ -128,6 +131,7 @@ void main() {
         ],
         senderAddress: 'test4@example.com',
         senderName: '测试发件人4',
+        senderType: '1',
         tag: 'test-tag-4',
         enableTracking: true,
         status: 'pending',
@@ -164,6 +168,7 @@ void main() {
         receiverLists: [],
         senderAddress: 'test5@example.com',
         senderName: '测试发件人5',
+        senderType: '1',
         createdAt: DateTime.now(),
       );
 
