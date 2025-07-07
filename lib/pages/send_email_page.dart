@@ -326,6 +326,8 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
         Expanded(
           child: _buildTableContent(),
         ),
+        // 选中记录统计
+        _buildSelectionStats(),
         // 分页控件
         _buildPagination(),
       ],
@@ -569,6 +571,74 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
           fontWeight: FontWeight.w500,
         ),
       ),
+    );
+  }
+
+  Widget _buildSelectionStats() {
+    return Selector<MailTaskProvider, Map<String, dynamic>>(
+      selector: (context, provider) => {
+        'selectedCount': provider.selectedCount,
+        'selectedRequestCount': provider.selectedRequestCount,
+        'selectedSuccessCount': provider.selectedSuccessCount,
+      },
+      builder: (context, statsData, child) {
+        final selectedCount = statsData['selectedCount'] as int;
+        final selectedRequestCount = statsData['selectedRequestCount'] as int;
+        final selectedSuccessCount = statsData['selectedSuccessCount'] as int;
+        
+        if (selectedCount == 0) {
+          return const SizedBox.shrink();
+        }
+        
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.blue[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.blue[200]!),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: Colors.blue[600],
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '已选中 $selectedCount 条记录',
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: Colors.blue[800],
+                ),
+              ),
+              const SizedBox(width: 24),
+              Text(
+                '请求数量：$selectedRequestCount',
+                style: TextStyle(
+                  color: Colors.blue[700],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Text(
+                '成功数量：$selectedSuccessCount',
+                style: TextStyle(
+                  color: Colors.blue[700],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Text(
+                '成功率：${selectedRequestCount > 0 ? ((selectedSuccessCount / selectedRequestCount) * 100).toStringAsFixed(1) : '0.0'}%',
+                style: TextStyle(
+                  color: Colors.blue[700],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

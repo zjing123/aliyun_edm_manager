@@ -54,6 +54,20 @@ class MailTaskProvider with ChangeNotifier {
     return total;
   }
   
+  // 计算选中项目的成功数量总和
+  int get selectedSuccessCount {
+    int total = 0;
+    for (String taskId in _selectedTaskIds) {
+      final task = _tasks.firstWhere((t) => t.taskId == taskId, orElse: () => MailTaskModel(
+        taskId: '', taskName: '', addressType: '', tagName: '', receiversName: '', 
+        templateName: '', requestCount: '0', successCount: '0', createTime: '', taskStatus: ''));
+      if (task.taskId.isNotEmpty) {
+        total += int.tryParse(task.successCount) ?? 0;
+      }
+    }
+    return total;
+  }
+  
   // 生成缓存键
   String _generateCacheKey({
     String? keyWord,
