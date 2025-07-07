@@ -1,6 +1,4 @@
-import 'package:intl/intl.dart';
-import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:aliyun_edm_manager/utils/time_formatter.dart';
 
 class MailTaskModel {
   final String taskId;
@@ -40,22 +38,28 @@ class MailTaskModel {
     }
   }
 
-  /// 获取格式化后的创建时间，默认中国时区（Asia/Shanghai）
-  String formattedCreateTime({String timeZone = 'Asia/Shanghai'}) {
-    if (createTime.isEmpty) return '';
-    try {
-      // 初始化时区数据（只需全局一次，实际可在main中做）
-      tzdata.initializeTimeZones();
-      // 解析UTC时间
-      DateTime utcTime = DateTime.parse(createTime).toUtc();
-      // 获取目标时区
-      final location = tz.getLocation(timeZone);
-      final localTime = tz.TZDateTime.from(utcTime, location);
-      // 格式化
-      return DateFormat('yyyy-MM-dd HH:mm:ss').format(localTime);
-    } catch (e) {
-      return createTime;
-    }
+  /// 获取格式化后的创建时间
+  String formattedCreateTime({String timeZone = TimeFormatter.defaultTimeZone}) {
+    return TimeFormatter.formatDateTime(
+      timeString: createTime,
+      timeZone: timeZone,
+    );
+  }
+
+  /// 获取格式化后的创建日期（仅日期部分）
+  String formattedCreateDate({String timeZone = TimeFormatter.defaultTimeZone}) {
+    return TimeFormatter.formatDate(
+      timeString: createTime,
+      timeZone: timeZone,
+    );
+  }
+
+  /// 获取相对时间（如：刚刚、5分钟前等）
+  String relativeCreateTime({String timeZone = TimeFormatter.defaultTimeZone}) {
+    return TimeFormatter.formatRelativeTime(
+      timeString: createTime,
+      timeZone: timeZone,
+    );
   }
 
   factory MailTaskModel.fromJson(Map<String, dynamic> json) {

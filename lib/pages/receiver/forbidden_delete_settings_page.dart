@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:aliyun_edm_manager/providers/receiver/receiver_list_provider.dart';
 import 'package:aliyun_edm_manager/providers/config/page_config_provider.dart';
 import 'package:aliyun_edm_manager/utils/dialog_util.dart';
+import 'package:aliyun_edm_manager/utils/time_formatter.dart';
 
 class ForbiddenDeleteSettingsPage extends StatefulWidget {
   const ForbiddenDeleteSettingsPage({super.key});
@@ -410,7 +411,7 @@ class _ForbiddenDeleteSettingsPageState extends State<ForbiddenDeleteSettingsPag
                                             _buildDataCell(item.receiversName),
                                             _buildDataCell(item.receiversAlias),
                                             _buildDataCell(item.count.toString()),
-                                            _buildDataCell(item.createTime),
+                                            _buildDataCell(item.formattedCreateTime()),
                                           ],
                                         );
                                       }).toList(),

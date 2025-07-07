@@ -742,7 +742,7 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
                 SizedBox(
                   width: 120,
                   child: Text(
-                    receiver.createTime,
+                    receiver.formattedCreateTime(),
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                 ),

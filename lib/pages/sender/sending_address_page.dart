@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:aliyun_edm_manager/utils/time_formatter.dart';
 
 class SendingAddressPage extends StatefulWidget {
   const SendingAddressPage({super.key});
@@ -147,7 +148,7 @@ class _SendingAddressPageState extends State<SendingAddressPage> {
                                 DataCell(Text(address['email'])),
                                 DataCell(Text(address['description'])),
                                 DataCell(Text(address['count'].toString())),
-                                DataCell(Text(address['createTime'])),
+                                DataCell(Text(TimeFormatter.formatDateTime(timeString: address['createTime']))),
                                 DataCell(
                                   Row(
                                     children: [

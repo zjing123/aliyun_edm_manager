@@ -1,3 +1,5 @@
+import 'package:aliyun_edm_manager/utils/time_formatter.dart';
+
 class EmailTagModel {
   final String tagId;
   final String tagName;
@@ -12,6 +14,30 @@ class EmailTagModel {
     required this.createTime,
     this.templateCount,
   });
+
+  /// 获取格式化后的创建时间
+  String formattedCreateTime({String timeZone = TimeFormatter.defaultTimeZone}) {
+    return TimeFormatter.formatDateTime(
+      timeString: createTime,
+      timeZone: timeZone,
+    );
+  }
+
+  /// 获取格式化后的创建日期（仅日期部分）
+  String formattedCreateDate({String timeZone = TimeFormatter.defaultTimeZone}) {
+    return TimeFormatter.formatDate(
+      timeString: createTime,
+      timeZone: timeZone,
+    );
+  }
+
+  /// 获取相对时间（如：刚刚、5分钟前等）
+  String relativeCreateTime({String timeZone = TimeFormatter.defaultTimeZone}) {
+    return TimeFormatter.formatRelativeTime(
+      timeString: createTime,
+      timeZone: timeZone,
+    );
+  }
 
   factory EmailTagModel.fromJson(Map<String, dynamic> json) {
     return EmailTagModel(

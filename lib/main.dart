@@ -7,9 +7,13 @@ import 'providers/receiver/receiver_list_provider.dart';
 import 'providers/task/scheduled_email_task_provider.dart';
 import 'providers/task/mail_task_provider.dart';
 import 'services/aliyun/aliyun_service_manager.dart';
+import 'utils/time_formatter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // 初始化时间格式化工具
+  TimeFormatter.initialize();
   
   runApp(
     MultiProvider(
