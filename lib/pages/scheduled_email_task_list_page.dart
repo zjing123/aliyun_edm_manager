@@ -129,6 +129,14 @@ class _ScheduledEmailTaskListPageState extends State<ScheduledEmailTaskListPage>
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _navigateToCreateTask(),
+        backgroundColor: Colors.white.withOpacity(0.9),
+        foregroundColor: Colors.blue,
+        elevation: 4,
+        child: const Icon(Icons.add),
+        tooltip: '新建定时发送邮件任务',
+      ),
     );
   }
 
