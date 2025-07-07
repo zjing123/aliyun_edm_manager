@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../models/mail_task_model.dart';
+import '../models/task/mail_task_model.dart';
 import '../services/aliyun_edm_service.dart';
 import 'global_config_provider.dart';
 

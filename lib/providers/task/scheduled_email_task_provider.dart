@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../models/scheduled_email_task_model.dart';
+import '../models/task/scheduled_email_task_model.dart';
 import '../services/aliyun_edm_service.dart';
 import '../services/database_service.dart';
 import 'global_config_provider.dart';

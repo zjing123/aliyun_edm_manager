@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../models/receiver_list_model.dart';
+import '../models/receiver/receiver_list_model.dart';
 import '../services/aliyun_edm_service.dart';
 import 'global_config_provider.dart';
 import 'page_config_provider.dart';
