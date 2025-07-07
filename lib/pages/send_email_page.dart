@@ -415,7 +415,7 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                   width: 80,
                   child: Text(
                     '操作',
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.right,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.grey[800],
@@ -706,7 +706,7 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                           style: TextStyle(color: Colors.grey[600]),
                         ),
                         SizedBox(
-                          width: 50,
+                          width: 30,
                           child: TextField(
                             controller: TextEditingController(text: '${currentPage + 1}'),
                             textAlign: TextAlign.center,
@@ -720,6 +720,16 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                               final page = int.tryParse(value);
                               if (page != null && page >= 1 && page <= totalPages) {
                                 context.read<MailTaskProvider>().goToPage(page);
+                              } else {
+                                // 如果输入的页码无效，显示提示并重置输入框
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('请输入有效的页码（1-$totalPages）'),
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                                // 重置输入框为当前页码
+                                setState(() {});
                               }
                             },
                           ),
