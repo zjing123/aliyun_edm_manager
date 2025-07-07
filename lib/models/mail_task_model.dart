@@ -1,3 +1,7 @@
+import 'package:intl/intl.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tzdata;
+
 class MailTaskModel {
   final String taskId;
   final String taskName;
@@ -22,6 +26,37 @@ class MailTaskModel {
     required this.createTime,
     required this.taskStatus,
   });
+
+  String get statusText {
+    switch (taskStatus) {
+      case '1':
+        return '成功';
+      case '2':
+        return '发送中';
+      case '3':
+        return '失败';
+      default:
+        return '未知';
+    }
+  }
+
+  /// 获取格式化后的创建时间，默认中国时区（Asia/Shanghai）
+  String formattedCreateTime({String timeZone = 'Asia/Shanghai'}) {
+    if (createTime.isEmpty) return '';
+    try {
+      // 初始化时区数据（只需全局一次，实际可在main中做）
+      tzdata.initializeTimeZones();
+      // 解析UTC时间
+      DateTime utcTime = DateTime.parse(createTime).toUtc();
+      // 获取目标时区
+      final location = tz.getLocation(timeZone);
+      final localTime = tz.TZDateTime.from(utcTime, location);
+      // 格式化
+      return DateFormat('yyyy-MM-dd HH:mm:ss').format(localTime);
+    } catch (e) {
+      return createTime;
+    }
+  }
 
   factory MailTaskModel.fromJson(Map<String, dynamic> json) {
     return MailTaskModel(

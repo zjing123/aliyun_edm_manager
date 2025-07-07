@@ -10,7 +10,7 @@ class MailTaskProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   
-  // 分页相关
+  // 分页相关 - 统一使用从1开始的页码
   int _currentPage = 1;
   int _pageSize = 20;
   int _totalCount = 0;
@@ -29,8 +29,8 @@ class MailTaskProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   
-  // 分页getter
-  int get currentPage => _currentPage;
+  // 分页getter - 返回从0开始的索引用于UI显示
+  int get currentPage => _currentPage - 1; // 转换为从0开始的索引用于UI
   int get pageSize => _pageSize;
   int get totalCount => _totalCount;
   int get totalPages => _totalPages;
@@ -155,7 +155,7 @@ class MailTaskProvider with ChangeNotifier {
       );
       if (cachedTasks != null) {
         _tasks = cachedTasks;
-        _currentPage = pageNo;
+        _currentPage = pageNo; // 使用从1开始的页码
         _pageSize = pageSize;
         // 保持原有的总数和总页数
         notifyListeners();
@@ -176,7 +176,7 @@ class MailTaskProvider with ChangeNotifier {
       );
       
       _tasks = response.tasks;
-      _currentPage = response.pageNumber - 1; // 转换为从0开始的索引
+      _currentPage = response.pageNumber; // 直接使用API返回的页码（从1开始）
       _pageSize = response.pageSize;
       _totalCount = response.totalCount;
       _totalPages = (_totalCount / _pageSize).ceil();
@@ -232,28 +232,28 @@ class MailTaskProvider with ChangeNotifier {
   
   // 上一页
   Future<void> previousPage() async {
-    if (_currentPage > 0) {
-      await goToPage(_currentPage);
+    if (_currentPage > 1) {
+      await goToPage(_currentPage - 1);
     }
   }
   
   // 下一页
   Future<void> nextPage() async {
-    if (_currentPage < _totalPages - 1) {
-      await goToPage(_currentPage + 2);
+    if (_currentPage < _totalPages) {
+      await goToPage(_currentPage + 1);
     }
   }
   
   // 第一页
   Future<void> firstPage() async {
-    if (_currentPage != 0) {
+    if (_currentPage != 1) {
       await goToPage(1);
     }
   }
   
   // 最后一页
   Future<void> lastPage() async {
-    if (_currentPage != _totalPages - 1 && _totalPages > 0) {
+    if (_currentPage != _totalPages && _totalPages > 0) {
       await goToPage(_totalPages);
     }
   }

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import '../pages/receiver_list_page.dart';
-import '../pages/overview_page.dart';
-import '../pages/sending_address_page.dart';
-import '../pages/template_management_page.dart';
-import '../pages/send_email_page.dart';
-import '../pages/scheduled_email_task_list_page.dart';
-import '../pages/invalid_addresses_page.dart';
+import '../pages/receiver/receiver_list_page.dart';
+import '../pages/overview/overview_page.dart';
+import '../pages/sender/sending_address_page.dart';
+import '../pages/template/template_management_page.dart';
+import '../pages/task/send_email/send_email_page.dart';
+import '../pages/task/scheduled_task/scheduled_email_task_list_page.dart';
+import '../pages/receiver/invalid_addresses_page.dart';
 import '../pages/sending_data_page.dart';
 import '../pages/sending_details_page.dart';
-import '../pages/config_page.dart';
+import '../pages/config/config_page.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
