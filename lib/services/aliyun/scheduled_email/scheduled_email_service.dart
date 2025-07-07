@@ -1,5 +1,5 @@
 import 'base_aliyun_service.dart';
-import '../../models/scheduled_email_task_model.dart';
+import '../../models/task/scheduled_email_task_model.dart';
 
 /// 定时发送邮件服务
 /// 提供定时发送邮件任务的创建、查询和管理功能

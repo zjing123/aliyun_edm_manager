@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../utils/aliyun_signer.dart';
-import '../../providers/global_config_provider.dart';
+import '../../providers/config/global_config_provider.dart';
 
 /// 阿里云服务基础类
 /// 提供通用的配置管理和API请求功能

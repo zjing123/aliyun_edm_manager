@@ -1,5 +1,5 @@
 import 'base_aliyun_service.dart';
-import '../../models/mail_task_model.dart';
+import '../../models/task/mail_task_model.dart';
 
 /// 邮件任务管理服务
 /// 提供邮件任务的查询和管理功能

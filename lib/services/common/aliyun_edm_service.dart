@@ -1,13 +1,13 @@
 import 'dart:math';
 import 'package:dio/dio.dart';
 import '../utils/aliyun_signer.dart';
-import '../models/receiver_detail.dart';
-import '../models/scheduled_email_task_model.dart';
-import '../models/template_model.dart';
-import '../models/sender_address_model.dart';
-import '../models/email_tag_model.dart';
-import '../models/mail_task_model.dart';
-import '../providers/global_config_provider.dart';
+import '../models/receiver/receiver_detail.dart';
+import '../models/task/scheduled_email_task_model.dart';
+import '../models/template/template_model.dart';
+import '../models/sender/sender_address_model.dart';
+import '../models/tag/email_tag_model.dart';
+import '../models/task/mail_task_model.dart';
+import '../providers/config/global_config_provider.dart';
 import '../constants/template_constants.dart';
 
 class AliyunEdmService {

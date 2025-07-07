@@ -1,5 +1,5 @@
 import 'base_aliyun_service.dart';
-import '../../models/template_model.dart';
+import '../../models/template/template_model.dart';
 import '../../constants/template_constants.dart';
 
 /// 模板管理服务

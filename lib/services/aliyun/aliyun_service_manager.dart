@@ -1,4 +1,4 @@
-import '../../providers/global_config_provider.dart';
+import '../../providers/config/global_config_provider.dart';
 import 'base_aliyun_service.dart';
 import 'receiver_service.dart';
 import 'template_service.dart';
