@@ -321,7 +321,7 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
       children: [
         // 表格头部
         _buildTableHeader(),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
         // 表格内容
         Expanded(
           child: _buildTableContent(),
@@ -399,8 +399,8 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                     ),
                   ),
                 ),
-                Expanded(
-                  flex: 1,
+                SizedBox(
+                  width: 80,
                   child: Text(
                     '状态',
                     style: TextStyle(
@@ -409,8 +409,8 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                     ),
                   ),
                 ),
-                Expanded(
-                  flex: 1,
+                SizedBox(
+                  width: 80,
                   child: Text(
                     '操作',
                     style: TextStyle(
@@ -507,12 +507,12 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                 ),
-                Expanded(
-                  flex: 1,
+                SizedBox(
+                  width: 80,
                   child: _buildStatusChip(task.taskStatus),
                 ),
-                Expanded(
-                  flex: 1,
+                SizedBox(
+                  width: 80,
                   child: Row(
                     children: [
                       IconButton(
@@ -532,38 +532,38 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
   }
 
   Widget _buildStatusChip(String status) {
-    Color color;
-    String text;
+    Color chipColor;
+    String statusText;
     
     switch (status) {
-      case 'Success':
-        color = Colors.green;
-        text = '成功';
+      case '1':
+        chipColor = Colors.green;
+        statusText = '成功';
         break;
-      case 'Failed':
-        color = Colors.red;
-        text = '失败';
+      case '2':
+        chipColor = Colors.orange;
+        statusText = '发送中';
         break;
-      case 'Pending':
-        color = Colors.orange;
-        text = '待处理';
+      case '3':
+        chipColor = Colors.red;
+        statusText = '失败';
         break;
       default:
-        color = Colors.grey;
-        text = status;
+        chipColor = Colors.grey;
+        statusText = '未知';
     }
     
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: chipColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: chipColor.withOpacity(0.3)),
       ),
       child: Text(
-        text,
+        statusText,
         style: TextStyle(
-          color: color,
+          color: chipColor,
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
