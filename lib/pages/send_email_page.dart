@@ -415,6 +415,7 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                   width: 80,
                   child: Text(
                     '操作',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.grey[800],
