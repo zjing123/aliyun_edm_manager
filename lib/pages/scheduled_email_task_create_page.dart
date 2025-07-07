@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/scheduled_email_task_model.dart';
-
 import '../models/template_model.dart';
 import '../models/sender_address_model.dart';
+import '../models/email_tag_model.dart';
 import '../providers/scheduled_email_task_provider.dart';
 import '../providers/receiver_list_provider.dart';
 import '../providers/global_config_provider.dart';
@@ -77,6 +77,14 @@ class _ScheduledEmailTaskCreatePageState extends State<ScheduledEmailTaskCreateP
   bool _senderAddressesLoaded = false;
   bool _showSenderAddressDropdown = false;
 
+  // 邮件标签数据
+  List<EmailTagModel> _emailTags = [];
+  List<EmailTagModel> _filteredEmailTags = [];
+  bool _isLoadingEmailTags = false;
+  String? _emailTagError;
+  bool _emailTagsLoaded = false;
+  bool _showEmailTagDropdown = false;
+
   @override
   void initState() {
     super.initState();
@@ -102,6 +110,9 @@ class _ScheduledEmailTaskCreatePageState extends State<ScheduledEmailTaskCreateP
     _senderAddressController.text = task.senderAddress;
     _selectedEmailTag = task.tag;
     _enableTracking = task.enableTracking;
+    
+    // 在编辑模式下预加载邮件标签数据
+    _loadEmailTags();
     
     // 填充收件人列表
     _selectedReceiverIds = task.receiverLists.map((e) => e.receiverId).toList();
@@ -215,6 +226,69 @@ class _ScheduledEmailTaskCreatePageState extends State<ScheduledEmailTaskCreateP
       });
       print('加载发信地址失败: $e');
     }
+  }
+
+  // 懒加载邮件标签数据
+  Future<void> _loadEmailTags() async {
+    if (_emailTagsLoaded) return;
+
+    setState(() {
+      _isLoadingEmailTags = true;
+      _emailTagError = null;
+    });
+
+    try {
+      final globalConfig = context.read<GlobalConfigProvider>();
+      final edmService = AliyunEdmService();
+      edmService.setGlobalConfigProvider(globalConfig);
+
+      if (!edmService.isConfigured()) {
+        throw Exception('阿里云AccessKey未配置，请先配置');
+      }
+
+      final emailTags = await edmService.getAllEmailTags(pageSize: 100);
+      setState(() {
+        _emailTags = emailTags;
+        _filteredEmailTags = emailTags;
+        _isLoadingEmailTags = false;
+        _emailTagsLoaded = true;
+      });
+    } catch (e) {
+      setState(() {
+        _emailTagError = e.toString();
+        _isLoadingEmailTags = false;
+      });
+      print('加载邮件标签失败: $e');
+    }
+  }
+
+  // 过滤邮件标签
+  void _filterEmailTags(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredEmailTags = _emailTags;
+      } else {
+        _filteredEmailTags = _emailTags
+            .where((tag) =>
+                tag.tagName.toLowerCase().contains(query.toLowerCase()) ||
+                (tag.description?.toLowerCase().contains(query.toLowerCase()) ?? false))
+            .toList();
+      }
+    });
+  }
+
+  // 获取选中的邮件标签名称
+  String? _getSelectedEmailTagName() {
+    if (_selectedEmailTag == null) return null;
+    final selectedTag = _emailTags.firstWhere(
+      (tag) => tag.tagId == _selectedEmailTag,
+      orElse: () => EmailTagModel(
+        tagId: _selectedEmailTag!,
+        tagName: _selectedEmailTag!,
+        createTime: '',
+      ),
+    );
+    return selectedTag.tagName;
   }
 
   // 过滤发信地址
@@ -1700,49 +1774,179 @@ class _ScheduledEmailTaskCreatePageState extends State<ScheduledEmailTaskCreateP
           ),
         ),
         const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          child: DropdownButtonFormField<String>(
-            decoration: InputDecoration(
-              hintText: '请选择邮件标签',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.blue[400]!),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              _showEmailTagDropdown = !_showEmailTagDropdown;
+            });
+            if (!_emailTagsLoaded && _showEmailTagDropdown) {
+              _loadEmailTags();
+            }
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+              color: Colors.white,
             ),
-            value: _selectedEmailTag,
-            items: const [
-              DropdownMenuItem(value: 'promotion', child: Text('推广邮件')),
-              DropdownMenuItem(value: 'notification', child: Text('通知邮件')),
-            ],
-            onChanged: (value) {
-              setState(() {
-                _selectedEmailTag = value;
-              });
-            },
-            dropdownColor: Colors.white,
-            isExpanded: true,
-            icon: Icon(Icons.arrow_drop_down, color: Colors.grey[600]),
-            iconEnabledColor: Colors.grey[600],
-            itemHeight: 48,
-            menuMaxHeight: 200,
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: 16,
+            child: Row(
+              children: [
+                Icon(Icons.label, color: Colors.grey[600], size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _getSelectedEmailTagName() ?? '请选择邮件标签',
+                    style: TextStyle(
+                      color: _selectedEmailTag != null ? Colors.black : Colors.grey[600],
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                Icon(
+                  _showEmailTagDropdown ? Icons.expand_less : Icons.expand_more,
+                  color: Colors.grey[600],
+                ),
+              ],
             ),
-            borderRadius: BorderRadius.circular(8),
           ),
         ),
+        if (_showEmailTagDropdown) 
+          _buildEmailTagDropdown(),
       ],
+    );
+  }
+
+  Widget _buildEmailTagDropdown() {
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
+        color: Colors.white,
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: '搜索标签名称或描述',
+                prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+              onChanged: _filterEmailTags,
+            ),
+          ),
+          const Divider(height: 1),
+          _buildEmailTagList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmailTagList() {
+    if (_isLoadingEmailTags) {
+      return Container(
+        height: 100,
+        alignment: Alignment.center,
+        child: const CircularProgressIndicator(),
+      );
+    }
+
+    if (_emailTagError != null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red[400], size: 48),
+            const SizedBox(height: 8),
+            Text(
+              '加载失败',
+              style: TextStyle(
+                color: Colors.red[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _emailTagError!,
+              style: TextStyle(
+                color: Colors.red[500],
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () {
+                _emailTagsLoaded = false;
+                _loadEmailTags();
+              },
+              child: const Text('重试'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_filteredEmailTags.isEmpty) {
+      return Container(
+        height: 100,
+        alignment: Alignment.center,
+        child: Text(
+          '未找到匹配的邮件标签',
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontSize: 14,
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 200),
+      child: ListView.builder(
+        shrinkWrap: true,
+        itemCount: _filteredEmailTags.length,
+        itemBuilder: (context, index) {
+          final tag = _filteredEmailTags[index];
+          final isSelected = _selectedEmailTag == tag.tagId;
+          
+          return ListTile(
+            title: Text(
+              tag.tagName,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: isSelected ? Colors.blue[700] : Colors.black,
+              ),
+            ),
+            subtitle: tag.description != null && tag.description!.isNotEmpty
+                ? Text(
+                    tag.description!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  )
+                : null,
+            trailing: isSelected
+                ? Icon(Icons.check, color: Colors.blue[600], size: 20)
+                : null,
+            onTap: () {
+              setState(() {
+                _selectedEmailTag = isSelected ? null : tag.tagId;
+                _showEmailTagDropdown = false;
+              });
+            },
+          );
+        },
+      ),
     );
   }
 

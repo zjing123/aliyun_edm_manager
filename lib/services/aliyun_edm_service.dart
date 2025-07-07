@@ -5,6 +5,7 @@ import '../models/receiver_detail.dart';
 import '../models/scheduled_email_task_model.dart';
 import '../models/template_model.dart';
 import '../models/sender_address_model.dart';
+import '../models/email_tag_model.dart';
 import '../models/mail_task_model.dart';
 import '../providers/global_config_provider.dart';
 import '../constants/template_constants.dart';
@@ -444,6 +445,78 @@ class AliyunEdmService {
       return allAddresses.where((address) => address.status == '0').toList();
     } catch (e) {
       print('获取可用发信地址失败: $e');
+      return [];
+    }
+  }
+
+  // 查询邮件标签列表 - QueryTagByParam API
+  Future<QueryTagByParamResponse> queryTagByParam({
+    String? keyWord,
+    int pageNo = 1,
+    int pageSize = 20,
+  }) async {
+    // 参数验证
+    if (pageNo < 1) {
+      pageNo = 1;
+    }
+    if (pageSize > 50) {
+      pageSize = 50;
+    }
+    if (pageSize < 1) {
+      pageSize = 20;
+    }
+
+    final params = await _buildCommonParams("QueryTagByParam");
+    
+    // 必填参数
+    params['PageNo'] = pageNo.toString();
+    params['PageSize'] = pageSize.toString();
+    
+    // 可选参数
+    if (keyWord != null && keyWord.isNotEmpty) {
+      params['KeyWord'] = keyWord;
+    }
+    
+    final accessKeySecret = _getAccessKeySecret();
+    final signature = AliyunSigner.sign(params, accessKeySecret, 'GET');
+    params['Signature'] = signature;
+
+    print('QueryTagByParam 请求参数:');
+    params.forEach((key, value) {
+      print('  $key: $value');
+    });
+
+    try {
+      final response = await _dio.get('', queryParameters: params);
+      print('QueryTagByParam 响应: ${response.data}');
+      return QueryTagByParamResponse.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      print('QueryTagByParam 错误: $e');
+      if (e is DioException) {
+        print('错误详情: ${e.response?.data}');
+        print('状态码: ${e.response?.statusCode}');
+        print('错误信息: ${e.message}');
+      }
+      rethrow;
+    }
+  }
+
+  // 获取所有邮件标签
+  Future<List<EmailTagModel>> getAllEmailTags({
+    String? keyWord,
+    int pageNo = 1,
+    int pageSize = 50,
+  }) async {
+    try {
+      final response = await queryTagByParam(
+        keyWord: keyWord,
+        pageNo: pageNo,
+        pageSize: pageSize,
+      );
+      
+      return response.tags;
+    } catch (e) {
+      print('获取邮件标签失败: $e');
       return [];
     }
   }
