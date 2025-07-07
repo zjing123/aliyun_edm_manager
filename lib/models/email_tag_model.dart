@@ -17,7 +17,7 @@ class EmailTagModel {
     return EmailTagModel(
       tagId: json['TagId']?.toString() ?? '',
       tagName: json['TagName']?.toString() ?? '',
-      description: json['Description']?.toString(),
+      description: json['TagDescription']?.toString(), // 注意：API返回的是TagDescription
       createTime: json['CreateTime']?.toString() ?? '',
       templateCount: json['TemplateCount'] != null 
           ? int.tryParse(json['TemplateCount'].toString()) 
@@ -57,14 +57,15 @@ class QueryTagByParamResponse {
   });
 
   factory QueryTagByParamResponse.fromJson(Map<String, dynamic> json) {
-    final data = json['Data'] as Map<String, dynamic>? ?? {};
+    // 根据实际API响应格式调整
+    final data = json['data'] as Map<String, dynamic>? ?? {}; // 注意：API返回的是小写的data
     final tagList = data['tag'] as List<dynamic>? ?? [];
     
     return QueryTagByParamResponse(
       requestId: json['RequestId']?.toString() ?? '',
-      totalCount: int.tryParse(data['TotalCount']?.toString() ?? '0') ?? 0,
-      pageNo: int.tryParse(data['PageNo']?.toString() ?? '1') ?? 1,
-      pageSize: int.tryParse(data['PageSize']?.toString() ?? '10') ?? 10,
+      totalCount: int.tryParse(json['TotalCount']?.toString() ?? '0') ?? 0, // TotalCount在根级别
+      pageNo: int.tryParse(json['PageNumber']?.toString() ?? '1') ?? 1, // PageNumber在根级别
+      pageSize: int.tryParse(json['PageSize']?.toString() ?? '10') ?? 10, // PageSize在根级别
       tags: tagList.map((tag) => EmailTagModel.fromJson(tag as Map<String, dynamic>)).toList(),
     );
   }

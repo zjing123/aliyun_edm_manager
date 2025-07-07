@@ -120,23 +120,30 @@ void _filterEmailTags(String query) {
 ### 响应格式
 ```json
 {
-  "RequestId": "request_id",
-  "Data": {
-    "TotalCount": 10,
-    "PageNo": 1,
-    "PageSize": 20,
+  "TotalCount": 2,
+  "PageSize": 50,
+  "RequestId": "8ABD21E3-2F55-55B7-8296-EDE4017CB9BA",
+  "data": {
     "tag": [
       {
-        "TagId": "tag_id",
-        "TagName": "标签名称",
-        "Description": "标签描述",
-        "CreateTime": "创建时间",
-        "TemplateCount": 5
+        "TagName": "EDM",
+        "TagDescription": "阿里云后台EDM邮件发送标签",
+        "TagId": "92165"
+      },
+      {
+        "TagName": "warmupTest001",
+        "TagId": "88481"
       }
     ]
-  }
+  },
+  "PageNumber": 1
 }
 ```
+
+**注意**: 实际API响应中：
+- 分页信息（TotalCount、PageSize、PageNumber）在根级别
+- 标签数据在 `data.tag` 数组中
+- 描述字段名为 `TagDescription` 而不是 `Description`
 
 ## 使用流程
 

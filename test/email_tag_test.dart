@@ -5,35 +5,34 @@ void main() {
   group('邮件标签模型测试', () {
     test('应该正确解析JSON数据', () {
       final jsonData = {
-        'TagId': 'tag_001',
-        'TagName': '推广邮件',
-        'Description': '用于推广活动的邮件标签',
+        'TagId': '92165',
+        'TagName': 'EDM',
+        'TagDescription': '阿里云后台EDM邮件发送标签',
         'CreateTime': '2024-01-01T00:00:00Z',
         'TemplateCount': 5,
       };
 
       final tag = EmailTagModel.fromJson(jsonData);
 
-      expect(tag.tagId, 'tag_001');
-      expect(tag.tagName, '推广邮件');
-      expect(tag.description, '用于推广活动的邮件标签');
+      expect(tag.tagId, '92165');
+      expect(tag.tagName, 'EDM');
+      expect(tag.description, '阿里云后台EDM邮件发送标签');
       expect(tag.createTime, '2024-01-01T00:00:00Z');
       expect(tag.templateCount, 5);
     });
 
     test('应该处理缺失的可选字段', () {
       final jsonData = {
-        'TagId': 'tag_002',
-        'TagName': '通知邮件',
-        'CreateTime': '2024-01-02T00:00:00Z',
+        'TagId': '88481',
+        'TagName': 'warmupTest001',
       };
 
       final tag = EmailTagModel.fromJson(jsonData);
 
-      expect(tag.tagId, 'tag_002');
-      expect(tag.tagName, '通知邮件');
+      expect(tag.tagId, '88481');
+      expect(tag.tagName, 'warmupTest001');
       expect(tag.description, null);
-      expect(tag.createTime, '2024-01-02T00:00:00Z');
+      expect(tag.createTime, '');
       expect(tag.templateCount, null);
     });
 
@@ -59,50 +58,46 @@ void main() {
   group('QueryTagByParamResponse测试', () {
     test('应该正确解析API响应', () {
       final jsonData = {
-        'RequestId': 'request_001',
-        'Data': {
-          'TotalCount': 2,
-          'PageNo': 1,
-          'PageSize': 10,
+        'TotalCount': 2,
+        'PageSize': 50,
+        'RequestId': '8ABD21E3-2F55-55B7-8296-EDE4017CB9BA',
+        'data': {
           'tag': [
             {
-              'TagId': 'tag_001',
-              'TagName': '推广邮件',
-              'Description': '推广活动邮件',
-              'CreateTime': '2024-01-01T00:00:00Z',
-              'TemplateCount': 5,
+              'TagName': 'EDM',
+              'TagDescription': '阿里云后台EDM邮件发送标签',
+              'TagId': '92165',
             },
             {
-              'TagId': 'tag_002',
-              'TagName': '通知邮件',
-              'Description': '系统通知邮件',
-              'CreateTime': '2024-01-02T00:00:00Z',
-              'TemplateCount': 3,
+              'TagName': 'warmupTest001',
+              'TagId': '88481',
             },
           ],
         },
+        'PageNumber': 1,
       };
 
       final response = QueryTagByParamResponse.fromJson(jsonData);
 
-      expect(response.requestId, 'request_001');
+      expect(response.requestId, '8ABD21E3-2F55-55B7-8296-EDE4017CB9BA');
       expect(response.totalCount, 2);
       expect(response.pageNo, 1);
-      expect(response.pageSize, 10);
+      expect(response.pageSize, 50);
       expect(response.tags.length, 2);
-      expect(response.tags[0].tagName, '推广邮件');
-      expect(response.tags[1].tagName, '通知邮件');
+      expect(response.tags[0].tagName, 'EDM');
+      expect(response.tags[0].description, '阿里云后台EDM邮件发送标签');
+      expect(response.tags[1].tagName, 'warmupTest001');
     });
 
     test('应该处理空标签列表', () {
       final jsonData = {
+        'TotalCount': 0,
+        'PageSize': 50,
         'RequestId': 'request_002',
-        'Data': {
-          'TotalCount': 0,
-          'PageNo': 1,
-          'PageSize': 10,
+        'data': {
           'tag': [],
         },
+        'PageNumber': 1,
       };
 
       final response = QueryTagByParamResponse.fromJson(jsonData);
