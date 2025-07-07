@@ -381,8 +381,8 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                     ),
                   ),
                 ),
-                Expanded(
-                  flex: 1,
+                SizedBox(
+                  width: 80,
                   child: Text(
                     '标签',
                     style: TextStyle(
@@ -391,8 +391,8 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                     ),
                   ),
                 ),
-                Expanded(
-                  flex: 1,
+                SizedBox(
+                  width: 80,
                   child: Text(
                     '请求数量',
                     style: TextStyle(
@@ -495,15 +495,15 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                 ),
-                Expanded(
-                  flex: 1,
+                SizedBox(
+                  width: 80,
                   child: Text(
                     task.tagName.isNotEmpty ? task.tagName : '无',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                 ),
-                Expanded(
-                  flex: 1,
+                SizedBox(
+                  width: 80,
                   child: Text(
                     task.requestCount,
                     style: TextStyle(color: Colors.grey[600]),
