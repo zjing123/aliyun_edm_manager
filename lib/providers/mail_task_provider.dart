@@ -176,7 +176,7 @@ class MailTaskProvider with ChangeNotifier {
       );
       
       _tasks = response.tasks;
-      _currentPage = response.pageNumber;
+      _currentPage = response.pageNumber - 1; // 转换为从0开始的索引
       _pageSize = response.pageSize;
       _totalCount = response.totalCount;
       _totalPages = (_totalCount / _pageSize).ceil();
@@ -232,28 +232,28 @@ class MailTaskProvider with ChangeNotifier {
   
   // 上一页
   Future<void> previousPage() async {
-    if (_currentPage > 1) {
-      await goToPage(_currentPage - 1);
+    if (_currentPage > 0) {
+      await goToPage(_currentPage);
     }
   }
   
   // 下一页
   Future<void> nextPage() async {
-    if (_currentPage < _totalPages) {
-      await goToPage(_currentPage + 1);
+    if (_currentPage < _totalPages - 1) {
+      await goToPage(_currentPage + 2);
     }
   }
   
   // 第一页
   Future<void> firstPage() async {
-    if (_currentPage != 1) {
+    if (_currentPage != 0) {
       await goToPage(1);
     }
   }
   
   // 最后一页
   Future<void> lastPage() async {
-    if (_currentPage != _totalPages && _totalPages > 0) {
+    if (_currentPage != _totalPages - 1 && _totalPages > 0) {
       await goToPage(_totalPages);
     }
   }
