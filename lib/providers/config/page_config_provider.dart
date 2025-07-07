@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../services/config_service.dart';
+import '../services/config/config_service.dart';
 
 class PageConfigProvider with ChangeNotifier {
   ConfigService? _configService;

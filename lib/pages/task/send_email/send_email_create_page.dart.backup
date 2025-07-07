@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../models/task/mail_task_model.dart';
-import '../../models/template/template_model.dart';
-import '../../models/sender/sender_address_model.dart';
-import '../../models/tag/email_tag_model.dart';
-import '../../providers/task/mail_task_provider.dart';
-import '../../providers/receiver/receiver_list_provider.dart';
-import '../../providers/config/global_config_provider.dart';
-import '../../services/aliyun/aliyun_service_manager.dart';
+import '../models/task/mail_task_model.dart';
+import '../models/template/template_model.dart';
+import '../models/sender/sender_address_model.dart';
+import '../models/tag/email_tag_model.dart';
+import '../providers/task/mail_task_provider.dart';
+import '../providers/receiver/receiver_list_provider.dart';
+import '../providers/config/global_config_provider.dart';
+import '../services/common/aliyun_edm_service.dart';
 
 // 发信地址类型常量
 class SenderTypeConstants {
@@ -127,15 +127,14 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
 
     try {
       final globalConfig = context.read<GlobalConfigProvider>();
-      final serviceManager = AliyunServiceManager();
-      serviceManager.initialize(globalConfig);
+      final edmService = AliyunEdmService();
+      edmService.setGlobalConfigProvider(globalConfig);
 
-      if (!serviceManager.isConfigured()) {
+      if (!edmService.isConfigured()) {
         throw Exception('阿里云AccessKey未配置，请先配置');
       }
 
-      final templateService = serviceManager.templateService;
-      final templates = await templateService.getAllTemplates(pageSize: 100);
+      final templates = await edmService.getAllTemplates(pageSize: 100);
       setState(() {
         _templates = templates;
         _filteredTemplates = templates;
@@ -177,15 +176,14 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
 
     try {
       final globalConfig = context.read<GlobalConfigProvider>();
-      final serviceManager = AliyunServiceManager();
-      serviceManager.initialize(globalConfig);
+      final edmService = AliyunEdmService();
+      edmService.setGlobalConfigProvider(globalConfig);
 
-      if (!serviceManager.isConfigured()) {
+      if (!edmService.isConfigured()) {
         throw Exception('阿里云AccessKey未配置，请先配置');
       }
 
-      final senderAddressService = serviceManager.senderAddressService;
-      final addresses = await senderAddressService.getAvailableSenderAddresses(pageSize: 100);
+      final addresses = await edmService.getAvailableSenderAddresses(pageSize: 100);
       setState(() {
         _senderAddresses = addresses;
         _filteredSenderAddresses = addresses;
@@ -212,15 +210,14 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
 
     try {
       final globalConfig = context.read<GlobalConfigProvider>();
-      final serviceManager = AliyunServiceManager();
-      serviceManager.initialize(globalConfig);
+      final edmService = AliyunEdmService();
+      edmService.setGlobalConfigProvider(globalConfig);
 
-      if (!serviceManager.isConfigured()) {
+      if (!edmService.isConfigured()) {
         throw Exception('阿里云AccessKey未配置，请先配置');
       }
 
-      final emailTagService = serviceManager.emailTagService;
-      final emailTags = await emailTagService.getAllEmailTags(pageSize: 100);
+      final emailTags = await edmService.getAllEmailTags(pageSize: 100);
       setState(() {
         _emailTags = emailTags;
         _filteredEmailTags = emailTags;

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'app.dart';
-import 'providers/global_config_provider.dart';
-import 'providers/page_config_provider.dart';
-import 'providers/receiver_list_provider.dart';
-import 'providers/scheduled_email_task_provider.dart';
-import 'providers/mail_task_provider.dart';
-import 'services/aliyun_edm_service.dart';
+import 'providers/config/global_config_provider.dart';
+import 'providers/config/page_config_provider.dart';
+import 'providers/receiver/receiver_list_provider.dart';
+import 'providers/task/scheduled_email_task_provider.dart';
+import 'providers/task/mail_task_provider.dart';
+import 'services/aliyun/aliyun_service_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,9 +45,15 @@ void main() async {
         
         // 定时发送邮件Provider - 依赖全局配置
         ChangeNotifierProxyProvider<GlobalConfigProvider, ScheduledEmailTaskProvider>(
-          create: (context) => ScheduledEmailTaskProvider(context.read<GlobalConfigProvider>()),
+          create: (context) {
+            final serviceManager = AliyunServiceManager();
+            return ScheduledEmailTaskProvider(serviceManager, context.read<GlobalConfigProvider>());
+          },
           update: (_, globalConfig, batchSendTask) {
-            batchSendTask ??= ScheduledEmailTaskProvider(globalConfig);
+            if (batchSendTask == null) {
+              final serviceManager = AliyunServiceManager();
+              batchSendTask = ScheduledEmailTaskProvider(serviceManager, globalConfig);
+            }
             
             // 设置全局配置
             if (globalConfig.isInitialized && globalConfig.configService != null) {
@@ -61,13 +67,13 @@ void main() async {
         // 邮件任务Provider - 依赖全局配置
         ChangeNotifierProxyProvider<GlobalConfigProvider, MailTaskProvider>(
           create: (context) {
-            final edmService = AliyunEdmService();
-            return MailTaskProvider(edmService);
+            final serviceManager = AliyunServiceManager();
+            return MailTaskProvider(serviceManager);
           },
           update: (_, globalConfig, mailTask) {
             if (mailTask == null) {
-              final edmService = AliyunEdmService();
-              mailTask = MailTaskProvider(edmService);
+              final serviceManager = AliyunServiceManager();
+              mailTask = MailTaskProvider(serviceManager);
             }
             
             // 设置全局配置

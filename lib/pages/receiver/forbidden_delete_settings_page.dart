@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/receiver_list_provider.dart';
-import '../providers/page_config_provider.dart';
+import '../providers/receiver/receiver_list_provider.dart';
+import '../providers/config/page_config_provider.dart';
 import '../utils/dialog_util.dart';
 
 class ForbiddenDeleteSettingsPage extends StatefulWidget {

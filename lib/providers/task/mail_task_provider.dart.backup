@@ -1,11 +1,10 @@
 import 'package:flutter/foundation.dart';
 import '../models/task/mail_task_model.dart';
-import '../services/aliyun/aliyun_service_manager.dart';
-import '../services/aliyun/task/email_task_service.dart';
+import '../services/common/aliyun_edm_service.dart';
 import 'global_config_provider.dart';
 
 class MailTaskProvider with ChangeNotifier {
-  final AliyunServiceManager _serviceManager;
+  final AliyunEdmService _edmService;
   
   List<MailTaskModel> _tasks = [];
   bool _isLoading = false;
@@ -24,7 +23,7 @@ class MailTaskProvider with ChangeNotifier {
   // 页面数据缓存 - 使用Map存储已加载的页面数据
   Map<String, List<MailTaskModel>> _pageCache = {};
   
-  MailTaskProvider(this._serviceManager);
+  MailTaskProvider(this._edmService);
   
   List<MailTaskModel> get tasks => _tasks;
   bool get isLoading => _isLoading;
@@ -169,8 +168,7 @@ class MailTaskProvider with ChangeNotifier {
     notifyListeners();
     
     try {
-      final emailTaskService = _serviceManager.getEmailTaskService();
-      final response = await emailTaskService.queryTaskByParam(
+      final response = await _edmService.queryTaskByParam(
         keyWord: keyWord,
         status: status,
         pageNo: pageNo,
@@ -298,8 +296,7 @@ class MailTaskProvider with ChangeNotifier {
   // 发送邮件
   Future<bool> sendMail(BatchSendMailRequest request) async {
     try {
-      final emailTaskService = _serviceManager.getEmailTaskService();
-      final success = await emailTaskService.batchSendMail(request);
+      final success = await _edmService.batchSendMail(request);
       if (success) {
         // 发送成功后刷新任务列表
         await forceRefresh();
@@ -320,7 +317,7 @@ class MailTaskProvider with ChangeNotifier {
   
   // 设置全局配置
   void setGlobalConfigProvider(GlobalConfigProvider globalConfig) {
-    _serviceManager.setGlobalConfigProvider(globalConfig);
+    _edmService.setGlobalConfigProvider(globalConfig);
   }
   
   // 获取缓存统计信息（用于调试）

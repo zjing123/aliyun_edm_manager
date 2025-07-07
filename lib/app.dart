@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'providers/global_config_provider.dart';
+import 'providers/config/global_config_provider.dart';
 import 'widgets/main_layout.dart';
 
 class EDMApp extends StatefulWidget {

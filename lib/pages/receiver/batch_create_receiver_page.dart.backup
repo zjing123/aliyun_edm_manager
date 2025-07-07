@@ -3,12 +3,12 @@ import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import 'dart:convert';
-import '../../services/aliyun/aliyun_service_manager.dart';
-import '../../services/config/config_service.dart';
-import '../../models/receiver/receiver_detail.dart';
-import '../../providers/receiver/receiver_list_provider.dart';
-import '../../utils/dialog_util.dart';
-import '../tag/filter_emails_config_page.dart';
+import '../services/common/aliyun_edm_service.dart';
+import '../services/config/config_service.dart';
+import '../models/receiver/receiver_detail.dart';
+import '../providers/receiver/receiver_list_provider.dart';
+import '../utils/dialog_util.dart';
+import 'filter_emails_config_page.dart';
 
 class BatchCreateReceiverPage extends StatefulWidget {
   const BatchCreateReceiverPage({super.key});
@@ -725,8 +725,8 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
     }
 
     // 检查阿里云配置
-    final serviceManager = AliyunServiceManager();
-    if (!await serviceManager.isConfigured()) {
+    final edmService = AliyunEdmService();
+    if (!await edmService.isConfigured()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('请先在设置中配置阿里云AccessKey'),
@@ -765,7 +765,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
   }
 
   Future<void> _processFile(int countPerList) async {
-    final serviceManager = AliyunServiceManager();
+    final edmService = AliyunEdmService();
     
     // 从Provider获取现有的收件人列表名称用于重复检查
     setState(() {
@@ -824,8 +824,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
 
       try {
         // 创建收件人列表
-        final receiverService = serviceManager.receiverService;
-        final createResponse = await receiverService.createReceiver(listName, alias: alias);
+        final createResponse = await edmService.createReceiver(listName, alias: alias);
         final receiverId = createResponse.receiverId;
         
         // 分批添加收件人（每次最多500个）
@@ -842,7 +841,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
           ).toList();
           
           // 批量添加收件人
-          await receiverService.saveReceiverDetails(receiverId, receiverParamsList);
+          await edmService.saveReceiverDetails(receiverId, receiverParamsList);
           
           setState(() {
             _processedEmails += chunk.length;

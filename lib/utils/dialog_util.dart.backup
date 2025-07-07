@@ -2,15 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/receiver/receiver_detail.dart';
-import '../models/task/mail_task_model.dart';
-import '../models/template/template_model.dart';
-import '../models/sender/sender_address_model.dart';
-import '../models/tag/email_tag_model.dart';
-import '../services/aliyun/aliyun_service_manager.dart';
-import '../services/aliyun/receiver/receiver_service.dart';
-import '../services/aliyun/template/template_service.dart';
-import '../services/aliyun/sender_address/sender_address_service.dart';
-import '../services/aliyun/email_tag/email_tag_service.dart';
+import '../services/common/aliyun_edm_service.dart';
 import '../providers/receiver/receiver_list_provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
@@ -668,7 +660,7 @@ class ReceiverDetailDialog extends StatefulWidget {
 }
 
 class _ReceiverDetailDialogState extends State<ReceiverDetailDialog> {
-  final AliyunServiceManager _serviceManager = AliyunServiceManager();
+  final AliyunEdmService _service = AliyunEdmService();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   ReceiverDetail? _detail;
@@ -729,8 +721,7 @@ class _ReceiverDetailDialogState extends State<ReceiverDetailDialog> {
     });
 
     try {
-      final receiverService = _serviceManager.receiverService;
-      final detail = await receiverService.getReceiverDetail(
+      final detail = await _service.getReceiverDetail(
         widget.receiverId,
         keyWord: keyWord,
         nextStart: nextStart,
@@ -1165,7 +1156,7 @@ class _ReceiverDetailDialogState extends State<ReceiverDetailDialog> {
       // 使用新的工厂方法创建参数对象
       final receiverParams = ReceiverDetailParams.fromMap(email, dataMap);
       
-      final response = await _serviceManager.receiverService.saveReceiverDetail(widget.receiverId, receiverParams);
+      final response = await _service.saveReceiverDetail(widget.receiverId, receiverParams);
       
       // 根据响应结果处理
       if (response.isSuccess) {
@@ -1248,7 +1239,7 @@ class _ReceiverDetailDialogState extends State<ReceiverDetailDialog> {
     if (!confirm) return;
 
     try {
-      await _serviceManager.receiverService.deleteReceiverDetail(widget.receiverId, email);
+      await _service.deleteReceiverDetail(widget.receiverId, email);
       
       // 删除成功，从本地列表中移除该成员
       setState(() {
@@ -1289,7 +1280,7 @@ class _ReceiverDetailDialogState extends State<ReceiverDetailDialog> {
     });
 
     try {
-      final detail = await _serviceManager.receiverService.getReceiverDetail(
+      final detail = await _service.getReceiverDetail(
         widget.receiverId,
         keyWord: _searchController.text.trim(),
         pageSize: 50,

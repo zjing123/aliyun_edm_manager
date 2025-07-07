@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/mail_task_provider.dart';
-import '../models/mail_task_model.dart';
+import '../providers/task/mail_task_provider.dart';
+import '../models/task/mail_task_model.dart';
 import 'config_page.dart';
 import 'send_email_create_page.dart';
 

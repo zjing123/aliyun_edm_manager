@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/scheduled_email_task_provider.dart';
-import '../providers/receiver_list_provider.dart';
-import '../models/scheduled_email_task_model.dart';
+import '../providers/task/scheduled_email_task_provider.dart';
+import '../providers/receiver/receiver_list_provider.dart';
+import '../models/task/scheduled_email_task_model.dart';
 import 'scheduled_email_task_create_page.dart';
 
 class ScheduledEmailTaskListPage extends StatefulWidget {

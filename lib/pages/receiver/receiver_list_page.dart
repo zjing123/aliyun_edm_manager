@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../utils/dialog_util.dart';
-import '../providers/receiver_list_provider.dart';
-import '../models/receiver_list_model.dart';
+import '../providers/receiver/receiver_list_provider.dart';
+import '../models/receiver/receiver_list_model.dart';
 import 'config_page.dart';
 import 'receiver_detail_page.dart';
 import 'batch_create_receiver_page.dart';

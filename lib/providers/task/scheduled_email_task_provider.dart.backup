@@ -1,15 +1,14 @@
 import 'package:flutter/foundation.dart';
-import '../../models/task/scheduled_email_task_model.dart';
-import '../../services/aliyun/aliyun_service_manager.dart';
-import '../../services/aliyun/scheduled_email/scheduled_email_service.dart';
-import '../../services/database/database_service.dart';
-import '../config/global_config_provider.dart';
-import '../receiver/receiver_list_provider.dart';
+import '../models/task/scheduled_email_task_model.dart';
+import '../services/common/aliyun_edm_service.dart';
+import '../services/database/database_service.dart';
+import 'global_config_provider.dart';
+import 'receiver_list_provider.dart';
 import 'dart:async';
 import 'dart:math';
 
 class ScheduledEmailTaskProvider extends ChangeNotifier {
-  final AliyunServiceManager _serviceManager;
+  final AliyunEdmService _edmService = AliyunEdmService();
   final DatabaseService _databaseService = DatabaseService();
   final GlobalConfigProvider _configProvider;
   ReceiverListProvider? _receiverListProvider;
@@ -23,7 +22,7 @@ class ScheduledEmailTaskProvider extends ChangeNotifier {
   final Map<String, Timer> _taskTimers = {};
   final Random _random = Random();
 
-  ScheduledEmailTaskProvider(this._serviceManager, this._configProvider);
+  ScheduledEmailTaskProvider(this._configProvider);
 
   List<ScheduledEmailTaskModel> get tasks => _tasks;
   bool get isLoading => _isLoading;
@@ -260,7 +259,7 @@ class ScheduledEmailTaskProvider extends ChangeNotifier {
 
   // 设置全局配置Provider
   void setGlobalConfigProvider(GlobalConfigProvider provider) {
-    _serviceManager.initialize(provider);
+    _edmService.setGlobalConfigProvider(provider);
   }
 
   // 设置收件人列表Provider
