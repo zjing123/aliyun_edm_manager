@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../models/batch_send_task_model.dart';
+import '../models/scheduled_email_task_model.dart';
 import '../services/aliyun_edm_service.dart';
 import '../services/database_service.dart';
 import 'global_config_provider.dart';
@@ -7,13 +7,13 @@ import 'receiver_list_provider.dart';
 import 'dart:async';
 import 'dart:math';
 
-class BatchSendTaskProvider extends ChangeNotifier {
+class ScheduledEmailTaskProvider extends ChangeNotifier {
   final AliyunEdmService _edmService = AliyunEdmService();
   final DatabaseService _databaseService = DatabaseService();
   final GlobalConfigProvider _configProvider;
   ReceiverListProvider? _receiverListProvider;
   
-  List<BatchSendTaskModel> _tasks = [];
+  List<ScheduledEmailTaskModel> _tasks = [];
   bool _isLoading = false;
   String? _error;
   bool _isInitialized = false;
@@ -22,9 +22,9 @@ class BatchSendTaskProvider extends ChangeNotifier {
   final Map<String, Timer> _taskTimers = {};
   final Random _random = Random();
 
-  BatchSendTaskProvider(this._configProvider);
+  ScheduledEmailTaskProvider(this._configProvider);
 
-  List<BatchSendTaskModel> get tasks => _tasks;
+  List<ScheduledEmailTaskModel> get tasks => _tasks;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
@@ -86,7 +86,7 @@ class BatchSendTaskProvider extends ChangeNotifier {
   }
 
   // 添加新任务
-  Future<bool> addTask(BatchSendTaskModel task) async {
+  Future<bool> addTask(ScheduledEmailTaskModel task) async {
     _setLoading(true);
     try {
       // 保存到数据库
@@ -216,7 +216,7 @@ class BatchSendTaskProvider extends ChangeNotifier {
   }
 
   // 根据状态过滤任务
-  Future<List<BatchSendTaskModel>> getTasksByStatus(String status) async {
+  Future<List<ScheduledEmailTaskModel>> getTasksByStatus(String status) async {
     try {
       return await _databaseService.getTasksByStatus(status);
     } catch (e) {
@@ -226,7 +226,7 @@ class BatchSendTaskProvider extends ChangeNotifier {
   }
 
   // 搜索任务
-  Future<List<BatchSendTaskModel>> searchTasks(String query) async {
+  Future<List<ScheduledEmailTaskModel>> searchTasks(String query) async {
     if (query.isEmpty) return _tasks;
     
     try {
@@ -336,8 +336,8 @@ class BatchSendTaskProvider extends ChangeNotifier {
     return null;
   }
 
-  // 创建批量发送任务
-  Future<bool> createBatchSendTask({
+  // 创建定时发送邮件
+  Future<bool> createScheduledEmailTask({
     required String taskName,
     required List<String> selectedReceiverIds,
     required String templateId,
@@ -410,7 +410,7 @@ class BatchSendTaskProvider extends ChangeNotifier {
       // 创建任务
       if (receiverLists.length == 1) {
         // 单个收件人列表
-        final task = BatchSendTaskModel(
+        final task = ScheduledEmailTaskModel(
           taskId: _generateTaskId(),
           taskName: taskName,
           templateId: templateId,
@@ -436,7 +436,7 @@ class BatchSendTaskProvider extends ChangeNotifier {
         
         for (int i = 0; i < receiverLists.length; i++) {
           final receiverList = receiverLists[i];
-          final task = BatchSendTaskModel(
+          final task = ScheduledEmailTaskModel(
             taskId: _generateTaskId(),
             taskName: '${taskName}_${i + 1}',
             templateId: templateId,
@@ -474,8 +474,8 @@ class BatchSendTaskProvider extends ChangeNotifier {
     }
   }
 
-  // 更新批量发送任务
-  Future<bool> updateBatchSendTask({
+  // 更新定时发送邮件
+  Future<bool> updateScheduledEmailTask({
     required String taskId,
     required String taskName,
     required List<String> selectedReceiverIds,
@@ -591,7 +591,7 @@ class BatchSendTaskProvider extends ChangeNotifier {
   }
 
   // 定时任务相关方法
-  void _scheduleTask(BatchSendTaskModel task) {
+  void _scheduleTask(ScheduledEmailTaskModel task) {
     if (task.scheduledStartTime == null) return;
 
     final now = DateTime.now();
@@ -608,7 +608,7 @@ class BatchSendTaskProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _executeTask(BatchSendTaskModel task) async {
+  Future<void> _executeTask(ScheduledEmailTaskModel task) async {
     try {
       // 检查任务状态
       if (task.status != 'pending') return;

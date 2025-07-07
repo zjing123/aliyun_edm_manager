@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/batch_send_task_provider.dart';
+import '../providers/scheduled_email_task_provider.dart';
 import '../providers/receiver_list_provider.dart';
-import '../models/batch_send_task_model.dart';
-import 'batch_send_task_create_page.dart';
+import '../models/scheduled_email_task_model.dart';
+import 'scheduled_email_task_create_page.dart';
 
-class BatchSendTaskListPage extends StatefulWidget {
-  const BatchSendTaskListPage({super.key});
+class ScheduledEmailTaskListPage extends StatefulWidget {
+  const ScheduledEmailTaskListPage({super.key});
 
   @override
-  State<BatchSendTaskListPage> createState() => _BatchSendTaskListPageState();
+  State<ScheduledEmailTaskListPage> createState() => _ScheduledEmailTaskListPageState();
 }
 
-class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
+class _ScheduledEmailTaskListPageState extends State<ScheduledEmailTaskListPage> {
   String _searchQuery = '';
   String _statusFilter = 'all';
 
@@ -20,8 +20,8 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // 同时加载批量发送任务和收件人列表数据
-      context.read<BatchSendTaskProvider>().fetchTasks();
+      // 同时加载定时发送邮件和收件人列表数据
+      context.read<ScheduledEmailTaskProvider>().fetchTasks();
       context.read<ReceiverListProvider>().loadReceivers();
     });
   }
@@ -39,7 +39,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  '批量发送任务',
+                  '定时发送邮件',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -62,7 +62,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
             _buildFilters(),
             const SizedBox(height: 16),
             Expanded(
-              child: Consumer<BatchSendTaskProvider>(
+              child: Consumer<ScheduledEmailTaskProvider>(
                 builder: (context, provider, child) {
                   if (provider.isLoading) {
                     return const Center(child: CircularProgressIndicator());
@@ -99,7 +99,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
                           Icon(Icons.task_alt, size: 64, color: Colors.grey[400]),
                           const SizedBox(height: 16),
                           Text(
-                            '暂无批量发送任务',
+                            '暂无定时发送邮件',
                             style: TextStyle(
                               fontSize: 18,
                               color: Colors.grey[600],
@@ -107,7 +107,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '点击"新建任务"开始创建您的第一个批量发送任务',
+                            '点击"新建任务"开始创建您的第一个定时发送邮件',
                             style: TextStyle(
                               color: Colors.grey[500],
                             ),
@@ -133,7 +133,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
   }
 
   Widget _buildStatisticsCards() {
-    return Consumer<BatchSendTaskProvider>(
+    return Consumer<ScheduledEmailTaskProvider>(
       builder: (context, provider, child) {
         return FutureBuilder<Map<String, int>>(
           future: provider.getTaskStatistics(),
@@ -266,7 +266,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
     );
   }
 
-  Widget _buildTaskCard(BatchSendTaskModel task, BatchSendTaskProvider provider) {
+  Widget _buildTaskCard(ScheduledEmailTaskModel task, ScheduledEmailTaskProvider provider) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -349,7 +349,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
     );
   }
 
-  Widget _buildStatusChip(BatchSendTaskModel task) {
+  Widget _buildStatusChip(ScheduledEmailTaskModel task) {
     final now = DateTime.now();
     
     // 检查任务是否已过期
@@ -451,7 +451,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
 
 
 
-  Widget _buildActionButtons(BatchSendTaskModel task, BatchSendTaskProvider provider) {
+  Widget _buildActionButtons(ScheduledEmailTaskModel task, ScheduledEmailTaskProvider provider) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -502,7 +502,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
     );
   }
 
-  List<BatchSendTaskModel> _getFilteredTasks(List<BatchSendTaskModel> tasks) {
+  List<ScheduledEmailTaskModel> _getFilteredTasks(List<ScheduledEmailTaskModel> tasks) {
     var filtered = tasks;
 
     // 状态筛选
@@ -526,7 +526,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
     return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}:${dateTime.second.toString().padLeft(2, '0')}';
   }
 
-  String _getTaskStartTimeText(BatchSendTaskModel task) {
+  String _getTaskStartTimeText(ScheduledEmailTaskModel task) {
     // 如果有定时发送时间，直接显示时间
     if (task.scheduledStartTime != null) {
       return _formatDateTime(task.scheduledStartTime!);
@@ -554,7 +554,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
     }
   }
 
-  Widget _buildTimeDisplay(BatchSendTaskModel task) {
+  Widget _buildTimeDisplay(ScheduledEmailTaskModel task) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isWideScreen = screenWidth >= 800;
     
@@ -599,12 +599,12 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
   void _navigateToCreateTask() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const BatchSendTaskCreatePage(),
+        builder: (context) => const ScheduledEmailTaskCreatePage(),
       ),
     );
   }
 
-  void _startTask(String taskId, BatchSendTaskProvider provider) async {
+  void _startTask(String taskId, ScheduledEmailTaskProvider provider) async {
     final success = await provider.updateTaskStatus(taskId, 'running');
     if (success) {
       _showSnackBar('任务已开始');
@@ -613,7 +613,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
     }
   }
 
-  void _pauseTask(String taskId, BatchSendTaskProvider provider) async {
+  void _pauseTask(String taskId, ScheduledEmailTaskProvider provider) async {
     final success = await provider.pauseTask(taskId);
     if (success) {
       _showSnackBar('任务已暂停');
@@ -622,7 +622,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
     }
   }
 
-  void _resumeTask(String taskId, BatchSendTaskProvider provider) async {
+  void _resumeTask(String taskId, ScheduledEmailTaskProvider provider) async {
     final success = await provider.resumeTask(taskId);
     if (success) {
       _showSnackBar('任务已恢复');
@@ -631,7 +631,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
     }
   }
 
-  void _stopTask(String taskId, BatchSendTaskProvider provider) async {
+  void _stopTask(String taskId, ScheduledEmailTaskProvider provider) async {
     final success = await provider.stopTask(taskId);
     if (success) {
       _showSnackBar('任务已停止');
@@ -640,12 +640,12 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
     }
   }
 
-  void _deleteTask(String taskId, BatchSendTaskProvider provider) {
+  void _deleteTask(String taskId, ScheduledEmailTaskProvider provider) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('确认删除'),
-        content: const Text('确定要删除这个批量发送任务吗？此操作不可恢复。'),
+        content: const Text('确定要删除这个定时发送邮件吗？此操作不可恢复。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -669,7 +669,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
     );
   }
 
-  void _viewTaskDetail(BatchSendTaskModel task) {
+  void _viewTaskDetail(ScheduledEmailTaskModel task) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -790,7 +790,7 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
                       TextButton.icon(
                         onPressed: () {
                           Navigator.of(context).pop();
-                          _deleteTask(task.taskId, Provider.of<BatchSendTaskProvider>(context, listen: false));
+                          _deleteTask(task.taskId, Provider.of<ScheduledEmailTaskProvider>(context, listen: false));
                         },
                         icon: const Icon(Icons.delete, size: 16),
                         label: const Text('删除'),
@@ -860,10 +860,10 @@ class _BatchSendTaskListPageState extends State<BatchSendTaskListPage> {
     }
   }
 
-  void _editTask(BatchSendTaskModel task) {
+  void _editTask(ScheduledEmailTaskModel task) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => BatchSendTaskCreatePage(taskToEdit: task),
+        builder: (context) => ScheduledEmailTaskCreatePage(taskToEdit: task),
       ),
     );
   }

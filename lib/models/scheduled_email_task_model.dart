@@ -1,4 +1,4 @@
-class BatchSendTaskModel {
+class ScheduledEmailTaskModel {
   final String taskId;
   final String taskName;
   final String templateId;
@@ -20,7 +20,7 @@ class BatchSendTaskModel {
   final int failedEmails;
   final String? errorMessage; // 错误消息
 
-  BatchSendTaskModel({
+  ScheduledEmailTaskModel({
     required this.taskId,
     required this.taskName,
     required this.templateId,
@@ -43,8 +43,8 @@ class BatchSendTaskModel {
     this.errorMessage,
   });
 
-  factory BatchSendTaskModel.fromMap(Map<String, dynamic> map) {
-    return BatchSendTaskModel(
+  factory ScheduledEmailTaskModel.fromMap(Map<String, dynamic> map) {
+    return ScheduledEmailTaskModel(
       taskId: map['TaskId']?.toString() ?? '',
       taskName: map['TaskName']?.toString() ?? '',
       templateId: map['TemplateId']?.toString() ?? '',
@@ -96,7 +96,7 @@ class BatchSendTaskModel {
     };
   }
 
-  BatchSendTaskModel copyWith({
+  ScheduledEmailTaskModel copyWith({
     String? taskId,
     String? taskName,
     String? templateId,
@@ -118,7 +118,7 @@ class BatchSendTaskModel {
     int? failedEmails,
     String? errorMessage,
   }) {
-    return BatchSendTaskModel(
+    return ScheduledEmailTaskModel(
       taskId: taskId ?? this.taskId,
       taskName: taskName ?? this.taskName,
       templateId: templateId ?? this.templateId,
@@ -144,7 +144,7 @@ class BatchSendTaskModel {
 
   @override
   String toString() {
-    return 'BatchSendTaskModel(taskId: $taskId, taskName: $taskName, status: $status)';
+    return 'ScheduledEmailTaskModel(taskId: $taskId, taskName: $taskName, status: $status)';
   }
 }
 

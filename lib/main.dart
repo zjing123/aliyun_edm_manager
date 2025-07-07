@@ -4,7 +4,7 @@ import 'app.dart';
 import 'providers/global_config_provider.dart';
 import 'providers/page_config_provider.dart';
 import 'providers/receiver_list_provider.dart';
-import 'providers/batch_send_task_provider.dart';
+import 'providers/scheduled_email_task_provider.dart';
 import 'providers/mail_task_provider.dart';
 import 'services/aliyun_edm_service.dart';
 
@@ -43,11 +43,11 @@ void main() async {
           },
         ),
         
-        // 批量发送任务Provider - 依赖全局配置
-        ChangeNotifierProxyProvider<GlobalConfigProvider, BatchSendTaskProvider>(
-          create: (context) => BatchSendTaskProvider(context.read<GlobalConfigProvider>()),
+        // 定时发送邮件Provider - 依赖全局配置
+        ChangeNotifierProxyProvider<GlobalConfigProvider, ScheduledEmailTaskProvider>(
+          create: (context) => ScheduledEmailTaskProvider(context.read<GlobalConfigProvider>()),
           update: (_, globalConfig, batchSendTask) {
-            batchSendTask ??= BatchSendTaskProvider(globalConfig);
+            batchSendTask ??= ScheduledEmailTaskProvider(globalConfig);
             
             // 设置全局配置
             if (globalConfig.isInitialized && globalConfig.configService != null) {

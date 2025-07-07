@@ -2,7 +2,7 @@ import 'dart:math';
 import 'package:dio/dio.dart';
 import '../utils/aliyun_signer.dart';
 import '../models/receiver_detail.dart';
-import '../models/batch_send_task_model.dart';
+import '../models/scheduled_email_task_model.dart';
 import '../models/template_model.dart';
 import '../models/sender_address_model.dart';
 import '../models/mail_task_model.dart';
@@ -448,27 +448,27 @@ class AliyunEdmService {
     }
   }
 
-  // 批量发送任务相关方法
-  Future<List<BatchSendTaskModel>> getBatchSendTasks() async {
-    // 这里应该调用阿里云API获取批量发送任务列表
+  // 定时发送邮件相关方法
+  Future<List<ScheduledEmailTaskModel>> getScheduledEmailTasks() async {
+    // 这里应该调用阿里云API获取定时发送邮件列表
     // 目前返回空列表，实际实现时需要调用相应的API
     return [];
   }
 
-  Future<bool> createBatchSendTask(BatchSendTaskModel task) async {
-    // 这里应该调用阿里云API创建批量发送任务
+  Future<bool> createScheduledEmailTask(ScheduledEmailTaskModel task) async {
+    // 这里应该调用阿里云API创建定时发送邮件
     // 目前返回true，实际实现时需要调用相应的API
     return true;
   }
 
-  Future<bool> deleteBatchSendTask(String taskId) async {
-    // 这里应该调用阿里云API删除批量发送任务
+  Future<bool> deleteScheduledEmailTask(String taskId) async {
+    // 这里应该调用阿里云API删除定时发送邮件
     // 目前返回true，实际实现时需要调用相应的API
     return true;
   }
 
-  Future<bool> updateBatchSendTaskStatus(String taskId, String status) async {
-    // 这里应该调用阿里云API更新批量发送任务状态
+  Future<bool> updateScheduledEmailTaskStatus(String taskId, String status) async {
+    // 这里应该调用阿里云API更新定时发送邮件状态
     // 目前返回true，实际实现时需要调用相应的API
     return true;
   }

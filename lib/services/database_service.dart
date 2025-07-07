@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
-import '../models/batch_send_task_model.dart';
+import '../models/scheduled_email_task_model.dart';
 
 class DatabaseService {
   static DatabaseService? _instance;
@@ -40,9 +40,9 @@ class DatabaseService {
   }
 
   Future<void> _createTables(Database db, int version) async {
-    // 创建批量发送任务表
+    // 创建定时发送邮件表
     await db.execute('''
-      CREATE TABLE batch_send_tasks (
+      CREATE TABLE scheduled_email_tasks (
         task_id TEXT PRIMARY KEY,
         task_name TEXT NOT NULL,
         template_id TEXT NOT NULL,
@@ -67,8 +67,8 @@ class DatabaseService {
     ''');
 
     // 创建索引以提高查询性能
-    await db.execute('CREATE INDEX idx_task_status ON batch_send_tasks(status)');
-    await db.execute('CREATE INDEX idx_scheduled_time ON batch_send_tasks(scheduled_start_time)');
+    await db.execute('CREATE INDEX idx_task_status ON scheduled_email_tasks(status)');
+    await db.execute('CREATE INDEX idx_scheduled_time ON scheduled_email_tasks(scheduled_start_time)');
   }
 
   Future<void> _upgradeDatabase(Database db, int oldVersion, int newVersion) async {
@@ -77,18 +77,18 @@ class DatabaseService {
   }
 
   // 插入新任务
-  Future<int> insertTask(BatchSendTaskModel task) async {
+  Future<int> insertTask(ScheduledEmailTaskModel task) async {
     final db = await database;
     final taskMap = _taskToMap(task);
-    return await db.insert('batch_send_tasks', taskMap);
+    return await db.insert('scheduled_email_tasks', taskMap);
   }
 
   // 更新任务
-  Future<int> updateTask(BatchSendTaskModel task) async {
+  Future<int> updateTask(ScheduledEmailTaskModel task) async {
     final db = await database;
     final taskMap = _taskToMap(task);
     return await db.update(
-      'batch_send_tasks',
+      'scheduled_email_tasks',
       taskMap,
       where: 'task_id = ?',
       whereArgs: [task.taskId],
@@ -99,17 +99,17 @@ class DatabaseService {
   Future<int> deleteTask(String taskId) async {
     final db = await database;
     return await db.delete(
-      'batch_send_tasks',
+      'scheduled_email_tasks',
       where: 'task_id = ?',
       whereArgs: [taskId],
     );
   }
 
   // 根据ID获取任务
-  Future<BatchSendTaskModel?> getTask(String taskId) async {
+  Future<ScheduledEmailTaskModel?> getTask(String taskId) async {
     final db = await database;
     final results = await db.query(
-      'batch_send_tasks',
+      'scheduled_email_tasks',
       where: 'task_id = ?',
       whereArgs: [taskId],
     );
@@ -121,17 +121,17 @@ class DatabaseService {
   }
 
   // 获取所有任务
-  Future<List<BatchSendTaskModel>> getAllTasks() async {
+  Future<List<ScheduledEmailTaskModel>> getAllTasks() async {
     final db = await database;
-    final results = await db.query('batch_send_tasks', orderBy: 'created_at DESC');
+    final results = await db.query('scheduled_email_tasks', orderBy: 'created_at DESC');
     return results.map((map) => _mapToTask(map)).toList();
   }
 
   // 根据状态获取任务
-  Future<List<BatchSendTaskModel>> getTasksByStatus(String status) async {
+  Future<List<ScheduledEmailTaskModel>> getTasksByStatus(String status) async {
     final db = await database;
     final results = await db.query(
-      'batch_send_tasks',
+      'scheduled_email_tasks',
       where: 'status = ?',
       whereArgs: [status],
       orderBy: 'created_at DESC',
@@ -140,11 +140,11 @@ class DatabaseService {
   }
 
   // 获取待执行的定时任务
-  Future<List<BatchSendTaskModel>> getPendingScheduledTasks() async {
+  Future<List<ScheduledEmailTaskModel>> getPendingScheduledTasks() async {
     final db = await database;
     final now = DateTime.now().toIso8601String();
     final results = await db.query(
-      'batch_send_tasks',
+      'scheduled_email_tasks',
       where: 'status = ? AND scheduled_start_time IS NOT NULL AND scheduled_start_time <= ?',
       whereArgs: ['pending', now],
       orderBy: 'scheduled_start_time ASC',
@@ -153,10 +153,10 @@ class DatabaseService {
   }
 
   // 搜索任务
-  Future<List<BatchSendTaskModel>> searchTasks(String query) async {
+  Future<List<ScheduledEmailTaskModel>> searchTasks(String query) async {
     final db = await database;
     final results = await db.query(
-      'batch_send_tasks',
+      'scheduled_email_tasks',
       where: 'task_name LIKE ? OR template_name LIKE ? OR sender_name LIKE ?',
       whereArgs: ['%$query%', '%$query%', '%$query%'],
       orderBy: 'created_at DESC',
@@ -169,7 +169,7 @@ class DatabaseService {
     final db = await database;
     final results = await db.rawQuery('''
       SELECT status, COUNT(*) as count 
-      FROM batch_send_tasks 
+      FROM scheduled_email_tasks 
       GROUP BY status
     ''');
 
@@ -198,14 +198,14 @@ class DatabaseService {
     final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30)).toIso8601String();
     
     return await db.delete(
-      'batch_send_tasks',
+      'scheduled_email_tasks',
       where: 'status IN (?, ?) AND completed_at < ?',
       whereArgs: ['completed', 'failed', thirtyDaysAgo],
     );
   }
 
-  // 将BatchSendTaskModel转换为Map
-  Map<String, dynamic> _taskToMap(BatchSendTaskModel task) {
+  // 将ScheduledEmailTaskModel转换为Map
+  Map<String, dynamic> _taskToMap(ScheduledEmailTaskModel task) {
     return {
       'task_id': task.taskId,
       'task_name': task.taskName,
@@ -230,15 +230,15 @@ class DatabaseService {
     };
   }
 
-  // 将Map转换为BatchSendTaskModel
-  BatchSendTaskModel _mapToTask(Map<String, dynamic> map) {
+  // 将Map转换为ScheduledEmailTaskModel
+  ScheduledEmailTaskModel _mapToTask(Map<String, dynamic> map) {
     final receiverListsJson = map['receiver_lists'] as String;
     final receiverListsData = jsonDecode(receiverListsJson) as List<dynamic>;
     final receiverLists = receiverListsData
         .map((e) => ReceiverListConfig.fromMap(e as Map<String, dynamic>))
         .toList();
 
-    return BatchSendTaskModel(
+    return ScheduledEmailTaskModel(
       taskId: map['task_id'] as String,
       taskName: map['task_name'] as String,
       templateId: map['template_id'] as String,

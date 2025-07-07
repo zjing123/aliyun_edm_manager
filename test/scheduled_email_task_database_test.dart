@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import '../lib/models/batch_send_task_model.dart';
+import '../lib/models/scheduled_email_task_model.dart';
 import '../lib/services/database_service.dart';
 
 void main() {
@@ -20,9 +20,9 @@ void main() {
     await databaseService.close();
   });
 
-  group('批量发送任务数据库测试', () {
+  group('定时发送邮件数据库测试', () {
     test('插入和获取任务', () async {
-      final task = BatchSendTaskModel(
+      final task = ScheduledEmailTaskModel(
         taskId: 'test_task_001',
         taskName: '测试任务',
         templateId: 'template_001',
@@ -63,7 +63,7 @@ void main() {
     });
 
     test('更新任务状态', () async {
-      final task = BatchSendTaskModel(
+      final task = ScheduledEmailTaskModel(
         taskId: 'test_task_002',
         taskName: '测试任务2',
         templateId: 'template_002',
@@ -109,7 +109,7 @@ void main() {
     });
 
     test('根据状态获取任务', () async {
-      final task1 = BatchSendTaskModel(
+      final task1 = ScheduledEmailTaskModel(
         taskId: 'test_task_003',
         taskName: '测试任务3',
         templateId: 'template_003',
@@ -156,7 +156,7 @@ void main() {
     });
 
     test('搜索任务', () async {
-      final task = BatchSendTaskModel(
+      final task = ScheduledEmailTaskModel(
         taskId: 'test_task_005',
         taskName: '搜索测试任务',
         templateId: 'template_005',
@@ -193,7 +193,7 @@ void main() {
     });
 
     test('删除任务', () async {
-      final task = BatchSendTaskModel(
+      final task = ScheduledEmailTaskModel(
         taskId: 'test_task_006',
         taskName: '删除测试任务',
         templateId: 'template_006',
@@ -235,7 +235,7 @@ void main() {
     });
 
     test('获取任务统计信息', () async {
-      final task1 = BatchSendTaskModel(
+      final task1 = ScheduledEmailTaskModel(
         taskId: 'stats_task_001',
         taskName: '统计测试任务1',
         templateId: 'template_stats_001',

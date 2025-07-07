@@ -7,8 +7,8 @@
 ## 主要特性
 
 ### 1. 任务管理
-- **任务列表**：查看所有批量发送任务及其状态
-- **任务创建**：创建新的批量发送任务
+- **任务列表**：查看所有定时发送邮件及其状态
+- **任务创建**：创建新的定时发送邮件
 - **任务控制**：开始、暂停、恢复、停止任务
 - **任务删除**：删除不需要的任务
 
@@ -33,9 +33,9 @@
 
 ### 1. 数据模型
 
-#### BatchSendTaskModel
+#### ScheduledEmailTaskModel
 ```dart
-class BatchSendTaskModel {
+class ScheduledEmailTaskModel {
   final String taskId;           // 任务ID
   final String taskName;         // 任务名称
   final String templateId;       // 模板ID
@@ -67,7 +67,7 @@ class ReceiverListConfig {
 
 ### 2. Provider 架构
 
-#### BatchSendTaskProvider
+#### ScheduledEmailTaskProvider
 - **状态管理**：管理任务列表、加载状态、错误信息
 - **任务操作**：添加、删除、更新任务状态
 - **数据过滤**：按状态、关键词搜索任务
@@ -75,13 +75,13 @@ class ReceiverListConfig {
 
 ### 3. 用户界面
 
-#### 任务列表页面 (BatchSendTaskListPage)
+#### 任务列表页面 (ScheduledEmailTaskListPage)
 - **统计卡片**：显示各状态任务数量
 - **搜索过滤**：按任务名称、模板名称、发件人搜索
 - **状态筛选**：按任务状态筛选
 - **任务卡片**：显示任务详细信息、进度、操作按钮
 
-#### 任务创建页面 (BatchSendTaskCreatePage)
+#### 任务创建页面 (ScheduledEmailTaskCreatePage)
 - **基本信息**：任务名称设置
 - **模板选择**：下拉选择邮件模板
 - **收件人列表**：多选收件人列表，设置发送间隔
@@ -92,19 +92,19 @@ class ReceiverListConfig {
 
 #### AliyunEdmService 扩展
 ```dart
-// 批量发送任务相关方法
-Future<List<BatchSendTaskModel>> getBatchSendTasks();
-Future<bool> createBatchSendTask(BatchSendTaskModel task);
+// 定时发送邮件相关方法
+Future<List<ScheduledEmailTaskModel>> getBatchSendTasks();
+Future<bool> createBatchSendTask(ScheduledEmailTaskModel task);
 Future<bool> deleteBatchSendTask(String taskId);
 Future<bool> updateBatchSendTaskStatus(String taskId, String status);
 ```
 
 ## 使用流程
 
-### 1. 创建批量发送任务
+### 1. 创建定时发送邮件
 
-1. **导航到批量发送任务页面**
-   - 在侧边栏选择"发送邮件" → "批量发送任务"
+1. **导航到定时发送邮件页面**
+   - 在侧边栏选择"发送邮件" → "定时发送邮件"
 
 2. **点击"新建任务"按钮**
    - 进入任务创建页面
@@ -130,10 +130,10 @@ Future<bool> updateBatchSendTaskStatus(String taskId, String status);
 8. **创建任务**
    - 点击"创建任务"按钮完成创建
 
-### 2. 管理批量发送任务
+### 2. 管理定时发送邮件
 
 1. **查看任务列表**
-   - 在批量发送任务页面查看所有任务
+   - 在定时发送邮件页面查看所有任务
    - 使用搜索和筛选功能快速找到目标任务
 
 2. **监控任务状态**
@@ -174,13 +174,13 @@ Future<bool> updateBatchSendTaskStatus(String taskId, String status);
 ## 测试覆盖
 
 ### 单元测试
-- **数据模型测试**：测试 BatchSendTaskModel 和 ReceiverListConfig
+- **数据模型测试**：测试 ScheduledEmailTaskModel 和 ReceiverListConfig
 - **数据转换测试**：测试 fromMap 和 toMap 方法
 - **默认值测试**：测试各种默认值处理
 - **复制方法测试**：测试 copyWith 方法
 
 ### 测试文件
-- `test/batch_send_task_test.dart`：包含完整的单元测试
+- `test/scheduled_email_task_test.dart`：包含完整的单元测试
 
 ## 注意事项
 

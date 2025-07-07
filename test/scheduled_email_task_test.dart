@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:aliyun_edm_manager/models/batch_send_task_model.dart';
+import 'package:aliyun_edm_manager/models/scheduled_email_task_model.dart';
 
 void main() {
-  group('BatchSendTaskModel Tests', () {
-    test('should create BatchSendTaskModel with required fields', () {
-      final task = BatchSendTaskModel(
+  group('ScheduledEmailTaskModel Tests', () {
+    test('should create ScheduledEmailTaskModel with required fields', () {
+      final task = ScheduledEmailTaskModel(
         taskId: 'test-task-001',
         taskName: '测试任务',
         templateId: 'template-001',
@@ -37,8 +37,8 @@ void main() {
       expect(task.failedEmails, 0);
     });
 
-    test('should create BatchSendTaskModel with optional fields', () {
-      final task = BatchSendTaskModel(
+    test('should create ScheduledEmailTaskModel with optional fields', () {
+      final task = ScheduledEmailTaskModel(
         taskId: 'test-task-002',
         taskName: '测试任务2',
         templateId: 'template-002',
@@ -66,7 +66,7 @@ void main() {
       expect(task.failedEmails, 2);
     });
 
-    test('should create BatchSendTaskModel from Map', () {
+    test('should create ScheduledEmailTaskModel from Map', () {
       final map = {
         'TaskId': 'test-task-003',
         'TaskName': '测试任务3',
@@ -94,7 +94,7 @@ void main() {
         'FailedEmails': 0,
       };
 
-      final task = BatchSendTaskModel.fromMap(map);
+      final task = ScheduledEmailTaskModel.fromMap(map);
 
       expect(task.taskId, 'test-task-003');
       expect(task.taskName, '测试任务3');
@@ -115,8 +115,8 @@ void main() {
       expect(task.failedEmails, 0);
     });
 
-    test('should convert BatchSendTaskModel to Map', () {
-      final task = BatchSendTaskModel(
+    test('should convert ScheduledEmailTaskModel to Map', () {
+      final task = ScheduledEmailTaskModel(
         taskId: 'test-task-004',
         taskName: '测试任务4',
         templateId: 'template-004',
@@ -159,8 +159,8 @@ void main() {
       expect(map['ReceiverLists'].length, 1);
     });
 
-    test('should copy BatchSendTaskModel with new values', () {
-      final originalTask = BatchSendTaskModel(
+    test('should copy ScheduledEmailTaskModel with new values', () {
+      final originalTask = ScheduledEmailTaskModel(
         taskId: 'test-task-005',
         taskName: '测试任务5',
         templateId: 'template-005',

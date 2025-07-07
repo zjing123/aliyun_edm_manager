@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/batch_send_task_model.dart';
+import '../models/scheduled_email_task_model.dart';
 
 import '../models/template_model.dart';
 import '../models/sender_address_model.dart';
-import '../providers/batch_send_task_provider.dart';
+import '../providers/scheduled_email_task_provider.dart';
 import '../providers/receiver_list_provider.dart';
 import '../providers/global_config_provider.dart';
 import '../services/aliyun_edm_service.dart';
@@ -25,19 +25,19 @@ class SenderTypeConstants {
   ];
 }
 
-class BatchSendTaskCreatePage extends StatefulWidget {
-  final BatchSendTaskModel? taskToEdit;
+class ScheduledEmailTaskCreatePage extends StatefulWidget {
+  final ScheduledEmailTaskModel? taskToEdit;
   
-  const BatchSendTaskCreatePage({
+  const ScheduledEmailTaskCreatePage({
     super.key,
     this.taskToEdit,
   });
 
   @override
-  State<BatchSendTaskCreatePage> createState() => _BatchSendTaskCreatePageState();
+  State<ScheduledEmailTaskCreatePage> createState() => _ScheduledEmailTaskCreatePageState();
 }
 
-class _BatchSendTaskCreatePageState extends State<BatchSendTaskCreatePage> {
+class _ScheduledEmailTaskCreatePageState extends State<ScheduledEmailTaskCreatePage> {
   final _formKey = GlobalKey<FormState>();
   final _taskNameController = TextEditingController();
   final _senderAddressController = TextEditingController();
@@ -237,7 +237,7 @@ class _BatchSendTaskCreatePageState extends State<BatchSendTaskCreatePage> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: Text(widget.taskToEdit != null ? '编辑批量发送任务' : '新建批量发送任务'),
+        title: Text(widget.taskToEdit != null ? '编辑定时发送邮件' : '新建定时发送邮件'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0,
@@ -1861,7 +1861,7 @@ class _BatchSendTaskCreatePageState extends State<BatchSendTaskCreatePage> {
     });
 
     // 使用新的验证逻辑
-    final provider = context.read<BatchSendTaskProvider>();
+    final provider = context.read<ScheduledEmailTaskProvider>();
     final validationError = provider.validateTaskData(
       taskName: _taskNameController.text,
       selectedReceiverIds: _selectedReceiverIds,
@@ -1927,7 +1927,7 @@ class _BatchSendTaskCreatePageState extends State<BatchSendTaskCreatePage> {
       
       if (widget.taskToEdit != null) {
         // 编辑模式
-        success = await provider.updateBatchSendTask(
+        success = await provider.updateScheduledEmailTask(
           taskId: widget.taskToEdit!.taskId,
           taskName: _taskNameController.text.trim(),
           selectedReceiverIds: _selectedReceiverIds,
@@ -1946,7 +1946,7 @@ class _BatchSendTaskCreatePageState extends State<BatchSendTaskCreatePage> {
         errorMessage = '更新任务失败';
       } else {
         // 创建模式
-        success = await provider.createBatchSendTask(
+        success = await provider.createScheduledEmailTask(
           taskName: _taskNameController.text.trim(),
           selectedReceiverIds: _selectedReceiverIds,
           templateId: _selectedTemplateId!,
