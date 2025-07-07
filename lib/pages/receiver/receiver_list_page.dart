@@ -8,6 +8,34 @@ import 'receiver_detail_page.dart';
 import 'batch_create_receiver_page.dart';
 import 'forbidden_delete_settings_page.dart';
 
+// 收件人列表状态封装类
+class _ReceiverListState {
+  final bool isLoading;
+  final String? error;
+  final bool receiversEmpty;
+  final bool hasExistingReceivers;
+
+  _ReceiverListState({
+    required this.isLoading,
+    required this.error,
+    required this.receiversEmpty,
+    required this.hasExistingReceivers,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is _ReceiverListState &&
+        other.isLoading == isLoading &&
+        other.error == error &&
+        other.receiversEmpty == receiversEmpty &&
+        other.hasExistingReceivers == hasExistingReceivers;
+  }
+
+  @override
+  int get hashCode => isLoading.hashCode ^ error.hashCode ^ receiversEmpty.hashCode ^ hasExistingReceivers.hashCode;
+}
+
 class ReceiverListPage extends StatefulWidget {
   const ReceiverListPage({super.key});
 
@@ -16,8 +44,6 @@ class ReceiverListPage extends StatefulWidget {
 }
 
 class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepAliveClientMixin {
-  final Set<String> _selectedReceivers = <String>{};
-  bool _selectAll = false;
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -74,7 +100,10 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
   }
 
   void _deleteSelectedReceivers() async {
-    if (_selectedReceivers.isEmpty) {
+    final provider = context.read<ReceiverListProvider>();
+    final selectedReceivers = provider.selectedReceivers;
+    
+    if (selectedReceivers.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('请先选择要删除的收件人列表'),
@@ -86,17 +115,15 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
 
     final confirm = await DialogUtil.confirm(
       context, 
-      "确认删除选中的 ${_selectedReceivers.length} 个收件人列表吗？\n\n删除后这些列表及其所有收件人数据将无法恢复。"
+      "确认删除选中的 ${selectedReceivers.length} 个收件人列表吗？\n\n删除后这些列表及其所有收件人数据将无法恢复。"
     );
     
     if (confirm) {
       try {
-        await context.read<ReceiverListProvider>().deleteReceivers(_selectedReceivers.toList());
-        _selectedReceivers.clear();
-        _selectAll = false;
+        await context.read<ReceiverListProvider>().deleteReceivers(selectedReceivers.toList());
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('成功删除 ${_selectedReceivers.length} 个收件人列表'),
+            content: Text('成功删除 ${selectedReceivers.length} 个收件人列表'),
             backgroundColor: Colors.green,
           ),
         );
@@ -107,55 +134,6 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
             backgroundColor: Colors.red,
           ),
         );
-      }
-    }
-  }
-
-  void _toggleSelectAll() {
-    final provider = context.read<ReceiverListProvider>();
-    if (_selectAll) {
-      setState(() {
-        _selectedReceivers.clear();
-        _selectAll = false;
-      });
-    } else {
-      // 只获取可删除的receiverId并选中
-      final deletableReceiverIds = provider.receivers
-          .where((item) => item.isDeletable)
-          .map((item) => item.receiverId)
-          .toSet();
-      setState(() {
-        _selectedReceivers.addAll(deletableReceiverIds);
-        // 只有当所有可删除的项目都被选中时，才设置为全选状态
-        _selectAll = _selectedReceivers.length == deletableReceiverIds.length;
-      });
-    }
-  }
-
-  void _toggleReceiverSelection(String receiverId) {
-    final provider = context.read<ReceiverListProvider>();
-    final receiver = provider.receivers.where((item) => item.receiverId == receiverId).firstOrNull;
-    
-    // 如果找不到收件人或收件人列表不可删除，则不允许选中
-    if (receiver == null || !receiver.isDeletable) {
-      return;
-    }
-    
-    if (_selectedReceivers.contains(receiverId)) {
-      setState(() {
-        _selectedReceivers.remove(receiverId);
-        _selectAll = false;
-      });
-    } else {
-      setState(() {
-        _selectedReceivers.add(receiverId);
-      });
-      // 检查是否所有可删除的项目都被选中
-      final deletableReceivers = provider.receivers.where((item) => item.isDeletable);
-      if (_selectedReceivers.length == deletableReceivers.length) {
-        setState(() {
-          _selectAll = true;
-        });
       }
     }
   }
@@ -286,17 +264,26 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
                 ),
                 Row(
                   children: [
-                    if (_selectedReceivers.isNotEmpty)
-                      ElevatedButton.icon(
-                        onPressed: _deleteSelectedReceivers,
-                        icon: Icon(Icons.delete, color: Colors.white),
-                        label: Text('删除选中(${_selectedReceivers.length})'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    if (_selectedReceivers.isNotEmpty) const SizedBox(width: 12),
+                    Selector<ReceiverListProvider, bool>(
+                      selector: (context, provider) => provider.selectedReceivers.isNotEmpty,
+                      builder: (context, hasSelected, child) {
+                        if (!hasSelected) return const SizedBox.shrink();
+                        return Row(
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: _deleteSelectedReceivers,
+                              icon: Icon(Icons.delete, color: Colors.white),
+                              label: Text('删除选中(${context.read<ReceiverListProvider>().selectedReceivers.length})'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                          ],
+                        );
+                      },
+                    ),
                     ElevatedButton.icon(
                       onPressed: _createReceiver,
                       icon: const Icon(Icons.add, color: Colors.white),
@@ -367,223 +354,9 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
               ),
             ),
             const SizedBox(height: 24),
-            // 数据表格
+            // 收件人列表
             Expanded(
-              child: Consumer<ReceiverListProvider>(
-                builder: (context, provider, child) {
-                  if (provider.isLoading) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  
-                  if (provider.error != null) {
-                    final error = provider.error!;
-                    print('Provider错误: $error'); // 添加调试信息
-                    
-                    if (error.contains('Access Key') && error.contains('未配置')) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.settings_outlined,
-                              size: 64,
-                              color: Colors.grey,
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              '需要配置阿里云AccessKey',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              '请点击右上角设置按钮配置您的阿里云AccessKey信息',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                            const SizedBox(height: 16),
-                            ElevatedButton.icon(
-                              onPressed: _openConfigPage,
-                              icon: const Icon(Icons.settings),
-                              label: const Text('去配置'),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                    
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            size: 64,
-                            color: Colors.red,
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            '加载失败',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 32),
-                            child: Text(
-                              error,
-                              style: const TextStyle(color: Colors.grey),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            onPressed: _reloadList,
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('重试'),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                  
-                  final receivers = provider.receivers;
-                  final screenWidth = MediaQuery.of(context).size.width;
-                  final showDescription = screenWidth >= 1000;
-                  
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Column(
-                        children: [
-                          // 固定表头
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: Colors.grey[300]!,
-                                  width: 1,
-                                ),
-                              ),
-                            ),
-                            child: Table(
-                              columnWidths: showDescription ? {
-                                0: const FlexColumnWidth(0.8),  // 复选框
-                                1: const FlexColumnWidth(2.0),  // 列表名称
-                                2: const FlexColumnWidth(2.5),  // 别称地址
-                                3: const FlexColumnWidth(2.0),  // 描述
-                                4: const FlexColumnWidth(1.0),  // 总数
-                                5: const FlexColumnWidth(2.0),  // 创建时间
-                                6: const FlexColumnWidth(1.5),  // 操作
-                              } : {
-                                0: const FlexColumnWidth(0.8),  // 复选框
-                                1: const FlexColumnWidth(2.5),  // 列表名称
-                                2: const FlexColumnWidth(3.0),  // 别称地址
-                                3: const FlexColumnWidth(1.2),  // 总数
-                                4: const FlexColumnWidth(2.5),  // 创建时间
-                                5: const FlexColumnWidth(1.8),  // 操作
-                              },
-                              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                              children: [
-                                TableRow(
-                                  children: [
-                                    _buildCheckboxHeaderCell(),
-                                    _buildHeaderCell('列表名称'),
-                                    _buildHeaderCell('别称地址'),
-                                    if (showDescription) _buildHeaderCell('描述'),
-                                    _buildHeaderCell('总数'),
-                                    _buildHeaderCell('创建时间'),
-                                    _buildHeaderCell('操作', isRight: true),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          // 可滚动的表体
-                          Expanded(
-                            child: receivers.isEmpty
-                                ? Center(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(32.0),
-                                      child: Text(
-                                        '暂无数据',
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                : Scrollbar(
-                                    controller: _scrollController,
-                                    child: SingleChildScrollView(
-                                      controller: _scrollController,
-                                      child: Table(
-                                        columnWidths: showDescription ? {
-                                          0: const FlexColumnWidth(0.8),
-                                          1: const FlexColumnWidth(2.0),
-                                          2: const FlexColumnWidth(2.5),
-                                          3: const FlexColumnWidth(2.0),
-                                          4: const FlexColumnWidth(1.0),
-                                          5: const FlexColumnWidth(2.0),
-                                          6: const FlexColumnWidth(1.5),
-                                        } : {
-                                          0: const FlexColumnWidth(0.8),
-                                          1: const FlexColumnWidth(2.5),
-                                          2: const FlexColumnWidth(3.0),
-                                          3: const FlexColumnWidth(1.2),
-                                          4: const FlexColumnWidth(2.5),
-                                          5: const FlexColumnWidth(1.8),
-                                        },
-                                        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                                        children: receivers.asMap().entries.map((entry) {
-                                          final index = entry.key;
-                                          final item = entry.value;
-                                          final isLastRow = index == receivers.length - 1;
-                                          
-                                          return TableRow(
-                                            decoration: BoxDecoration(
-                                              color: index % 2 == 0 ? Colors.white : Colors.grey[50],
-                                              border: isLastRow ? null : Border(
-                                                bottom: BorderSide(
-                                                  color: Colors.grey[200]!,
-                                                  width: 1,
-                                                ),
-                                              ),
-                                            ),
-                                            children: [
-                                              _buildCheckboxCell(item.receiverId),
-                                              _buildReceiverNameCell(item),
-                                              _buildDataCell(item.receiversAlias),
-                                              if (showDescription) _buildDataCell(item.desc ?? ''),
-                                              _buildDataCell(item.count.toString()),
-                                              _buildDataCell(item.createTime),
-                                              _buildActionCell(
-                                                onDetail: () => _openDetailPage(item.receiverId, item.receiversName),
-                                                onDelete: item.isDeletable ? () => _deleteReceiver(item.receiverId, item.receiversName) : null,
-                                              ),
-                                            ],
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
+              child: _buildReceiverListSelector(),
             ),
           ],
         ),
@@ -622,146 +395,420 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
     );
   }
 
-  Widget _buildCheckboxHeaderCell() {
-    final provider = context.read<ReceiverListProvider>();
-    final deletableReceivers = provider.receivers.where((item) => item.isDeletable);
-    final hasDeletableReceivers = deletableReceivers.isNotEmpty;
-    
-    // 如果没有可删除的收件人列表，则不显示表头checkbox
-    if (!hasDeletableReceivers) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-        // 返回空的容器，不显示复选框
-      );
-    }
-    
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-      child: Checkbox(
-        value: _selectAll,
-        onChanged: (value) => _toggleSelectAll(),
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+  Widget _buildReceiverListSelector() {
+    return Selector<ReceiverListProvider, _ReceiverListState>(
+      selector: (context, provider) => _ReceiverListState(
+        isLoading: provider.isLoading,
+        error: provider.error,
+        receiversEmpty: provider.receivers.isEmpty,
+        hasExistingReceivers: provider.receivers.isNotEmpty,
       ),
+      builder: (context, state, child) {
+        // 首次加载时显示完整的加载指示器
+        if (state.isLoading && !state.hasExistingReceivers) {
+          return const Center(child: CircularProgressIndicator());
+        }
+                  
+        if (state.error != null) {
+          final error = state.error!;
+          print('Provider错误: $error'); // 添加调试信息
+                    
+          if (error.contains('Access Key') && error.contains('未配置')) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.settings_outlined,
+                    size: 64,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    '需要配置阿里云AccessKey',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '请点击右上角设置按钮配置您的阿里云AccessKey信息',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _openConfigPage,
+                    icon: const Icon(Icons.settings),
+                    label: const Text('去配置'),
+                  ),
+                ],
+              ),
+            );
+          }
+                    
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Colors.red,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  '加载失败',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    error,
+                    style: const TextStyle(color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: _reloadList,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重试'),
+                ),
+              ],
+            ),
+          );
+        }
+                  
+        if (state.receiversEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.list_alt_outlined,
+                  size: 64,
+                  color: Colors.grey,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  '暂无收件人列表',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '点击"新建收件人列表"按钮开始创建',
+                  style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: _createReceiver,
+                  icon: const Icon(Icons.add),
+                  label: const Text('新建收件人列表'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+                  
+        return _buildOptimizedReceiverList();
+      },
     );
   }
 
-  Widget _buildCheckboxCell(String receiverId) {
-    final provider = context.read<ReceiverListProvider>();
-    final receiver = provider.receivers.where((item) => item.receiverId == receiverId).firstOrNull;
-    
-    // 如果找不到收件人或收件人列表不可删除，则不显示复选框
-    if (receiver == null || !receiver.isDeletable) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-        // 返回空的容器，不显示复选框
-      );
-    }
-    
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-      child: Checkbox(
-        value: _selectedReceivers.contains(receiverId),
-        onChanged: (value) => _toggleReceiverSelection(receiverId),
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
-    );
-  }
-
-  Widget _buildHeaderCell(String text, {bool isRight = false}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
-          color: Colors.black87,
+  Widget _buildOptimizedReceiverList() {
+    return Column(
+      children: [
+        // 表格头部
+        _buildTableHeader(),
+        const SizedBox(height: 10),
+        // 表格内容
+        Expanded(
+          child: _buildTableContent(),
         ),
-        textAlign: isRight ? TextAlign.right : TextAlign.left,
-      ),
+        // 选中记录统计
+        _buildSelectionStats(),
+      ],
     );
   }
 
-  Widget _buildDataCell(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 14),
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-
-  Widget _buildReceiverNameCell(ReceiverListModel receiver) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              receiver.receiversName,
-              style: const TextStyle(fontSize: 14),
-              overflow: TextOverflow.ellipsis,
+  Widget _buildTableHeader() {
+    return Selector<ReceiverListProvider, bool>(
+      selector: (context, provider) => provider.selectAll,
+      builder: (context, isAllSelected, child) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Checkbox(
+                  value: isAllSelected,
+                  onChanged: (value) {
+                    context.read<ReceiverListProvider>().toggleSelectAll();
+                  },
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    '列表名称',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    '别称地址',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    '描述',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 60,
+                  child: Text(
+                    '总数',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 120,
+                  child: Text(
+                    '创建时间',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 80,
+                  child: Text(
+                    '操作',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          if (!receiver.isDeletable) ...[
-            const SizedBox(width: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.orange[100],
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.orange[300]!),
+        );
+      },
+    );
+  }
+
+  Widget _buildTableContent() {
+    return Selector<ReceiverListProvider, List<ReceiverListModel>>(
+      selector: (context, provider) => provider.receivers,
+      builder: (context, receivers, child) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
               ),
-              child: Text(
-                '只读',
+            ],
+          ),
+          child: Scrollbar(
+            controller: _scrollController,
+            child: ListView.builder(
+              controller: _scrollController,
+              itemCount: receivers.length,
+              itemBuilder: (context, index) {
+                final receiver = receivers[index];
+                return _buildReceiverRow(receiver, index);
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildReceiverRow(ReceiverListModel receiver, int index) {
+    return Selector<ReceiverListProvider, bool>(
+      selector: (context, provider) => provider.isReceiverSelected(receiver.receiverId),
+      builder: (context, isSelected, child) {
+        return Container(
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: Colors.grey[200]!,
+                width: 1,
+              ),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Checkbox(
+                  value: isSelected,
+                  onChanged: receiver.isDeletable ? (value) {
+                    context.read<ReceiverListProvider>().toggleReceiverSelection(receiver.receiverId);
+                  } : null,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          receiver.receiversName,
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ),
+                      if (!receiver.isDeletable) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange[100],
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.orange[300]!),
+                          ),
+                          child: Text(
+                            '只读',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.orange[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    receiver.receiversAlias,
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    receiver.desc ?? '',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ),
+                SizedBox(
+                  width: 60,
+                  child: Text(
+                    receiver.count.toString(),
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ),
+                SizedBox(
+                  width: 120,
+                  child: Text(
+                    receiver.createTime,
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ),
+                SizedBox(
+                  width: 80,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.visibility, size: 18),
+                        onPressed: () => _openDetailPage(receiver.receiverId, receiver.receiversName),
+                        tooltip: '查看详情',
+                      ),
+                      if (receiver.isDeletable)
+                        IconButton(
+                          icon: const Icon(Icons.delete, size: 18),
+                          onPressed: () => _deleteReceiver(receiver.receiverId, receiver.receiversName),
+                          tooltip: '删除',
+                          color: Colors.red,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSelectionStats() {
+    return Selector<ReceiverListProvider, Set<String>>(
+      selector: (context, provider) => provider.selectedReceivers,
+      builder: (context, selectedReceivers, child) {
+        if (selectedReceivers.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.blue[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.blue[200]!),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: Colors.blue[600],
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '已选中 ${selectedReceivers.length} 个收件人列表',
                 style: TextStyle(
-                  fontSize: 10,
-                  color: Colors.orange[700],
                   fontWeight: FontWeight.w500,
+                  color: Colors.blue[800],
                 ),
               ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionCell({
-    required VoidCallback onDetail,
-    VoidCallback? onDelete,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      alignment: Alignment.centerRight,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          TextButton(
-            onPressed: onDetail,
-            style: TextButton.styleFrom(
-              minimumSize: const Size(32, 28),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-            ),
-            child: const Text('详情', style: TextStyle(fontSize: 11)),
+            ],
           ),
-          if (onDelete != null) ...[
-            const SizedBox(width: 2),
-            TextButton(
-              onPressed: onDelete,
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-                minimumSize: const Size(32, 28),
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-              ),
-              child: const Text('删除', style: TextStyle(fontSize: 11)),
-            ),
-          ],
-        ],
-      ),
+        );
+      },
     );
   }
 }

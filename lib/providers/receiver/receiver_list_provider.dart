@@ -12,6 +12,10 @@ class ReceiverListProvider with ChangeNotifier {
   String? _error;
   DateTime? _lastUpdated;
 
+  // 选择相关状态
+  final Set<String> _selectedReceivers = <String>{};
+  bool _selectAll = false;
+
   // 依赖注入的配置Provider
   GlobalConfigProvider? _globalConfigProvider;
   PageConfigProvider? _pageConfigProvider;
@@ -32,6 +36,11 @@ class ReceiverListProvider with ChangeNotifier {
   String? get error => _error;
   DateTime? get lastUpdated => _lastUpdated;
   
+  // 选择相关的 getters
+  Set<String> get selectedReceivers => _selectedReceivers;
+  bool get selectAll => _selectAll;
+  int get selectedCount => _selectedReceivers.length;
+  
   // 获取所有收件人列表名称（用于重复检查）
   Set<String> get receiverNames => _receivers
       .map((r) => r.receiversName.toLowerCase().trim())
@@ -41,6 +50,50 @@ class ReceiverListProvider with ChangeNotifier {
   // 检查名称是否重复
   bool isNameDuplicate(String name) {
     return receiverNames.contains(name.toLowerCase().trim());
+  }
+
+  // 选择相关方法
+  bool isReceiverSelected(String receiverId) {
+    return _selectedReceivers.contains(receiverId);
+  }
+
+  void toggleReceiverSelection(String receiverId) {
+    if (_selectedReceivers.contains(receiverId)) {
+      _selectedReceivers.remove(receiverId);
+    } else {
+      _selectedReceivers.add(receiverId);
+    }
+    _updateSelectAllState();
+    notifyListeners();
+  }
+
+  void toggleSelectAll() {
+    if (_selectAll) {
+      _selectedReceivers.clear();
+      _selectAll = false;
+    } else {
+      // 只选择可删除的收件人列表
+      final deletableReceiverIds = _receivers
+          .where((item) => item.isDeletable)
+          .map((item) => item.receiverId)
+          .toSet();
+      _selectedReceivers.addAll(deletableReceiverIds);
+      _selectAll = _selectedReceivers.length == deletableReceiverIds.length;
+    }
+    notifyListeners();
+  }
+
+  void _updateSelectAllState() {
+    final deletableReceivers = _receivers.where((item) => item.isDeletable);
+    final deletableReceiverIds = deletableReceivers.map((item) => item.receiverId).toSet();
+    _selectAll = deletableReceiverIds.isNotEmpty && 
+                 _selectedReceivers.length == deletableReceiverIds.length;
+  }
+
+  void clearSelection() {
+    _selectedReceivers.clear();
+    _selectAll = false;
+    notifyListeners();
   }
 
   // 加载收件人列表
@@ -59,6 +112,9 @@ class ReceiverListProvider with ChangeNotifier {
       _receivers = receiversData.map((data) => ReceiverListModel.fromMap(data)).toList();
       _lastUpdated = DateTime.now();
       _error = null;
+      
+      // 更新选择状态
+      _updateSelectAllState();
     } catch (e) {
       _error = e.toString();
       _receivers = [];
@@ -89,11 +145,13 @@ class ReceiverListProvider with ChangeNotifier {
         desc: receiver.desc,
         count: receiver.count,
         createTime: receiver.createTime,
+        isDeletable: true, // 新创建的列表默认可删除
       );
       
       // 添加到本地列表
       _receivers.add(newReceiver);
       _lastUpdated = DateTime.now();
+      _updateSelectAllState();
       Future.microtask(() => notifyListeners());
     } catch (e) {
       _error = e.toString();
@@ -114,7 +172,10 @@ class ReceiverListProvider with ChangeNotifier {
       
       // 从本地列表移除
       _receivers.removeWhere((r) => r.receiverId == receiverId);
+      // 从选择列表中移除
+      _selectedReceivers.remove(receiverId);
       _lastUpdated = DateTime.now();
+      _updateSelectAllState();
       Future.microtask(() => notifyListeners());
     } catch (e) {
       _error = e.toString();
@@ -137,7 +198,10 @@ class ReceiverListProvider with ChangeNotifier {
       
       // 从本地列表移除
       _receivers.removeWhere((r) => receiverIds.contains(r.receiverId));
+      // 从选择列表中移除
+      _selectedReceivers.removeAll(receiverIds);
       _lastUpdated = DateTime.now();
+      _updateSelectAllState();
       Future.microtask(() => notifyListeners());
     } catch (e) {
       _error = e.toString();
@@ -169,6 +233,8 @@ class ReceiverListProvider with ChangeNotifier {
   // 清空缓存
   void clearCache() {
     _receivers.clear();
+    _selectedReceivers.clear();
+    _selectAll = false;
     _lastUpdated = null;
     _error = null;
     Future.microtask(() => notifyListeners());
@@ -190,6 +256,8 @@ class ReceiverListProvider with ChangeNotifier {
   // 强制刷新收件人列表
   Future<void> forceRefresh() async {
     _receivers.clear();
+    _selectedReceivers.clear();
+    _selectAll = false;
     _lastUpdated = null;
     _error = null;
     await loadReceivers();
