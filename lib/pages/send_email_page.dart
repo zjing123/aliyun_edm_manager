@@ -362,7 +362,7 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  flex: 2,
+                  flex: 3,
                   child: Text(
                     '邮件模板',
                     style: TextStyle(
@@ -372,7 +372,7 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                   ),
                 ),
                 Expanded(
-                  flex: 2,
+                  flex: 1,
                   child: Text(
                     '收件人列表',
                     style: TextStyle(
@@ -482,14 +482,14 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  flex: 2,
+                  flex: 3,
                   child: Text(
                     task.templateName,
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                 ),
                 Expanded(
-                  flex: 2,
+                  flex: 1,
                   child: Text(
                     task.receiversName,
                     style: TextStyle(color: Colors.grey[600]),
