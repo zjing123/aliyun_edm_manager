@@ -360,7 +360,7 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                     context.read<MailTaskProvider>().toggleSelectAll();
                   },
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 8),
                 Expanded(
                   flex: 3,
                   child: Text(
@@ -402,7 +402,7 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                   ),
                 ),
                 SizedBox(
-                  width: 60,
+                  width: 70,
                   child: Text(
                     '状态',
                     style: TextStyle(
@@ -412,7 +412,17 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                   ),
                 ),
                 SizedBox(
-                  width: 80,
+                  width: 150,
+                  child: Text(
+                    '创建时间',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 60,
                   child: Text(
                     '操作',
                     textAlign: TextAlign.right,
@@ -481,7 +491,7 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                     context.read<MailTaskProvider>().toggleTaskSelection(task.taskId);
                   },
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 8),
                 Expanded(
                   flex: 3,
                   child: Text(
@@ -511,11 +521,21 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                   ),
                 ),
                 SizedBox(
-                  width: 60,
-                  child: _buildStatusChip(task.taskStatus),
+                  width: 70,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: _buildStatusChip(task),
+                  ),
                 ),
                 SizedBox(
-                  width: 80,
+                  width: 150,
+                  child: Text(
+                    task.formattedCreateTime(),
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ),
+                SizedBox(
+                  width: 60,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -535,38 +555,32 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
     );
   }
 
-  Widget _buildStatusChip(String status) {
+  Widget _buildStatusChip(MailTaskModel task) {
     Color chipColor;
-    String statusText;
-    
-    switch (status) {
+    switch (task.taskStatus) {
       case '1':
         chipColor = Colors.green;
-        statusText = '成功';
         break;
       case '2':
         chipColor = Colors.orange;
-        statusText = '发送中';
         break;
       case '3':
         chipColor = Colors.red;
-        statusText = '失败';
         break;
       default:
         chipColor = Colors.grey;
-        statusText = '未知';
     }
     
     return Container(
       alignment: Alignment.center,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: chipColor.withOpacity(0.1),
+        color: chipColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: chipColor.withOpacity(0.3)),
+        border: Border.all(color: chipColor.withValues(alpha: 0.3)),
       ),
       child: Text(
-        statusText,
+        task.statusText,
         style: TextStyle(
           color: chipColor,
           fontSize: 12,
@@ -797,9 +811,9 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                 _buildDetailRow('发信类型', task.addressType == '0' ? '随机地址' : '固定地址'),
                 _buildDetailRow('邮件标签', task.tagName.isNotEmpty ? task.tagName : '无'),
                 _buildDetailRow('请求数量', task.requestCount),
-                _buildDetailRow('状态', _getStatusText(task.taskStatus)),
+                _buildDetailRow('状态', task.statusText),
                 if (task.createTime.isNotEmpty)
-                  _buildDetailRow('创建时间', task.createTime),
+                  _buildDetailRow('创建时间', task.formattedCreateTime()),
                 const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -824,19 +838,6 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
         );
       },
     );
-  }
-
-  String _getStatusText(String status) {
-    switch (status) {
-      case '1':
-        return '成功';
-      case '2':
-        return '发送中';
-      case '3':
-        return '失败';
-      default:
-        return '未知';
-    }
   }
 
   Widget _buildDetailRow(String label, String value) {
