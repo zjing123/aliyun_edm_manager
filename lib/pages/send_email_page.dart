@@ -706,7 +706,7 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                           style: TextStyle(color: Colors.grey[600]),
                         ),
                         SizedBox(
-                          width: 30,
+                          width: 50,
                           child: TextField(
                             controller: TextEditingController(text: '${currentPage + 1}'),
                             textAlign: TextAlign.center,
@@ -770,53 +770,99 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('任务详情'),
-          content: SingleChildScrollView(
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: 16,
+          backgroundColor: Colors.white,
+          child: Container(
+            constraints: const BoxConstraints(minWidth: 350, maxWidth: 420),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const Text(
+                  '任务详情',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 18),
                 _buildDetailRow('邮件模板', task.templateName),
                 _buildDetailRow('收件人列表', task.receiversName),
                 _buildDetailRow('发信类型', task.addressType == '0' ? '随机地址' : '固定地址'),
                 _buildDetailRow('邮件标签', task.tagName.isNotEmpty ? task.tagName : '无'),
                 _buildDetailRow('请求数量', task.requestCount),
-                _buildDetailRow('成功数量', task.successCount),
-                _buildDetailRow('状态', task.taskStatus),
+                _buildDetailRow('状态', _getStatusText(task.taskStatus)),
                 if (task.createTime.isNotEmpty)
                   _buildDetailRow('创建时间', task.createTime),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.blue,
+                        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('关闭'),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('关闭'),
-            ),
-          ],
         );
       },
     );
   }
 
+  String _getStatusText(String status) {
+    switch (status) {
+      case '1':
+        return '成功';
+      case '2':
+        return '发送中';
+      case '3':
+        return '失败';
+      default:
+        return '未知';
+    }
+  }
+
   Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 80,
+            width: 90,
             child: Text(
               '$label：',
-              style: const TextStyle(fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+                fontSize: 15,
+              ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(
+                color: Colors.grey[700],
+                fontSize: 15,
+              ),
             ),
           ),
         ],
