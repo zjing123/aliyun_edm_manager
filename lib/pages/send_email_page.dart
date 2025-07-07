@@ -362,7 +362,7 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                 Expanded(
                   flex: 2,
                   child: Text(
-                    '任务名称',
+                    '邮件模板',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.grey[800],
@@ -380,9 +380,9 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                   ),
                 ),
                 Expanded(
-                  flex: 2,
+                  flex: 1,
                   child: Text(
-                    '邮件模板',
+                    '标签',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.grey[800],
@@ -390,9 +390,9 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                   ),
                 ),
                 Expanded(
-                  flex: 2,
+                  flex: 1,
                   child: Text(
-                    '发信地址',
+                    '请求数量',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.grey[800],
@@ -400,7 +400,7 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                   ),
                 ),
                 SizedBox(
-                  width: 80,
+                  width: 60,
                   child: Text(
                     '状态',
                     style: TextStyle(
@@ -482,8 +482,8 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                 Expanded(
                   flex: 2,
                   child: Text(
-                    task.taskName ?? '未命名任务',
-                    style: const TextStyle(fontWeight: FontWeight.w500),
+                    task.templateName,
+                    style: TextStyle(color: Colors.grey[600]),
                   ),
                 ),
                 Expanded(
@@ -494,21 +494,21 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                   ),
                 ),
                 Expanded(
-                  flex: 2,
+                  flex: 1,
                   child: Text(
-                    task.templateName,
+                    task.tagName.isNotEmpty ? task.tagName : '无',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                 ),
                 Expanded(
-                  flex: 2,
+                  flex: 1,
                   child: Text(
-                    task.templateName, // 使用模板名称替代发信地址
+                    task.requestCount,
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                 ),
                 SizedBox(
-                  width: 80,
+                  width: 60,
                   child: _buildStatusChip(task.taskStatus),
                 ),
                 SizedBox(
@@ -554,6 +554,7 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
     }
     
     return Container(
+      alignment: Alignment.center,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: chipColor.withOpacity(0.1),
@@ -643,11 +644,12 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildDetailRow('任务名称', task.taskName ?? '未命名任务'),
-                _buildDetailRow('收件人列表', task.receiversName),
                 _buildDetailRow('邮件模板', task.templateName),
+                _buildDetailRow('收件人列表', task.receiversName),
                 _buildDetailRow('发信类型', task.addressType == '0' ? '随机地址' : '固定地址'),
                 _buildDetailRow('邮件标签', task.tagName.isNotEmpty ? task.tagName : '无'),
+                _buildDetailRow('请求数量', task.requestCount),
+                _buildDetailRow('成功数量', task.successCount),
                 _buildDetailRow('状态', task.taskStatus),
                 if (task.createTime.isNotEmpty)
                   _buildDetailRow('创建时间', task.createTime),
