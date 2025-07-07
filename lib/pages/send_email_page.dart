@@ -516,6 +516,7 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
                 SizedBox(
                   width: 80,
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       IconButton(
                         icon: const Icon(Icons.visibility, size: 18),
@@ -678,21 +679,72 @@ class _SendEmailPageState extends State<SendEmailPage> with AutomaticKeepAliveCl
               ),
               Row(
                 children: [
+                  // 首页按钮
+                  IconButton(
+                    icon: const Icon(Icons.first_page),
+                    onPressed: currentPage > 0
+                        ? () => context.read<MailTaskProvider>().firstPage()
+                        : null,
+                    tooltip: '首页',
+                  ),
+                  // 上一页按钮
                   IconButton(
                     icon: const Icon(Icons.chevron_left),
                     onPressed: currentPage > 0
                         ? () => context.read<MailTaskProvider>().previousPage()
                         : null,
+                    tooltip: '上一页',
                   ),
-                  Text(
-                    '${currentPage + 1} / $totalPages',
-                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  // 页码显示和输入
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      children: [
+                        Text(
+                          '第 ',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                        SizedBox(
+                          width: 50,
+                          child: TextField(
+                            controller: TextEditingController(text: '${currentPage + 1}'),
+                            textAlign: TextAlign.center,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                            onSubmitted: (value) {
+                              final page = int.tryParse(value);
+                              if (page != null && page >= 1 && page <= totalPages) {
+                                context.read<MailTaskProvider>().goToPage(page);
+                              }
+                            },
+                          ),
+                        ),
+                        Text(
+                          ' 页，共 $totalPages 页',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
                   ),
+                  // 下一页按钮
                   IconButton(
                     icon: const Icon(Icons.chevron_right),
                     onPressed: currentPage < totalPages - 1
                         ? () => context.read<MailTaskProvider>().nextPage()
                         : null,
+                    tooltip: '下一页',
+                  ),
+                  // 末页按钮
+                  IconButton(
+                    icon: const Icon(Icons.last_page),
+                    onPressed: currentPage < totalPages - 1
+                        ? () => context.read<MailTaskProvider>().lastPage()
+                        : null,
+                    tooltip: '末页',
                   ),
                 ],
               ),
