@@ -1,6 +1,5 @@
-import 'package:dio/dio.dart';
-import 'base_aliyun_service.dart';
-import '../../models/receiver/receiver_detail.dart';
+import 'package:aliyun_edm_manager/services/aliyun/base_aliyun_service.dart';
+import 'package:aliyun_edm_manager/models/receiver/receiver_detail.dart';
 
 /// 收件人管理服务
 /// 提供收件人列表和收件人详情的增删改查功能

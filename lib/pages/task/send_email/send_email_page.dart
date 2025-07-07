@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/task/mail_task_provider.dart';
-import '../models/task/mail_task_model.dart';
-import 'config_page.dart';
+import 'package:aliyun_edm_manager/providers/task/mail_task_provider.dart';
+import 'package:aliyun_edm_manager/models/task/mail_task_model.dart';
+import 'package:aliyun_edm_manager/pages/config/config_page.dart';
 import 'send_email_create_page.dart';
 
 // 表格渲染性能优化说明：

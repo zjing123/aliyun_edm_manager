@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/config/global_config_provider.dart';
-import 'filter_emails_config_page.dart';
+import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
+import 'package:aliyun_edm_manager/pages/tag/filter_emails_config_page.dart';
 
 class ConfigPage extends StatefulWidget {
   const ConfigPage({super.key});

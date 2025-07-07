@@ -1,5 +1,5 @@
-import 'base_aliyun_service.dart';
-import '../../models/task/mail_task_model.dart';
+import 'package:aliyun_edm_manager/services/aliyun/base_aliyun_service.dart';
+import 'package:aliyun_edm_manager/models/task/mail_task_model.dart';
 
 /// 邮件任务管理服务
 /// 提供邮件任务的查询和管理功能
@@ -30,6 +30,34 @@ class EmailTaskService extends BaseAliyunService {
 
     final response = await get("QueryTaskByParam", params);
     return MailTaskResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// 批量发送邮件
+  Future<bool> batchSendMail(BatchSendMailRequest request) async {
+    try {
+      final params = <String, String>{
+        'ReceiversName': request.receiversName,
+        'TemplateName': request.templateName,
+        'AccountName': request.accountName,
+        'ClickTrace': request.clickTrace,
+        'AddressType': request.addressType,
+        'TagName': request.tagName,
+        'ReplyToAddress': request.replyToAddress,
+      };
+      
+      if (request.taskName != null && request.taskName!.isNotEmpty) {
+        params['TaskName'] = request.taskName!;
+      }
+
+      final response = await post("BatchSendMail", params);
+      final responseData = response.data as Map<String, dynamic>;
+      
+      // 检查响应状态
+      return responseData['RequestId'] != null;
+    } catch (e) {
+      print('批量发送邮件失败: $e');
+      return false;
+    }
   }
 
   /// 获取所有邮件任务

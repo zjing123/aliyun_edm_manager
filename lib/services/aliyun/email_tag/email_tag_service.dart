@@ -1,5 +1,5 @@
-import 'base_aliyun_service.dart';
-import '../../models/tag/email_tag_model.dart';
+import 'package:aliyun_edm_manager/services/aliyun/base_aliyun_service.dart';
+import 'package:aliyun_edm_manager/models/tag/email_tag_model.dart';
 
 /// 邮件标签管理服务
 /// 提供邮件标签的查询和管理功能

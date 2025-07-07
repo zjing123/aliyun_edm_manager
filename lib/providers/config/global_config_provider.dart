@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../services/config/config_service.dart';
+import 'package:aliyun_edm_manager/services/config/config_service.dart';
 
 class GlobalConfigProvider with ChangeNotifier {
   ConfigService? _configService;

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../utils/dialog_util.dart';
-import '../providers/receiver/receiver_list_provider.dart';
-import '../models/receiver/receiver_list_model.dart';
-import 'config_page.dart';
+import 'package:aliyun_edm_manager/utils/dialog_util.dart';
+import 'package:aliyun_edm_manager/providers/receiver/receiver_list_provider.dart';
+import 'package:aliyun_edm_manager/models/receiver/receiver_list_model.dart';
+import 'package:aliyun_edm_manager/pages/config/config_page.dart';
 import 'receiver_detail_page.dart';
 import 'batch_create_receiver_page.dart';
 import 'forbidden_delete_settings_page.dart';
@@ -18,6 +18,7 @@ class ReceiverListPage extends StatefulWidget {
 class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepAliveClientMixin {
   final Set<String> _selectedReceivers = <String>{};
   bool _selectAll = false;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   bool get wantKeepAlive => false; // 不保持页面状态，每次都会重新创建
@@ -38,6 +39,12 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ReceiverListProvider>().forceRefresh();
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   void _reloadList() {
@@ -517,7 +524,9 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
                                     ),
                                   )
                                 : Scrollbar(
+                                    controller: _scrollController,
                                     child: SingleChildScrollView(
+                                      controller: _scrollController,
                                       child: Table(
                                         columnWidths: showDescription ? {
                                           0: const FlexColumnWidth(0.8),

@@ -1,8 +1,7 @@
 import 'package:flutter/foundation.dart';
-import '../models/task/mail_task_model.dart';
-import '../services/aliyun/aliyun_service_manager.dart';
-import '../services/aliyun/task/email_task_service.dart';
-import 'global_config_provider.dart';
+import 'package:aliyun_edm_manager/models/task/mail_task_model.dart';
+import 'package:aliyun_edm_manager/services/aliyun/aliyun_service_manager.dart';
+import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
 
 class MailTaskProvider with ChangeNotifier {
   final AliyunServiceManager _serviceManager;
@@ -169,7 +168,7 @@ class MailTaskProvider with ChangeNotifier {
     notifyListeners();
     
     try {
-      final emailTaskService = _serviceManager.getEmailTaskService();
+      final emailTaskService = _serviceManager.emailTaskService;
       final response = await emailTaskService.queryTaskByParam(
         keyWord: keyWord,
         status: status,
@@ -298,7 +297,7 @@ class MailTaskProvider with ChangeNotifier {
   // 发送邮件
   Future<bool> sendMail(BatchSendMailRequest request) async {
     try {
-      final emailTaskService = _serviceManager.getEmailTaskService();
+      final emailTaskService = _serviceManager.emailTaskService;
       final success = await emailTaskService.batchSendMail(request);
       if (success) {
         // 发送成功后刷新任务列表
@@ -320,7 +319,12 @@ class MailTaskProvider with ChangeNotifier {
   
   // 设置全局配置
   void setGlobalConfigProvider(GlobalConfigProvider globalConfig) {
-    _serviceManager.setGlobalConfigProvider(globalConfig);
+    // 确保服务管理器已初始化
+    if (!_serviceManager.isInitialized) {
+      _serviceManager.initialize(globalConfig);
+    } else {
+      _serviceManager.updateGlobalConfigProvider(globalConfig);
+    }
   }
   
   // 获取缓存统计信息（用于调试）

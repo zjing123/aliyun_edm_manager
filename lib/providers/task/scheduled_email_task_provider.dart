@@ -1,10 +1,9 @@
 import 'package:flutter/foundation.dart';
-import '../../models/task/scheduled_email_task_model.dart';
-import '../../services/aliyun/aliyun_service_manager.dart';
-import '../../services/aliyun/scheduled_email/scheduled_email_service.dart';
-import '../../services/database/database_service.dart';
-import '../config/global_config_provider.dart';
-import '../receiver/receiver_list_provider.dart';
+import 'package:aliyun_edm_manager/models/task/scheduled_email_task_model.dart';
+import 'package:aliyun_edm_manager/services/aliyun/aliyun_service_manager.dart';
+import 'package:aliyun_edm_manager/services/database/database_service.dart';
+import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
+import 'package:aliyun_edm_manager/providers/receiver/receiver_list_provider.dart';
 import 'dart:async';
 import 'dart:math';
 

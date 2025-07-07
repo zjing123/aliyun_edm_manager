@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
-import '../models/task/scheduled_email_task_model.dart';
+import 'package:aliyun_edm_manager/services/config/config_service.dart';
+import 'package:aliyun_edm_manager/models/task/scheduled_email_task_model.dart';
+import 'package:aliyun_edm_manager/models/receiver/receiver_list_model.dart';
 
 class DatabaseService {
   static DatabaseService? _instance;

@@ -1,11 +1,10 @@
-import '../../providers/config/global_config_provider.dart';
-import 'base_aliyun_service.dart';
-import 'receiver_service.dart';
-import 'template_service.dart';
-import 'sender_address_service.dart';
-import 'email_tag_service.dart';
-import 'email_task_service.dart';
-import 'scheduled_email_service.dart';
+import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
+import 'package:aliyun_edm_manager/services/aliyun/receiver/receiver_service.dart';
+import 'package:aliyun_edm_manager/services/aliyun/template/template_service.dart';
+import 'package:aliyun_edm_manager/services/aliyun/sender_address/sender_address_service.dart';
+import 'package:aliyun_edm_manager/services/aliyun/email_tag/email_tag_service.dart';
+import 'package:aliyun_edm_manager/services/aliyun/email_task/email_task_service.dart';
+import 'package:aliyun_edm_manager/services/aliyun/scheduled_email/scheduled_email_service.dart';
 
 /// 阿里云服务管理器
 /// 统一管理所有阿里云子服务，提供便捷的访问接口

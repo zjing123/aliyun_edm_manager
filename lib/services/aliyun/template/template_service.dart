@@ -1,6 +1,6 @@
-import 'base_aliyun_service.dart';
-import '../../models/template/template_model.dart';
-import '../../constants/template_constants.dart';
+import 'package:aliyun_edm_manager/services/aliyun/base_aliyun_service.dart';
+import 'package:aliyun_edm_manager/models/template/template_model.dart';
+import 'package:aliyun_edm_manager/constants/template_constants.dart';
 
 /// 模板管理服务
 /// 提供邮件模板的查询和管理功能

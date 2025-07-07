@@ -1,5 +1,5 @@
-import 'base_aliyun_service.dart';
-import '../../models/sender/sender_address_model.dart';
+import 'package:aliyun_edm_manager/services/aliyun/base_aliyun_service.dart';
+import 'package:aliyun_edm_manager/models/sender/sender_address_model.dart';
 
 /// 发信地址管理服务
 /// 提供发信地址的查询和管理功能

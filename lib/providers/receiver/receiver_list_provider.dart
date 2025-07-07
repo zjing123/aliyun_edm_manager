@@ -1,9 +1,8 @@
 import 'package:flutter/foundation.dart';
-import '../../models/receiver/receiver_list_model.dart';
-import '../../services/aliyun/aliyun_service_manager.dart';
-import '../../services/aliyun/receiver/receiver_service.dart';
-import '../config/global_config_provider.dart';
-import '../config/page_config_provider.dart';
+import 'package:aliyun_edm_manager/models/receiver/receiver_list_model.dart';
+import 'package:aliyun_edm_manager/services/aliyun/aliyun_service_manager.dart';
+import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
+import 'package:aliyun_edm_manager/providers/config/page_config_provider.dart';
 
 class ReceiverListProvider with ChangeNotifier {
   AliyunServiceManager? _serviceManager;
@@ -186,5 +185,13 @@ class ReceiverListProvider with ChangeNotifier {
   void clearError() {
     _error = null;
     Future.microtask(() => notifyListeners());
+  }
+
+  // 强制刷新收件人列表
+  Future<void> forceRefresh() async {
+    _receivers.clear();
+    _lastUpdated = null;
+    _error = null;
+    await loadReceivers();
   }
 } 

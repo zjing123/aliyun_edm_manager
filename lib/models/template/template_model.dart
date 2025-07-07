@@ -1,4 +1,4 @@
-import '../constants/template_constants.dart';
+import 'package:aliyun_edm_manager/constants/template_constants.dart';
 
 class TemplateModel {
   final String templateId;

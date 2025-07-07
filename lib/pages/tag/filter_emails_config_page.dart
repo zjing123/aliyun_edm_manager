@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/config/page_config_provider.dart';
-import '../utils/dialog_util.dart';
+import 'package:aliyun_edm_manager/providers/config/page_config_provider.dart';
+import 'package:aliyun_edm_manager/utils/dialog_util.dart';
 
 class FilterEmailsConfigPage extends StatefulWidget {
   const FilterEmailsConfigPage({super.key});

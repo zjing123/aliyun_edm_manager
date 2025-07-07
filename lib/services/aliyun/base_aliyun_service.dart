@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import '../../utils/aliyun_signer.dart';
-import '../../providers/config/global_config_provider.dart';
+import 'package:aliyun_edm_manager/utils/aliyun_signer.dart';
+import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
 
 /// 阿里云服务基础类
 /// 提供通用的配置管理和API请求功能
@@ -52,7 +52,7 @@ abstract class BaseAliyunService {
   }
 
   /// 构建通用请求参数
-  Future<Map<String, String>> _buildCommonParams(String action) async {
+  Map<String, String> _buildCommonParams(String action) {
     final params = <String, String>{};
     
     // 必填参数
@@ -75,13 +75,13 @@ abstract class BaseAliyunService {
 
   /// 生成时间戳
   String _generateTimestamp() {
-    final now = DateTime.now().toUtc();
-    return now.toIso8601String().replaceAll(RegExp(r'[-:]|\.\d{3}'), '');
+    // 格式: 2023-01-01T12:00:00Z
+    return DateTime.now().toUtc().toIso8601String();
   }
 
   /// 执行GET请求
   Future<Response> get(String action, Map<String, String> params) async {
-    final commonParams = await _buildCommonParams(action);
+    final commonParams = _buildCommonParams(action);
     commonParams.addAll(params);
     
     final accessKeySecret = _getAccessKeySecret();
@@ -102,7 +102,7 @@ abstract class BaseAliyunService {
 
   /// 执行POST请求
   Future<Response> post(String action, Map<String, String> params) async {
-    final commonParams = await _buildCommonParams(action);
+    final commonParams = _buildCommonParams(action);
     commonParams.addAll(params);
     
     final accessKeySecret = _getAccessKeySecret();

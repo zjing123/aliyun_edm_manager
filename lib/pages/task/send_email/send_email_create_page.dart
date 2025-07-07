@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../models/task/mail_task_model.dart';
-import '../../models/template/template_model.dart';
-import '../../models/sender/sender_address_model.dart';
-import '../../models/tag/email_tag_model.dart';
-import '../../providers/task/mail_task_provider.dart';
-import '../../providers/receiver/receiver_list_provider.dart';
-import '../../providers/config/global_config_provider.dart';
-import '../../services/aliyun/aliyun_service_manager.dart';
+import 'package:aliyun_edm_manager/models/task/mail_task_model.dart';
+import 'package:aliyun_edm_manager/models/template/template_model.dart';
+import 'package:aliyun_edm_manager/models/sender/sender_address_model.dart';
+import 'package:aliyun_edm_manager/models/tag/email_tag_model.dart';
+import 'package:aliyun_edm_manager/providers/task/mail_task_provider.dart';
+import 'package:aliyun_edm_manager/providers/receiver/receiver_list_provider.dart';
+import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
+import 'package:aliyun_edm_manager/services/aliyun/aliyun_service_manager.dart';
 
 // 发信地址类型常量
 class SenderTypeConstants {

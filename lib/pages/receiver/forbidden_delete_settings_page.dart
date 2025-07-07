@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/receiver/receiver_list_provider.dart';
-import '../providers/config/page_config_provider.dart';
-import '../utils/dialog_util.dart';
+import 'package:aliyun_edm_manager/providers/receiver/receiver_list_provider.dart';
+import 'package:aliyun_edm_manager/providers/config/page_config_provider.dart';
+import 'package:aliyun_edm_manager/utils/dialog_util.dart';
 
 class ForbiddenDeleteSettingsPage extends StatefulWidget {
   const ForbiddenDeleteSettingsPage({super.key});
@@ -15,6 +15,7 @@ class _ForbiddenDeleteSettingsPageState extends State<ForbiddenDeleteSettingsPag
   final Set<String> _selectedForbiddenIds = <String>{};
   bool _isLoading = false;
   String? _error;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -377,7 +378,9 @@ class _ForbiddenDeleteSettingsPageState extends State<ForbiddenDeleteSettingsPag
                           child: receivers.isEmpty
                               ? const Center(child: Text('暂无数据'))
                               : Scrollbar(
+                                  controller: _scrollController,
                                   child: SingleChildScrollView(
+                                    controller: _scrollController,
                                     child: Table(
                                       columnWidths: const {
                                         0: FlexColumnWidth(0.8),
@@ -425,6 +428,12 @@ class _ForbiddenDeleteSettingsPageState extends State<ForbiddenDeleteSettingsPag
         );
       },
     );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Widget _buildHeaderCell(String text) {
