@@ -602,7 +602,7 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
                   ),
                 ),
                 SizedBox(
-                  width: 120,
+                  width: 150,
                   child: Text(
                     '创建时间',
                     style: TextStyle(
@@ -740,7 +740,7 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
                   ),
                 ),
                 SizedBox(
-                  width: 120,
+                  width: 150,
                   child: Text(
                     receiver.formattedCreateTime(),
                     style: TextStyle(color: Colors.grey[600]),

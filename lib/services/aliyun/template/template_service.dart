@@ -46,6 +46,10 @@ class TemplateService extends BaseAliyunService {
     int pageSize = 10,
   }) async {
     try {
+      if (pageSize > 50) {
+        pageSize = 50;
+      }
+
       final response = await queryTemplateByParam(
         templateName: templateName,
         templateStatus: templateStatus,

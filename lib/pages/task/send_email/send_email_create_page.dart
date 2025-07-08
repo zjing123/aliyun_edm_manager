@@ -135,7 +135,7 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
       }
 
       final templateService = serviceManager.templateService;
-      final templates = await templateService.getAllTemplates(pageSize: 100);
+      final templates = await templateService.getAllTemplates(pageSize: 10);
       setState(() {
         _templates = templates;
         _filteredTemplates = templates;
