@@ -6,6 +6,7 @@ import 'package:aliyun_edm_manager/pages/config/config_page.dart';
 import 'package:aliyun_edm_manager/pages/template/template_create_page.dart';
 import 'package:aliyun_edm_manager/pages/template/template_edit_page.dart';
 import 'package:aliyun_edm_manager/utils/dialog_util.dart';
+import 'package:aliyun_edm_manager/providers/sender/sender_name_selection_provider.dart';
 
 // 模板列表状态封装类
 class _TemplateListState {
@@ -80,7 +81,12 @@ class _TemplateListPageState extends State<TemplateListPage> with AutomaticKeepA
   void _showCreateDialog() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const TemplateCreatePage()),
+      MaterialPageRoute(
+        builder: (context) => ChangeNotifierProvider(
+          create: (_) => SenderNameSelectionProvider(),
+          child: const TemplateCreatePage(),
+        ),
+      ),
     ).then((_) {
       // 返回时刷新列表
       _reloadList();

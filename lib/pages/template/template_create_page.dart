@@ -16,12 +16,28 @@ class _TemplateCreatePageState extends State<TemplateCreatePage> {
   final _templateSubjectController = TextEditingController();
   final _templateNickNameController = TextEditingController();
   final _templateTextController = TextEditingController();
+  String? _selectedSenderNameValue;
+  final _customSenderNameController = TextEditingController();
 
-  String? _selectedSenderNameId;
   bool _isSubmitting = false;
   bool _showSenderDropdown = false;
   bool _senderNamesLoaded = false;
   String? _senderNameError;
+  String? _dropdownErrorText;
+  String? _inputErrorText;
+
+  @override
+  void initState() {
+    super.initState();
+    // 主动加载发送人名称数据
+    Future.microtask(() {
+      if (mounted) {
+        final provider = Provider.of<SenderNameSelectionProvider>(context, listen: false);
+        provider.loadSenderNames();
+      }
+    });
+    _customSenderNameController.addListener(_validateSenderNameField);
+  }
 
   @override
   void dispose() {
@@ -29,7 +45,30 @@ class _TemplateCreatePageState extends State<TemplateCreatePage> {
     _templateSubjectController.dispose();
     _templateNickNameController.dispose();
     _templateTextController.dispose();
+    _customSenderNameController.removeListener(_validateSenderNameField);
+    _customSenderNameController.dispose();
     super.dispose();
+  }
+
+  void _validateSenderNameField() {
+    String? dropdownError;
+    String? inputError;
+    
+    if (_selectedSenderNameValue == null || _selectedSenderNameValue!.isEmpty) {
+      dropdownError = '请选择发送人名称';
+    } else if (_selectedSenderNameValue == 'custom') {
+      final value = _customSenderNameController.text;
+      if (value.trim().isEmpty) {
+        inputError = '请输入发送人名称';
+      } else if (value.trim().length < 1 || value.trim().length > 30) {
+        inputError = '长度需为1-30个字符';
+      }
+    }
+    
+    setState(() {
+      _dropdownErrorText = dropdownError;
+      _inputErrorText = inputError;
+    });
   }
 
   Future<void> _loadSenderNames() async {
@@ -47,14 +86,20 @@ class _TemplateCreatePageState extends State<TemplateCreatePage> {
   }
 
   Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) {
+    _validateSenderNameField();
+    if (!_formKey.currentState!.validate() || _dropdownErrorText != null || _inputErrorText != null) {
       return;
     }
     setState(() {
       _isSubmitting = true;
     });
     try {
-      final senderName = _templateNickNameController.text.trim();
+      String senderName;
+      if (_selectedSenderNameValue == 'custom') {
+        senderName = _customSenderNameController.text.trim();
+      } else {
+        senderName = _selectedSenderNameValue ?? '';
+      }
       final success = await context.read<TemplateProvider>().createTemplate(
         templateType: 1, // 默认HTML
         templateName: _templateNameController.text.trim(),
@@ -94,6 +139,36 @@ class _TemplateCreatePageState extends State<TemplateCreatePage> {
   Widget _buildSenderNameField() {
     final senderProvider = context.watch<SenderNameSelectionProvider>();
     final senderOptions = senderProvider.senderNames;
+    final hasOptions = senderOptions.isNotEmpty;
+    final dropdownItems = [
+      DropdownMenuItem<String>(
+        value: '',
+        child: const Text('请选择...', style: TextStyle(fontSize: 15, color: Colors.grey)),
+      ),
+      ...senderOptions.map((e) => DropdownMenuItem<String>(
+        value: e.name,
+        child: Text(e.name, style: const TextStyle(fontSize: 15)),
+      )),
+      DropdownMenuItem<String>(
+        value: 'custom',
+        child: Row(
+          children: const [
+            Icon(Icons.edit, size: 16, color: Colors.blue),
+            SizedBox(width: 4),
+            Text('手动输入', style: TextStyle(fontSize: 15, color: Colors.blue, fontWeight: FontWeight.w600)),
+            SizedBox(width: 4),
+            Text('（自定义）', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
+      ),
+    ];
+    if (hasOptions && _selectedSenderNameValue != 'custom' && _selectedSenderNameValue != '' && !senderOptions.any((e) => e.name == _selectedSenderNameValue)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _selectedSenderNameValue = '';
+        });
+      });
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -104,88 +179,117 @@ class _TemplateCreatePageState extends State<TemplateCreatePage> {
           ],
         ),
         const SizedBox(height: 8),
-        if (senderProvider.isLoading)
-          const Center(child: CircularProgressIndicator()),
-        if (!senderProvider.isLoading && !senderOptions.isEmpty)
-          GestureDetector(
-            onTap: () async {
-              await _loadSenderNames();
-              setState(() {
-                _showSenderDropdown = !_showSenderDropdown;
-              });
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[300]!),
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.grey[50],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _selectedSenderNameId == null
-                        ? (_templateNickNameController.text.isNotEmpty ? _templateNickNameController.text : '请选择或输入发送人名称')
-                        : senderOptions.firstWhere((e) => e.id == _selectedSenderNameId).name,
-                      style: TextStyle(
-                        color: _selectedSenderNameId != null || _templateNickNameController.text.isNotEmpty ? Colors.black87 : Colors.grey[500],
-                      ),
+        Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: Theme(
+                data: Theme.of(context).copyWith(
+                  highlightColor: Colors.blue[50],
+                  splashColor: Colors.blue[50],
+                  hoverColor: Colors.blue[50],
+                ),
+                child: DropdownButtonFormField<String>(
+                  value: _selectedSenderNameValue,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: _dropdownErrorText != null ? Colors.red : Colors.grey[300]!),
                     ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: _dropdownErrorText != null ? Colors.red : Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: _dropdownErrorText != null ? Colors.red : Colors.blue, width: 2),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Colors.red, width: 2),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Colors.red, width: 2),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
-                  Icon(_showSenderDropdown ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: Colors.grey[600]),
-                ],
+                  items: dropdownItems,
+                  onChanged: hasOptions ? (value) {
+                    setState(() {
+                      _selectedSenderNameValue = value;
+                    });
+                    _validateSenderNameField();
+                  } : null,
+                  validator: (value) => null,
+                ),
               ),
             ),
-          ),
-        if (_showSenderDropdown && !senderOptions.isEmpty)
-          Container(
-            margin: const EdgeInsets.only(top: 8),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey[300]!),
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.white,
+            const SizedBox(width: 8),
+            Tooltip(
+              message: '如需自定义发送人名称，请选择"手动输入"并在右侧输入框填写',
+              textStyle: const TextStyle(fontSize: 14, color: Colors.white),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1976D2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.info_outline, 
+                size: 18, 
+                color: const Color(0xFF1976D2),
+              ),
             ),
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: senderOptions.length,
-              itemBuilder: (context, index) {
-                final sender = senderOptions[index];
-                return ListTile(
-                  title: Text(sender.name),
-                  onTap: () {
-                    setState(() {
-                      _selectedSenderNameId = sender.id;
-                      _templateNickNameController.text = sender.name;
-                      _showSenderDropdown = false;
-                    });
-                  },
-                );
-              },
-            ),
-          ),
-        if (!senderProvider.isLoading && senderOptions.isEmpty)
-          TextFormField(
-            controller: _templateNickNameController,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              hintText: '请输入发送人名称',
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return '请输入发送人名称';
-              }
-              if (value.trim().length < 1 || value.trim().length > 30) {
-                return '长度需为1-30个字符';
-              }
-              return null;
-            },
-          ),
-        if (_senderNameError != null)
+            const SizedBox(width: 12),
+            if (_selectedSenderNameValue == 'custom')
+              Expanded(
+                flex: 3,
+                child: TextFormField(
+                  controller: _customSenderNameController,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: _inputErrorText != null ? Colors.red : Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: _inputErrorText != null ? Colors.red : Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: _inputErrorText != null ? Colors.red : Colors.blue, width: 2),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Colors.red, width: 2),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Colors.red, width: 2),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    hintText: '请输入发送人名称',
+                  ),
+                  validator: (value) => null,
+                  onChanged: (value) => _validateSenderNameField(),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        if (_dropdownErrorText != null)
           Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(_senderNameError!, style: const TextStyle(color: Colors.red)),
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(_dropdownErrorText!, style: const TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.w500)),
+          ),
+        if (_inputErrorText != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(_inputErrorText!, style: const TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.w500)),
           ),
       ],
     );
@@ -331,20 +435,6 @@ class _TemplateCreatePageState extends State<TemplateCreatePage> {
                         // 发送人名称
                         _buildSenderNameField(),
                         const SizedBox(height: 20),
-                        // 变量说明
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.blue[50],
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.blue[200]!),
-                          ),
-                          child: const Text(
-                            '{EAddr}替换收件人邮箱地址；{UserName}替换收件人真实姓名；{NickName}替换收件人昵称；{Gender}替换收件人称呼（先生，女士）；{Birthday}替换收件人生日；{Mobile}替换收件人电话。',
-                            style: TextStyle(fontSize: 13, color: Color(0xFF1976D2)),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
                         // 邮件正文
                         Row(
                           children: [
@@ -380,6 +470,20 @@ class _TemplateCreatePageState extends State<TemplateCreatePage> {
                             }
                             return null;
                           },
+                        ),
+                        const SizedBox(height: 12),
+                        // 变量说明
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue[200]!),
+                          ),
+                          child: const Text(
+                            '{EAddr}替换收件人邮箱地址；{UserName}替换收件人真实姓名；{NickName}替换收件人昵称；{Gender}替换收件人称呼（先生，女士）；{Birthday}替换收件人生日；{Mobile}替换收件人电话。',
+                            style: TextStyle(fontSize: 13, color: Color(0xFF1976D2)),
+                          ),
                         ),
                       ],
                     ),
