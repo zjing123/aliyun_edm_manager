@@ -71,9 +71,9 @@ class QueryTemplateByParamResponse {
 
     return QueryTemplateByParamResponse(
       templates: templates,
-      totalCount: data['totalCount'] ?? 0,
-      pageNo: data['pageNo'] ?? 1,
-      pageSize: data['pageSize'] ?? 10,
+      totalCount: json['TotalCount'] ?? 0,
+      pageNo: json['PageNumber'] ?? 1,
+      pageSize: json['PageSize'] ?? 10,
       requestId: json['RequestId'] ?? '',
     );
   }
