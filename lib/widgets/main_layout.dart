@@ -12,6 +12,9 @@ import '../pages/sending_data_page.dart';
 import '../pages/sending_details_page.dart';
 import '../pages/config/config_page.dart';
 import '../providers/sender/sender_name_provider.dart';
+import '../pages/tag/tag_list_page.dart';
+import '../providers/tag/tag_provider.dart';
+import '../services/aliyun/aliyun_service_manager.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -36,6 +39,7 @@ class _MainLayoutState extends State<MainLayout> {
         NavigationItem(title: '发信地址', route: '/sending-address'),
         NavigationItem(title: '发送人名称', route: '/sender-name'),
         NavigationItem(title: '模板管理', route: '/template-management'),
+        NavigationItem(title: '邮件标签', route: '/tag-management'),
       ],
     ),
     NavigationItem(
@@ -281,6 +285,18 @@ class _MainLayoutState extends State<MainLayout> {
         );
       case '/template-management':
         return const TemplateListPage();
+      case '/tag-management':
+        return ChangeNotifierProvider(
+          create: (context) {
+            final serviceManager = AliyunServiceManager();
+            final globalConfig = context.read<GlobalConfigProvider>();
+            serviceManager.initialize(globalConfig);
+            final provider = TagProvider(serviceManager);
+            provider.setGlobalConfigProvider(globalConfig);
+            return provider;
+          },
+          child: const TagListPage(),
+        );
       case '/recipient-list':
         return const ReceiverListPage();
       case '/send-email':
