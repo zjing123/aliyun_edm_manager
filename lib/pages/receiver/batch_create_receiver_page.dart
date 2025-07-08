@@ -3,12 +3,12 @@ import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import 'dart:convert';
-import '../../services/aliyun/aliyun_service_manager.dart';
-import '../../services/config/config_service.dart';
-import '../../models/receiver/receiver_detail.dart';
-import '../../providers/receiver/receiver_list_provider.dart';
-import '../../utils/dialog_util.dart';
-import '../tag/filter_emails_config_page.dart';
+import 'package:aliyun_edm_manager/services/aliyun/aliyun_service_manager.dart';
+import 'package:aliyun_edm_manager/services/config/config_service.dart';
+import 'package:aliyun_edm_manager/models/receiver/receiver_detail.dart';
+import 'package:aliyun_edm_manager/providers/receiver/receiver_list_provider.dart';
+import 'package:aliyun_edm_manager/utils/dialog_util.dart';
+import 'package:aliyun_edm_manager/pages/tag/filter_emails_config_page.dart';
 
 class BatchCreateReceiverPage extends StatefulWidget {
   const BatchCreateReceiverPage({super.key});

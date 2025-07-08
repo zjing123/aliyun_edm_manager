@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../models/receiver/receiver_detail.dart';
-import '../../services/aliyun/aliyun_service_manager.dart';
-import '../../services/aliyun/receiver/receiver_service.dart';
-import '../../providers/config/global_config_provider.dart';
-import '../../utils/dialog_util.dart';
+import 'package:aliyun_edm_manager/models/receiver/receiver_detail.dart';
+import 'package:aliyun_edm_manager/services/aliyun/aliyun_service_manager.dart';
+import 'package:aliyun_edm_manager/services/aliyun/receiver/receiver_service.dart';
+import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
+import 'package:aliyun_edm_manager/utils/dialog_util.dart';
 import 'dart:async';
 
 class ReceiverDetailPage extends StatefulWidget {
