@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../pages/receiver/receiver_list_page.dart';
 import '../pages/overview/overview_page.dart';
-import '../pages/sender/sending_address_page.dart';
+import '../pages/sender/sender_address_list_page.dart';
 import '../pages/sender/sender_name_list_page.dart';
 import '../pages/template/template_list_page.dart';
 import '../pages/task/send_email/send_email_page.dart';
@@ -12,6 +12,8 @@ import '../pages/sending_data_page.dart';
 import '../pages/sending_details_page.dart';
 import '../pages/config/config_page.dart';
 import '../providers/sender/sender_name_provider.dart';
+import '../providers/sender/sender_address_provider.dart';
+import '../services/aliyun/aliyun_service_manager.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -273,7 +275,7 @@ class _MainLayoutState extends State<MainLayout> {
       case '/overview':
         return const OverviewPage();
       case '/sending-address':
-        return const SendingAddressPage();
+        return const SenderAddressListPage();
       case '/sender-name':
         return ChangeNotifierProvider(
           create: (_) => SenderNameProvider()..loadSenderNames(),
