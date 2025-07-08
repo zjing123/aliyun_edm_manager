@@ -6,6 +6,7 @@ import 'providers/config/page_config_provider.dart';
 import 'providers/receiver/receiver_list_provider.dart';
 import 'providers/task/scheduled_email_task_provider.dart';
 import 'providers/task/mail_task_provider.dart';
+import 'providers/template/template_provider.dart';
 import 'services/aliyun/aliyun_service_manager.dart';
 import 'utils/time_formatter.dart';
 
@@ -86,6 +87,27 @@ void main() async {
             }
             
             return mailTask;
+          },
+        ),
+        
+        // 模板管理Provider - 依赖全局配置
+        ChangeNotifierProxyProvider<GlobalConfigProvider, TemplateProvider>(
+          create: (context) {
+            final serviceManager = AliyunServiceManager();
+            return TemplateProvider(serviceManager);
+          },
+          update: (_, globalConfig, templateProvider) {
+            if (templateProvider == null) {
+              final serviceManager = AliyunServiceManager();
+              templateProvider = TemplateProvider(serviceManager);
+            }
+            
+            // 设置全局配置
+            if (globalConfig.isInitialized) {
+              templateProvider.setGlobalConfigProvider(globalConfig);
+            }
+            
+            return templateProvider;
           },
         ),
       ],

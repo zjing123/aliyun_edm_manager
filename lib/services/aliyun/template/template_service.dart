@@ -1,5 +1,6 @@
 import 'package:aliyun_edm_manager/services/aliyun/base_aliyun_service.dart';
 import 'package:aliyun_edm_manager/models/template/template_model.dart';
+import 'package:aliyun_edm_manager/models/template/template_request_response.dart';
 import 'package:aliyun_edm_manager/constants/template_constants.dart';
 
 /// 模板管理服务
@@ -7,7 +8,7 @@ import 'package:aliyun_edm_manager/constants/template_constants.dart';
 class TemplateService extends BaseAliyunService {
   
   /// 查询邮件模板
-  Future<QueryTemplateResponse> queryTemplateByParam({
+  Future<QueryTemplateByParamResponse> queryTemplateByParam({
     String? templateName,
     String? templateStatus,
     String? templateType,
@@ -34,7 +35,48 @@ class TemplateService extends BaseAliyunService {
     }
 
     final response = await get("QueryTemplateByParam", params);
-    return QueryTemplateResponse.fromJson(response.data as Map<String, dynamic>);
+    print('QueryTemplateByParam API 返回数据: ${response.data}');
+    return QueryTemplateByParamResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// 使用新的Request类查询模板
+  Future<QueryTemplateByParamResponse> queryTemplateByParamWithRequest(QueryTemplateByParamRequest request) async {
+    final params = request.toJson().map((key, value) => MapEntry(key, value.toString()));
+    final response = await get("QueryTemplateByParam", params);
+    print('QueryTemplateByParam API 返回数据: ${response.data}');
+    return QueryTemplateByParamResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// 创建模板
+  Future<CreateTemplateResponse> createTemplate(CreateTemplateRequest request) async {
+    final params = request.toJson().map((key, value) => MapEntry(key, value.toString()));
+    final response = await post("CreateTemplate", params);
+    print('CreateTemplate API 返回数据: ${response.data}');
+    return CreateTemplateResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// 修改模板
+  Future<ModifyTemplateResponse> modifyTemplate(ModifyTemplateRequest request) async {
+    final params = request.toJson().map((key, value) => MapEntry(key, value.toString()));
+    final response = await post("ModifyTemplate", params);
+    print('ModifyTemplate API 返回数据: ${response.data}');
+    return ModifyTemplateResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// 删除模板
+  Future<DeleteTemplateResponse> deleteTemplate(DeleteTemplateRequest request) async {
+    final params = request.toJson().map((key, value) => MapEntry(key, value.toString()));
+    final response = await post("DeleteTemplate", params);
+    print('DeleteTemplate API 返回数据: ${response.data}');
+    return DeleteTemplateResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// 获取模板详情
+  Future<DescTemplateResponse> descTemplate(DescTemplateRequest request) async {
+    final params = request.toJson().map((key, value) => MapEntry(key, value.toString()));
+    final response = await get("DescTemplate", params);
+    print('DescTemplate API 返回数据: ${response.data}');
+    return DescTemplateResponse.fromJson(response.data as Map<String, dynamic>);
   }
 
   /// 获取所有模板（包括审核中、审核通过、审核未通过）

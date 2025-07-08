@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../pages/receiver/receiver_list_page.dart';
 import '../pages/overview/overview_page.dart';
 import '../pages/sender/sending_address_page.dart';
-import '../pages/template/template_management_page.dart';
+import '../pages/template/template_list_page.dart';
 import '../pages/task/send_email/send_email_page.dart';
 import '../pages/task/scheduled_task/scheduled_email_task_list_page.dart';
 import '../pages/receiver/invalid_addresses_page.dart';
@@ -271,7 +271,7 @@ class _MainLayoutState extends State<MainLayout> {
       case '/sending-address':
         return const SendingAddressPage();
       case '/template-management':
-        return const TemplateManagementPage();
+        return const TemplateListPage();
       case '/recipient-list':
         return const ReceiverListPage();
       case '/send-email':
