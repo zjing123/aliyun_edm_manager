@@ -332,21 +332,13 @@ class _TemplateListPageState extends State<TemplateListPage> with AutomaticKeepA
       builder: (context, templates, child) {
         return Column(
           children: [
-            // 模板列表表格
+            // 表格头部
+            _buildTableHeader(),
+            const SizedBox(height: 10),
+            // 表格内容
             Expanded(
-              child: Column(
-                children: [
-                  // 表格头部
-                  _buildTableHeader(),
-                  const SizedBox(height: 10),
-                  // 表格内容
-                  Expanded(
-                    child: _buildTableContent(),
-                  ),
-                ],
-              ),
+              child: _buildTableContent(),
             ),
-            const SizedBox(height: 16),
             // 分页控件
             _buildPagination(),
           ],
