@@ -167,14 +167,48 @@ class _TemplateListPageState extends State<TemplateListPage> with AutomaticKeepA
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: _showCreateDialog,
-                  icon: const Icon(Icons.add, color: Colors.white),
-                  label: const Text('新建模板'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                  ),
+                // 批量操作和新建按钮
+                Row(
+                  children: [
+                    // 批量删除按钮
+                    Selector<TemplateProvider, bool>(
+                      selector: (context, provider) => provider.hasSelection,
+                      builder: (context, hasSelection, child) {
+                        if (!hasSelection) return SizedBox.shrink();
+                        
+                        return Row(
+                          children: [
+                            Text(
+                              '已选择 ${context.watch<TemplateProvider>().selectedCount} 项',
+                              style: TextStyle(color: Colors.grey[600]),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              onPressed: _showBatchDeleteDialog,
+                              icon: Icon(Icons.delete, size: 16),
+                              label: Text('批量删除'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                        );
+                      },
+                    ),
+                    // 新建按钮
+                    ElevatedButton.icon(
+                      onPressed: _showCreateDialog,
+                      icon: const Icon(Icons.add, color: Colors.white),
+                      label: const Text('新建模板'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -300,71 +334,16 @@ class _TemplateListPageState extends State<TemplateListPage> with AutomaticKeepA
           children: [
             // 模板列表表格
             Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
-                      spreadRadius: 1,
-                      blurRadius: 3,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
-                ),
-                child: SingleChildScrollView(
-                  child: DataTable(
-                    columns: const [
-                      DataColumn(label: Text('模板名称')),
-                      DataColumn(label: Text('邮件标题')),
-                      DataColumn(label: Text('发送人名称')),
-                      DataColumn(label: Text('状态')),
-                      DataColumn(label: Text('创建时间')),
-                      DataColumn(label: Text('操作')),
-                    ],
-                    rows: templates.map((template) {
-                      return DataRow(
-                        cells: [
-                          DataCell(Text(template.templateName)),
-                          DataCell(Text(template.templateSubject)),
-                          DataCell(Text(template.templateNickName)),
-                          DataCell(
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: _getStatusColor(template.templateStatus),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                template.statusDescription,
-                                style: const TextStyle(color: Colors.white, fontSize: 12),
-                              ),
-                            ),
-                          ),
-                          DataCell(Text(template.createTime)),
-                          DataCell(
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit, size: 18),
-                                  onPressed: () => _showEditDialog(template),
-                                  tooltip: '编辑',
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                                  onPressed: () => _showDeleteDialog(template),
-                                  tooltip: '删除',
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
-                    }).toList(),
+              child: Column(
+                children: [
+                  // 表格头部
+                  _buildTableHeader(),
+                  const SizedBox(height: 10),
+                  // 表格内容
+                  Expanded(
+                    child: _buildTableContent(),
                   ),
-                ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
@@ -388,7 +367,6 @@ class _TemplateListPageState extends State<TemplateListPage> with AutomaticKeepA
         final currentPage = pagination['currentPage'] as int;
         final totalPages = pagination['totalPages'] as int;
         final totalCount = pagination['totalCount'] as int;
-        final pageSize = pagination['pageSize'] as int;
 
         if (totalPages <= 1) return const SizedBox.shrink();
 
@@ -399,7 +377,7 @@ class _TemplateListPageState extends State<TemplateListPage> with AutomaticKeepA
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.grey.withValues(alpha: 0.1),
                 spreadRadius: 1,
                 blurRadius: 3,
                 offset: const Offset(0, 1),
@@ -447,6 +425,320 @@ class _TemplateListPageState extends State<TemplateListPage> with AutomaticKeepA
         return Colors.red;
       default:
         return Colors.grey;
+    }
+  }
+
+  Widget _buildTableHeader() {
+    return Selector<TemplateProvider, bool>(
+      selector: (context, provider) => provider.selectAll,
+      builder: (context, isAllSelected, child) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Checkbox(
+                  value: isAllSelected,
+                  onChanged: (value) {
+                    context.read<TemplateProvider>().toggleSelectAll();
+                  },
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 80,
+                  child: Text(
+                    '模板类型',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    '模板名称',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 80,
+                  child: Text(
+                    '审核状态',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 150,
+                  child: Text(
+                    '创建时间',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 80,
+                  child: Text(
+                    '操作',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTableContent() {
+    return Selector<TemplateProvider, List<TemplateModel>>(
+      selector: (context, provider) => provider.templates,
+      builder: (context, templates, child) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ListView.builder(
+            itemCount: templates.length,
+            itemBuilder: (context, index) {
+              final template = templates[index];
+              return _buildTemplateRow(template, index);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTemplateRow(TemplateModel template, int index) {
+    return Selector<TemplateProvider, bool>(
+      selector: (context, provider) => provider.isTemplateSelected(template.templateId),
+      builder: (context, isSelected, child) {
+        return Container(
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: Colors.grey[200]!,
+                width: 1,
+              ),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Checkbox(
+                  value: isSelected,
+                  onChanged: (value) {
+                    context.read<TemplateProvider>().toggleTemplateSelection(template.templateId);
+                  },
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 80,
+                  child: Text(
+                    '邮件',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    template.templateName,
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ),
+                SizedBox(
+                  width: 80,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: _buildStatusChip(template),
+                  ),
+                ),
+                SizedBox(
+                  width: 150,
+                  child: Text(
+                    template.createTime,
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ),
+                SizedBox(
+                  width: 80,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit, size: 18),
+                        onPressed: () => _showEditDialog(template),
+                        tooltip: '编辑',
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                        onPressed: () => _showDeleteDialog(template),
+                        tooltip: '删除',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatusChip(TemplateModel template) {
+    Color chipColor = _getStatusColor(template.templateStatus);
+    
+    return Container(
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: chipColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: chipColor.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        template.statusDescription,
+        style: TextStyle(
+          color: chipColor,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+  
+  // 显示批量删除确认对话框
+  void _showBatchDeleteDialog() {
+    final provider = context.read<TemplateProvider>();
+    final selectedCount = provider.selectedCount;
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.warning, color: Colors.orange),
+              const SizedBox(width: 8),
+              Text('批量删除确认'),
+            ],
+          ),
+          content: Text(
+            '确定要删除选中的 $selectedCount 个模板吗？\n\n此操作不可恢复，请谨慎操作。',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('取消'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _performBatchDelete();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('确认删除'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  
+  // 执行批量删除
+  Future<void> _performBatchDelete() async {
+    final provider = context.read<TemplateProvider>();
+    
+    try {
+      // 显示加载对话框
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            content: Row(
+              children: [
+                CircularProgressIndicator(),
+                const SizedBox(width: 16),
+                Text('正在删除模板...'),
+              ],
+            ),
+          );
+        },
+      );
+      
+      // 执行批量删除
+      final success = await provider.deleteSelectedTemplates();
+      
+      // 关闭加载对话框
+      Navigator.of(context).pop();
+      
+      if (success) {
+        // 显示成功消息
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('批量删除成功'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        // 显示错误消息
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('批量删除失败，请重试'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // 关闭加载对话框
+      Navigator.of(context).pop();
+      
+      // 显示错误消息
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('批量删除失败: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 } 

@@ -33,6 +33,10 @@ class TemplateProvider extends ChangeNotifier {
   int? _status;
   int? _fromType;
   
+  // 批量选择相关
+  Set<String> _selectedTemplateIds = {};
+  bool _selectAll = false;
+  
   // 构造函数
   TemplateProvider(AliyunServiceManager serviceManager) {
     _serviceManager = serviceManager;
@@ -49,6 +53,12 @@ class TemplateProvider extends ChangeNotifier {
   String? get keyWord => _keyWord;
   int? get status => _status;
   int? get fromType => _fromType;
+  
+  // 批量选择相关getters
+  Set<String> get selectedTemplateIds => _selectedTemplateIds;
+  bool get selectAll => _selectAll;
+  int get selectedCount => _selectedTemplateIds.length;
+  bool get hasSelection => _selectedTemplateIds.isNotEmpty;
   
   // 设置全局配置Provider
   void setGlobalConfigProvider(GlobalConfigProvider provider) {
@@ -277,5 +287,82 @@ class TemplateProvider extends ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+  
+  // 批量选择相关方法
+  
+  // 切换单个模板的选择状态
+  void toggleTemplateSelection(String templateId) {
+    if (_selectedTemplateIds.contains(templateId)) {
+      _selectedTemplateIds.remove(templateId);
+    } else {
+      _selectedTemplateIds.add(templateId);
+    }
+    
+    // 更新全选状态
+    _updateSelectAllState();
+    notifyListeners();
+  }
+  
+  // 切换全选状态
+  void toggleSelectAll() {
+    _selectAll = !_selectAll;
+    
+    if (_selectAll) {
+      // 全选：添加所有模板ID
+      _selectedTemplateIds = _templates.map((template) => template.templateId).toSet();
+    } else {
+      // 取消全选：清空选择
+      _selectedTemplateIds.clear();
+    }
+    
+    notifyListeners();
+  }
+  
+  // 检查指定模板是否被选中
+  bool isTemplateSelected(String templateId) {
+    return _selectedTemplateIds.contains(templateId);
+  }
+  
+  // 清空所有选择
+  void clearSelection() {
+    _selectedTemplateIds.clear();
+    _selectAll = false;
+    notifyListeners();
+  }
+  
+  // 更新全选状态
+  void _updateSelectAllState() {
+    if (_templates.isEmpty) {
+      _selectAll = false;
+    } else {
+      _selectAll = _selectedTemplateIds.length == _templates.length;
+    }
+  }
+  
+  // 批量删除模板
+  Future<bool> deleteSelectedTemplates() async {
+    if (_selectedTemplateIds.isEmpty) {
+      return false;
+    }
+    
+    try {
+      bool allSuccess = true;
+      
+      for (String templateId in _selectedTemplateIds) {
+        final success = await deleteTemplate(templateId: int.parse(templateId));
+        if (!success) {
+          allSuccess = false;
+        }
+      }
+      
+      // 清空选择
+      clearSelection();
+      
+      return allSuccess;
+    } catch (e) {
+      print('批量删除模板失败: $e');
+      return false;
+    }
   }
 } 
