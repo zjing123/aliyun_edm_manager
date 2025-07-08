@@ -377,10 +377,9 @@ class _TemplateListPageState extends State<TemplateListPage> with AutomaticKeepA
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withValues(alpha: 0.1),
-                spreadRadius: 1,
-                blurRadius: 3,
-                offset: const Offset(0, 1),
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
@@ -393,18 +392,82 @@ class _TemplateListPageState extends State<TemplateListPage> with AutomaticKeepA
               ),
               Row(
                 children: [
+                  // 首页按钮
+                  IconButton(
+                    icon: const Icon(Icons.first_page),
+                    onPressed: currentPage > 1
+                        ? () => context.read<TemplateProvider>().firstPage()
+                        : null,
+                    tooltip: '首页',
+                  ),
+                  // 上一页按钮
                   IconButton(
                     icon: const Icon(Icons.chevron_left),
                     onPressed: currentPage > 1
                         ? () => context.read<TemplateProvider>().previousPage()
                         : null,
+                    tooltip: '上一页',
                   ),
-                  Text('$currentPage'),
+                  // 页码显示和输入
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      children: [
+                        Text(
+                          '第 ',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                        SizedBox(
+                          width: 50,
+                          child: TextField(
+                            controller: TextEditingController(text: '$currentPage'),
+                            textAlign: TextAlign.center,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                            onSubmitted: (value) {
+                              final page = int.tryParse(value);
+                              if (page != null && page >= 1 && page <= totalPages) {
+                                context.read<TemplateProvider>().goToPage(page);
+                              } else {
+                                // 如果输入的页码无效，显示提示并重置输入框
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('请输入有效的页码（1-$totalPages）'),
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                                // 重置输入框为当前页码
+                                setState(() {});
+                              }
+                            },
+                          ),
+                        ),
+                        Text(
+                          ' 页，共 $totalPages 页',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // 下一页按钮
                   IconButton(
                     icon: const Icon(Icons.chevron_right),
                     onPressed: currentPage < totalPages
                         ? () => context.read<TemplateProvider>().nextPage()
                         : null,
+                    tooltip: '下一页',
+                  ),
+                  // 末页按钮
+                  IconButton(
+                    icon: const Icon(Icons.last_page),
+                    onPressed: currentPage < totalPages
+                        ? () => context.read<TemplateProvider>().lastPage()
+                        : null,
+                    tooltip: '末页',
                   ),
                 ],
               ),

@@ -140,6 +140,22 @@ class TemplateProvider extends ChangeNotifier {
     }
   }
   
+  // 首页
+  Future<void> firstPage() async {
+    if (_currentPage != 1) {
+      _currentPage = 1;
+      await loadTemplates();
+    }
+  }
+  
+  // 末页
+  Future<void> lastPage() async {
+    if (_currentPage != _totalPages) {
+      _currentPage = _totalPages;
+      await loadTemplates();
+    }
+  }
+  
   // 跳转到指定页
   Future<void> goToPage(int page) async {
     if (page >= 1 && page <= _totalPages) {
