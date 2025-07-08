@@ -1,28 +1,34 @@
 import 'package:aliyun_edm_manager/utils/time_formatter.dart';
 
 class SenderAddressModel {
-  final String mailAddress;
+  final String mailAddressId;
   final String accountName;
+  final String replyAddress;
   final String sendType;
+  final String accountStatus;
+  final String replyStatus;
+  final String domainStatus;
+  final String createTime;
   final String dailyCount;
   final String monthCount;
-  final String status;
-  final String createTime;
-  final String domainStatus;
-  final String mailAddressId;
   final String dailyReqCount;
   final String monthReqCount;
+  
+  // 添加缺失的属性
+  String get status => accountStatus;
+  String get mailAddress => accountName;
 
   SenderAddressModel({
-    required this.mailAddress,
+    required this.mailAddressId,
     required this.accountName,
+    required this.replyAddress,
     required this.sendType,
+    required this.accountStatus,
+    required this.replyStatus,
+    required this.domainStatus,
+    required this.createTime,
     required this.dailyCount,
     required this.monthCount,
-    required this.status,
-    required this.createTime,
-    required this.domainStatus,
-    required this.mailAddressId,
     required this.dailyReqCount,
     required this.monthReqCount,
   });
@@ -51,17 +57,55 @@ class SenderAddressModel {
     );
   }
 
+  /// 获取发信类型描述
+  String get sendTypeDescription {
+    switch (sendType) {
+      case 'batch':
+        return '批量';
+      case 'trigger':
+        return '触发';
+      default:
+        return '未知';
+    }
+  }
+
+  /// 获取账号状态描述
+  String get accountStatusDescription {
+    switch (accountStatus) {
+      case '0':
+        return '正常';
+      case '1':
+        return '冻结';
+      default:
+        return '未知';
+    }
+  }
+
+  /// 获取额度限制描述
+  String get quotaDescription {
+    final daily = dailyCount == '-1' ? '无限制' : dailyCount;
+    final monthly = monthCount == '-1' ? '无限制' : monthCount;
+    return '日: $daily, 月: $monthly';
+  }
+
+  /// 检查账号是否正常
+  bool get isAccountNormal => accountStatus == '0';
+
+  /// 检查域名是否正常
+  bool get isDomainNormal => domainStatus == '0';
+
   factory SenderAddressModel.fromJson(Map<String, dynamic> json) {
     return SenderAddressModel(
-      mailAddress: json['AccountName'] ?? '',
+      mailAddressId: json['MailAddressId']?.toString() ?? '',
       accountName: json['AccountName'] ?? '',
+      replyAddress: json['ReplyAddress'] ?? '',
       sendType: json['Sendtype'] ?? '',
+      accountStatus: json['AccountStatus']?.toString() ?? '0',
+      replyStatus: json['ReplyStatus']?.toString() ?? '0',
+      domainStatus: json['DomainStatus']?.toString() ?? '0',
+      createTime: json['CreateTime'] ?? '',
       dailyCount: json['DailyCount']?.toString() ?? '0',
       monthCount: json['MonthCount']?.toString() ?? '0',
-      status: json['AccountStatus']?.toString() ?? '0',
-      createTime: json['CreateTime'] ?? '',
-      domainStatus: json['DomainStatus']?.toString() ?? '0',
-      mailAddressId: json['MailAddressId']?.toString() ?? '',
       dailyReqCount: json['DailyReqCount']?.toString() ?? '0',
       monthReqCount: json['MonthReqCount']?.toString() ?? '0',
     );
@@ -69,14 +113,16 @@ class SenderAddressModel {
 
   Map<String, dynamic> toJson() {
     return {
+      'MailAddressId': mailAddressId,
       'AccountName': accountName,
+      'ReplyAddress': replyAddress,
       'Sendtype': sendType,
+      'AccountStatus': accountStatus,
+      'ReplyStatus': replyStatus,
+      'DomainStatus': domainStatus,
+      'CreateTime': createTime,
       'DailyCount': dailyCount,
       'MonthCount': monthCount,
-      'AccountStatus': status,
-      'CreateTime': createTime,
-      'DomainStatus': domainStatus,
-      'MailAddressId': mailAddressId,
       'DailyReqCount': dailyReqCount,
       'MonthReqCount': monthReqCount,
     };
@@ -84,7 +130,7 @@ class SenderAddressModel {
 
   @override
   String toString() {
-    return 'SenderAddressModel(mailAddress: $mailAddress, accountName: $accountName, status: $status)';
+    return 'SenderAddressModel(mailAddressId: $mailAddressId, accountName: $accountName, status: $accountStatus)';
   }
 }
 

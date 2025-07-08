@@ -7,6 +7,7 @@ import 'providers/receiver/receiver_list_provider.dart';
 import 'providers/task/scheduled_email_task_provider.dart';
 import 'providers/task/mail_task_provider.dart';
 import 'providers/template/template_provider.dart';
+import 'providers/sender/sender_address_provider.dart';
 import 'services/aliyun/aliyun_service_manager.dart';
 import 'utils/time_formatter.dart';
 
@@ -108,6 +109,27 @@ void main() async {
             }
             
             return templateProvider;
+          },
+        ),
+        
+        // 发信地址Provider - 依赖全局配置
+        ChangeNotifierProxyProvider<GlobalConfigProvider, SenderAddressProvider>(
+          create: (context) {
+            final serviceManager = AliyunServiceManager();
+            return SenderAddressProvider(serviceManager);
+          },
+          update: (_, globalConfig, senderAddressProvider) {
+            if (senderAddressProvider == null) {
+              final serviceManager = AliyunServiceManager();
+              senderAddressProvider = SenderAddressProvider(serviceManager);
+            }
+            
+            // 设置全局配置
+            if (globalConfig.isInitialized) {
+              senderAddressProvider.setGlobalConfigProvider(globalConfig);
+            }
+            
+            return senderAddressProvider;
           },
         ),
       ],
