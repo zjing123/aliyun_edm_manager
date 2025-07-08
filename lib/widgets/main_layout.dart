@@ -14,6 +14,7 @@ import '../pages/config/config_page.dart';
 import '../providers/sender/sender_name_provider.dart';
 import '../pages/tag/tag_list_page.dart';
 import '../providers/tag/tag_provider.dart';
+import '../providers/config/global_config_provider.dart';
 import '../services/aliyun/aliyun_service_manager.dart';
 
 class MainLayout extends StatefulWidget {
