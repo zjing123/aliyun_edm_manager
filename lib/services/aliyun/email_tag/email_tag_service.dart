@@ -1,4 +1,4 @@
-import 'package:aliyun_edm_manager/services/aliyun/base_aliyun_service.dart';
+THIS SHOULD BE A LINTER ERRORimport 'package:aliyun_edm_manager/services/aliyun/base_aliyun_service.dart';
 import 'package:aliyun_edm_manager/models/tag/email_tag_model.dart';
 
 /// 邮件标签管理服务
