@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:convert';
 import 'package:aliyun_edm_manager/providers/template/template_provider.dart';
 import 'package:aliyun_edm_manager/models/template/template_model.dart';
-import 'package:aliyun_edm_manager/models/template/template_request_response.dart';
 
 class TemplateEditPage extends StatefulWidget {
   final TemplateModel template;
@@ -20,13 +20,9 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
   final _templateNickNameController = TextEditingController();
   final _templateTextController = TextEditingController();
 
-  int _selectedTemplateType = 1;
-  int _selectedFromType = 0;
-
   bool _isLoading = true;
   bool _isSubmitting = false;
   String? _error;
-  DescTemplateResponse? _templateDetail;
 
   @override
   void initState() {
@@ -51,12 +47,26 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
 
       if (templateDetail != null) {
         setState(() {
-          _templateDetail = templateDetail;
           _templateNameController.text = templateDetail.templateName;
           _templateSubjectController.text = templateDetail.templateSubject;
           _templateNickNameController.text = templateDetail.templateNickName;
-          _templateTextController.text = templateDetail.templateText;
-          _selectedTemplateType = int.parse(templateDetail.templateType);
+          // 设置模板文本内容
+          if (templateDetail.templateText.isNotEmpty) {
+            try {
+              final jsonData = jsonDecode(templateDetail.templateText);
+              // 如果是JSON格式，尝试提取纯文本
+              if (jsonData is Map && jsonData.containsKey('ops')) {
+                final ops = jsonData['ops'] as List;
+                final plainText = ops.map((op) => op['insert']?.toString() ?? '').join('');
+                _templateTextController.text = plainText;
+              } else {
+                _templateTextController.text = templateDetail.templateText;
+              }
+            } catch (e) {
+              // 如果解析失败，使用原始文本
+              _templateTextController.text = templateDetail.templateText;
+            }
+          }
           _isLoading = false;
         });
       } else {
@@ -89,7 +99,6 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
         templateSubject: _templateSubjectController.text.trim(),
         templateNickName: _templateNickNameController.text.trim(),
         templateText: _templateTextController.text.trim(),
-        fromType: _selectedFromType,
       );
 
       if (success) {
@@ -182,43 +191,18 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(8),
                             boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withOpacity(0.1),
-                                spreadRadius: 1,
-                                blurRadius: 3,
-                                offset: const Offset(0, 1),
-                              ),
+                                                  BoxShadow(
+                      color: Colors.grey.withValues(alpha: 0.1),
+                      spreadRadius: 1,
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
                             ],
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // 模板类型
-                              const Text(
-                                '模板类型 *',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              DropdownButtonFormField<int>(
-                                value: _selectedTemplateType,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                ),
-                                items: const [
-                                  DropdownMenuItem(value: 1, child: Text('HTML模板')),
-                                  DropdownMenuItem(value: 2, child: Text('文本模板')),
-                                ],
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedTemplateType = value!;
-                                  });
-                                },
-                              ),
-                              const SizedBox(height: 16),
+
 
                               // 模板名称
                               const Text(
@@ -315,43 +299,8 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              TextFormField(
-                                controller: _templateTextController,
-                                maxLines: 8,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  hintText: '请输入邮件正文内容，支持HTML格式',
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                ),
-                              ),
+                              _buildHtmlEditor(),
                               const SizedBox(height: 16),
-
-                              // FromType
-                              const Text(
-                                '发信类型',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              DropdownButtonFormField<int>(
-                                value: _selectedFromType,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                ),
-                                items: const [
-                                  DropdownMenuItem(value: 0, child: Text('默认')),
-                                  DropdownMenuItem(value: 1, child: Text('类型1')),
-                                  DropdownMenuItem(value: 2, child: Text('类型2')),
-                                ],
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedFromType = value!;
-                                  });
-                                },
-                              ),
                             ],
                           ),
                         ),
@@ -388,4 +337,28 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                 ),
     );
   }
+
+  // 构建HTML编辑器
+  Widget _buildHtmlEditor() {
+    return Container(
+      height: 300,
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: TextField(
+        controller: _templateTextController,
+        maxLines: null,
+        expands: true,
+        decoration: const InputDecoration(
+          hintText: '请输入HTML格式的邮件正文内容',
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.all(12),
+        ),
+        style: const TextStyle(fontSize: 14),
+      ),
+    );
+  }
+
+
 } 

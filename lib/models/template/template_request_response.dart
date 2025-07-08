@@ -86,7 +86,6 @@ class CreateTemplateRequest {
   final String? templateSubject;
   final String? templateNickName;
   final String? templateText;
-  final int? fromType;
 
   CreateTemplateRequest({
     required this.templateType,
@@ -94,7 +93,6 @@ class CreateTemplateRequest {
     this.templateSubject,
     this.templateNickName,
     this.templateText,
-    this.fromType,
   });
 
   Map<String, dynamic> toJson() {
@@ -111,9 +109,6 @@ class CreateTemplateRequest {
     }
     if (templateText != null && templateText!.isNotEmpty) {
       params['TemplateText'] = templateText;
-    }
-    if (fromType != null) {
-      params['FromType'] = fromType;
     }
     
     return params;
@@ -275,14 +270,14 @@ class DescTemplateResponse {
 
   factory DescTemplateResponse.fromJson(Map<String, dynamic> json) {
     return DescTemplateResponse(
-      requestId: json['RequestId'] ?? '',
-      createTime: json['CreateTime'] ?? '',
-      templateSubject: json['TemplateSubject'] ?? '',
-      templateStatus: json['TemplateStatus'] ?? '',
-      templateNickName: json['TemplateNickName'] ?? '',
-      templateType: json['TemplateType'] ?? '',
-      templateName: json['TemplateName'] ?? '',
-      templateText: json['TemplateText'] ?? '',
+      requestId: json['RequestId']?.toString() ?? '',
+      createTime: json['CreateTime']?.toString() ?? '',
+      templateSubject: json['TemplateSubject']?.toString() ?? '',
+      templateStatus: json['TemplateStatus']?.toString() ?? '',
+      templateNickName: json['TemplateNickName']?.toString() ?? '',
+      templateType: json['TemplateType']?.toString() ?? '',
+      templateName: json['TemplateName']?.toString() ?? '',
+      templateText: json['TemplateText']?.toString() ?? '',
     );
   }
 } 

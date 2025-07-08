@@ -6,6 +6,7 @@ import 'package:path/path.dart';
 import 'package:aliyun_edm_manager/services/config/config_service.dart';
 import 'package:aliyun_edm_manager/models/task/scheduled_email_task_model.dart';
 import 'package:aliyun_edm_manager/models/receiver/receiver_list_model.dart';
+import 'package:aliyun_edm_manager/models/sender/sender_name_model.dart';
 
 class DatabaseService {
   static DatabaseService? _instance;
@@ -35,7 +36,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 3,
       onCreate: _createTables,
       onUpgrade: _upgradeDatabase,
     );
@@ -68,14 +69,68 @@ class DatabaseService {
       )
     ''');
 
+    // 创建发送人名称表
+    await db.execute('''
+      CREATE TABLE sender_names (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        is_default INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
     // 创建索引以提高查询性能
     await db.execute('CREATE INDEX idx_task_status ON scheduled_email_tasks(status)');
     await db.execute('CREATE INDEX idx_scheduled_time ON scheduled_email_tasks(scheduled_start_time)');
+    await db.execute('CREATE INDEX idx_sender_name ON sender_names(name)');
   }
 
   Future<void> _upgradeDatabase(Database db, int oldVersion, int newVersion) async {
-    // 数据库升级逻辑，暂时为空
-    // 将来如果需要修改表结构，可以在这里添加升级逻辑
+    // 数据库升级逻辑
+    if (oldVersion < 2) {
+      // 从版本1升级到版本2：添加sender_names表
+      try {
+        // 检查sender_names表是否已存在
+        final result = await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='sender_names'"
+        );
+        
+        if (result.isEmpty) {
+          // 创建发送人名称表
+          await db.execute('''
+            CREATE TABLE sender_names (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL UNIQUE,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              is_default INTEGER NOT NULL DEFAULT 0
+            )
+          ''');
+          
+          // 创建索引
+          await db.execute('CREATE INDEX idx_sender_name ON sender_names(name)');
+          
+          print('数据库升级：已创建 sender_names 表');
+        }
+      } catch (e) {
+        print('数据库升级错误：$e');
+      }
+    }
+
+    if (oldVersion < 3) {
+      // v3: sender_names表添加is_default字段
+      try {
+        final columns = await db.rawQuery("PRAGMA table_info(sender_names)");
+        final hasIsDefault = columns.any((col) => col['name'] == 'is_default');
+        if (!hasIsDefault) {
+          await db.execute('ALTER TABLE sender_names ADD COLUMN is_default INTEGER NOT NULL DEFAULT 0');
+          print('数据库升级：sender_names表已添加 is_default 字段');
+        }
+      } catch (e) {
+        print('数据库升级错误（is_default）：$e');
+      }
+    }
   }
 
   // 插入新任务
@@ -271,5 +326,131 @@ class DatabaseService {
       await db.close();
       _database = null;
     }
+  }
+
+  // ==================== 发送人名称相关操作 ====================
+
+  // 插入发送人名称
+  Future<int> insertSenderName(SenderNameModel senderName) async {
+    final db = await database;
+    final senderNameMap = _senderNameToMap(senderName);
+    return await db.insert('sender_names', senderNameMap);
+  }
+
+  // 更新发送人名称
+  Future<int> updateSenderName(SenderNameModel senderName) async {
+    final db = await database;
+    final senderNameMap = _senderNameToMap(senderName);
+    return await db.update(
+      'sender_names',
+      senderNameMap,
+      where: 'id = ?',
+      whereArgs: [senderName.id],
+    );
+  }
+
+  // 删除发送人名称
+  Future<int> deleteSenderName(String id) async {
+    final db = await database;
+    return await db.delete(
+      'sender_names',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // 批量删除发送人名称
+  Future<int> deleteSenderNames(List<String> ids) async {
+    final db = await database;
+    final placeholders = List.filled(ids.length, '?').join(',');
+    return await db.delete(
+      'sender_names',
+      where: 'id IN ($placeholders)',
+      whereArgs: ids,
+    );
+  }
+
+  // 根据ID获取发送人名称
+  Future<SenderNameModel?> getSenderName(String id) async {
+    final db = await database;
+    final results = await db.query(
+      'sender_names',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (results.isNotEmpty) {
+      return _mapToSenderName(results.first);
+    }
+    return null;
+  }
+
+  // 获取所有发送人名称
+  Future<List<SenderNameModel>> getAllSenderNames() async {
+    final db = await database;
+    final results = await db.query('sender_names', orderBy: 'created_at DESC');
+    return results.map((map) => _mapToSenderName(map)).toList();
+  }
+
+  // 搜索发送人名称
+  Future<List<SenderNameModel>> searchSenderNames(String query) async {
+    final db = await database;
+    final results = await db.query(
+      'sender_names',
+      where: 'name LIKE ?',
+      whereArgs: ['%$query%'],
+      orderBy: 'created_at DESC',
+    );
+    return results.map((map) => _mapToSenderName(map)).toList();
+  }
+
+  // 检查发送人名称是否存在
+  Future<bool> isSenderNameExists(String name, {String? excludeId}) async {
+    final db = await database;
+    String whereClause = 'name = ?';
+    List<dynamic> whereArgs = [name];
+    
+    if (excludeId != null) {
+      whereClause += ' AND id != ?';
+      whereArgs.add(excludeId);
+    }
+    
+    final results = await db.query(
+      'sender_names',
+      where: whereClause,
+      whereArgs: whereArgs,
+    );
+    return results.isNotEmpty;
+  }
+
+  // 获取发送人名称统计信息
+  Future<int> getSenderNameCount() async {
+    final db = await database;
+    final result = await db.rawQuery('SELECT COUNT(*) as count FROM sender_names');
+    return result.first['count'] as int;
+  }
+
+  // 将SenderNameModel转换为Map
+  Map<String, dynamic> _senderNameToMap(SenderNameModel senderName) {
+    return {
+      'id': senderName.id,
+      'name': senderName.name,
+      'created_at': senderName.createdAt,
+      'updated_at': senderName.updatedAt,
+      'is_default': senderName.isDefault ?? 0,
+    };
+  }
+
+  // 将Map转换为SenderNameModel
+  SenderNameModel _mapToSenderName(Map<String, dynamic> map) {
+    return SenderNameModel(
+      id: map['id'] as String,
+      name: map['name'] as String,
+      createdAt: map['created_at'] as String,
+      updatedAt: map['updated_at'] as String,
+      isDefault: (map['is_default'] is int)
+        ? map['is_default'] as int
+        : int.tryParse(map['is_default']?.toString() ?? '0') ?? 0,
+    );
   }
 } 

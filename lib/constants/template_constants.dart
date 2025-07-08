@@ -1,23 +1,21 @@
 /// 模板相关常量定义
 class TemplateConstants {
   // 模板状态
-  static const String STATUS_APPROVED = '0';  // 审核通过
-  static const String STATUS_PENDING = '2';   // 待审核
+  static const String STATUS_DRAFT = '0';     // 草稿
+  static const String STATUS_APPROVED = '2';  // 已通过审核
   
   // 模板类型
-  static const String TYPE_TRIGGER = '0';     // 触发邮件
-  static const String TYPE_BATCH = '1';       // 批量邮件
+  static const String TYPE_EMAIL = '0';     // 邮件
   
   // 状态描述映射
   static const Map<String, String> statusDescriptions = {
-    STATUS_APPROVED: '审核通过',
-    STATUS_PENDING: '待审核',
+    STATUS_DRAFT: '草稿',
+    STATUS_APPROVED: '已通过审核',
   };
   
   // 类型描述映射
   static const Map<String, String> typeDescriptions = {
-    TYPE_TRIGGER: '触发邮件',
-    TYPE_BATCH: '批量邮件',
+    TYPE_EMAIL: '邮件',
   };
   
   // 获取状态描述

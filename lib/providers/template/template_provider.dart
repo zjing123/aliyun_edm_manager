@@ -4,6 +4,57 @@ import 'package:aliyun_edm_manager/models/template/template_request_response.dar
 import 'package:aliyun_edm_manager/services/aliyun/aliyun_service_manager.dart';
 import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
 
+/// 缓存数据类
+class _CachedPageData {
+  final List<TemplateModel> templates;
+  final int totalCount;
+  final int totalPages;
+  final DateTime cacheTime;
+  
+  _CachedPageData({
+    required this.templates,
+    required this.totalCount,
+    required this.totalPages,
+    required this.cacheTime,
+  });
+  
+  /// 检查缓存是否过期（30分钟）
+  bool get isExpired {
+    return DateTime.now().difference(cacheTime).inMinutes > 30;
+  }
+}
+
+/// 缓存键类
+class _CacheKey {
+  final int page;
+  final String? keyWord;
+  final int? status;
+  final int? fromType;
+  
+  _CacheKey({
+    required this.page,
+    this.keyWord,
+    this.status,
+    this.fromType,
+  });
+  
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is _CacheKey &&
+        other.page == page &&
+        other.keyWord == keyWord &&
+        other.status == status &&
+        other.fromType == fromType;
+  }
+  
+  @override
+  int get hashCode => page.hashCode ^ 
+      (keyWord?.hashCode ?? 0) ^ 
+      (status?.hashCode ?? 0) ^ 
+      (fromType?.hashCode ?? 0);
+}
+
 /// 模板管理Provider
 /// 提供模板的增删改查功能
 class TemplateProvider extends ChangeNotifier {
@@ -36,6 +87,9 @@ class TemplateProvider extends ChangeNotifier {
   // 批量选择相关
   Set<String> _selectedTemplateIds = {};
   bool _selectAll = false;
+  
+  // 缓存相关
+  final Map<_CacheKey, _CachedPageData> _cache = {};
   
   // 构造函数
   TemplateProvider(AliyunServiceManager serviceManager) {
@@ -76,11 +130,44 @@ class TemplateProvider extends ChangeNotifier {
     _status = status;
     _fromType = fromType;
     _currentPage = 1; // 重置到第一页
+    // 搜索参数改变时清理缓存
+    _clearCache();
   }
   
   // 加载模板列表
   Future<void> loadTemplates({bool forceRefresh = false}) async {
     if (_isLoading && !forceRefresh) return;
+    
+    // 清理过期缓存
+    _clearExpiredCache();
+    
+    // 创建缓存键
+    final cacheKey = _CacheKey(
+      page: _currentPage,
+      keyWord: _keyWord,
+      status: _status,
+      fromType: _fromType,
+    );
+    
+    // 检查缓存
+    if (!forceRefresh && _cache.containsKey(cacheKey)) {
+      final cachedData = _cache[cacheKey]!;
+      if (!cachedData.isExpired) {
+        // 使用缓存数据
+        setState(() {
+          _templates = cachedData.templates;
+          _totalCount = cachedData.totalCount;
+          _totalPages = cachedData.totalPages;
+          _isLoading = false;
+          _error = null;
+        });
+        print('使用缓存数据，页码: $_currentPage，共${_templates.length}条记录');
+        return;
+      } else {
+        // 缓存过期，移除
+        _cache.remove(cacheKey);
+      }
+    }
     
     setState(() {
       _isLoading = true;
@@ -102,6 +189,15 @@ class TemplateProvider extends ChangeNotifier {
       
       final response = await _serviceManager.templateService.queryTemplateByParamWithRequest(request);
       
+      // 缓存数据
+      final cachedData = _CachedPageData(
+        templates: response.templates,
+        totalCount: response.totalCount,
+        totalPages: response.totalPages,
+        cacheTime: DateTime.now(),
+      );
+      _cache[cacheKey] = cachedData;
+      
       setState(() {
         _templates = response.templates;
         _totalCount = response.totalCount;
@@ -109,7 +205,7 @@ class TemplateProvider extends ChangeNotifier {
         _isLoading = false;
       });
       
-      print('模板列表加载成功，共${_templates.length}条记录');
+      print('模板列表加载成功，页码: $_currentPage，共${_templates.length}条记录，已缓存');
     } catch (e) {
       setState(() {
         _error = e.toString();
@@ -121,6 +217,13 @@ class TemplateProvider extends ChangeNotifier {
   
   // 刷新模板列表
   Future<void> refresh() async {
+    await loadTemplates(forceRefresh: true);
+  }
+  
+  // 清空缓存并回到第一页
+  Future<void> refreshAndClearCache() async {
+    _clearCache();
+    _currentPage = 1;
     await loadTemplates(forceRefresh: true);
   }
   
@@ -171,7 +274,6 @@ class TemplateProvider extends ChangeNotifier {
     String? templateSubject,
     String? templateNickName,
     String? templateText,
-    int? fromType,
   }) async {
     try {
       if (!_serviceManager.isConfigured()) {
@@ -184,14 +286,14 @@ class TemplateProvider extends ChangeNotifier {
         templateSubject: templateSubject,
         templateNickName: templateNickName,
         templateText: templateText,
-        fromType: fromType,
       );
       
       final response = await _serviceManager.templateService.createTemplate(request);
       
       print('模板创建成功，TemplateId: ${response.templateId}');
       
-      // 刷新列表
+      // 清理缓存并刷新列表
+      _clearCache();
       await refresh();
       
       return true;
@@ -228,7 +330,8 @@ class TemplateProvider extends ChangeNotifier {
       
       print('模板修改成功，RequestId: ${response.requestId}');
       
-      // 刷新列表
+      // 清理缓存并刷新列表
+      _clearCache();
       await refresh();
       
       return true;
@@ -257,7 +360,8 @@ class TemplateProvider extends ChangeNotifier {
       
       print('模板删除成功，RequestId: ${response.requestId}');
       
-      // 刷新列表
+      // 清理缓存并刷新列表
+      _clearCache();
       await refresh();
       
       return true;
@@ -354,6 +458,23 @@ class TemplateProvider extends ChangeNotifier {
     } else {
       _selectAll = _selectedTemplateIds.length == _templates.length;
     }
+  }
+  
+  // 清理过期缓存
+  void _clearExpiredCache() {
+    final expiredKeys = _cache.keys.where((key) => _cache[key]!.isExpired).toList();
+    for (final key in expiredKeys) {
+      _cache.remove(key);
+    }
+    if (expiredKeys.isNotEmpty) {
+      print('清理了 ${expiredKeys.length} 个过期缓存');
+    }
+  }
+  
+  // 清理所有缓存
+  void _clearCache() {
+    _cache.clear();
+    print('已清理所有缓存');
   }
   
   // 批量删除模板

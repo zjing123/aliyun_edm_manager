@@ -63,7 +63,7 @@ class _TemplateListPageState extends State<TemplateListPage> with AutomaticKeepA
   }
 
   void _reloadList() {
-    context.read<TemplateProvider>().refresh();
+    context.read<TemplateProvider>().refreshAndClearCache();
   }
 
   void _openConfigPage() async {
@@ -264,10 +264,6 @@ class _TemplateListPageState extends State<TemplateListPage> with AutomaticKeepA
         hasExistingTemplates: provider.templates.isNotEmpty,
       ),
       builder: (context, state, child) {
-        if (state.isLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
         if (state.error != null) {
           return Center(
             child: Column(
@@ -295,7 +291,7 @@ class _TemplateListPageState extends State<TemplateListPage> with AutomaticKeepA
           );
         }
 
-        if (state.templatesEmpty) {
+        if (state.templatesEmpty && !state.isLoading) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -472,14 +468,12 @@ class _TemplateListPageState extends State<TemplateListPage> with AutomaticKeepA
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case '0': // 审核中
-        return Colors.orange;
-      case '1': // 审核通过
-        return Colors.green;
-      case '2': // 审核未通过
-        return Colors.red;
-      default:
+      case '0': // 草稿
         return Colors.grey;
+      case '2': // 已通过审核
+        return Colors.green;
+      default:
+        return Colors.orange;
     }
   }
 
@@ -531,7 +525,7 @@ class _TemplateListPageState extends State<TemplateListPage> with AutomaticKeepA
                   ),
                 ),
                 SizedBox(
-                  width: 80,
+                  width: 100,
                   child: Text(
                     '审核状态',
                     style: TextStyle(
@@ -570,28 +564,50 @@ class _TemplateListPageState extends State<TemplateListPage> with AutomaticKeepA
   }
 
   Widget _buildTableContent() {
-    return Selector<TemplateProvider, List<TemplateModel>>(
-      selector: (context, provider) => provider.templates,
-      builder: (context, templates, child) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
+    return Selector<TemplateProvider, Map<String, dynamic>>(
+      selector: (context, provider) => {
+        'templates': provider.templates,
+        'isLoading': provider.isLoading,
+      },
+      builder: (context, data, child) {
+        final templates = data['templates'] as List<TemplateModel>;
+        final isLoading = data['isLoading'] as bool;
+        
+        return Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: ListView.builder(
-            itemCount: templates.length,
-            itemBuilder: (context, index) {
-              final template = templates[index];
-              return _buildTemplateRow(template, index);
-            },
-          ),
+              child: ListView.builder(
+                itemCount: templates.length,
+                itemBuilder: (context, index) {
+                  final template = templates[index];
+                  return _buildTemplateRow(template, index);
+                },
+              ),
+            ),
+            if (isLoading)
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+              ),
+          ],
         );
       },
     );
@@ -636,7 +652,7 @@ class _TemplateListPageState extends State<TemplateListPage> with AutomaticKeepA
                   ),
                 ),
                 SizedBox(
-                  width: 80,
+                  width: 100,
                   child: Padding(
                     padding: const EdgeInsets.only(right: 10),
                     child: _buildStatusChip(template),

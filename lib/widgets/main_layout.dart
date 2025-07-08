@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../pages/receiver/receiver_list_page.dart';
 import '../pages/overview/overview_page.dart';
 import '../pages/sender/sending_address_page.dart';
+import '../pages/sender/sender_name_list_page.dart';
 import '../pages/template/template_list_page.dart';
 import '../pages/task/send_email/send_email_page.dart';
 import '../pages/task/scheduled_task/scheduled_email_task_list_page.dart';
@@ -9,6 +11,7 @@ import '../pages/receiver/invalid_addresses_page.dart';
 import '../pages/sending_data_page.dart';
 import '../pages/sending_details_page.dart';
 import '../pages/config/config_page.dart';
+import '../providers/sender/sender_name_provider.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -31,6 +34,7 @@ class _MainLayoutState extends State<MainLayout> {
       icon: Icons.settings,
       children: [
         NavigationItem(title: '发信地址', route: '/sending-address'),
+        NavigationItem(title: '发送人名称', route: '/sender-name'),
         NavigationItem(title: '模板管理', route: '/template-management'),
       ],
     ),
@@ -270,13 +274,18 @@ class _MainLayoutState extends State<MainLayout> {
         return const OverviewPage();
       case '/sending-address':
         return const SendingAddressPage();
+      case '/sender-name':
+        return ChangeNotifierProvider(
+          create: (_) => SenderNameProvider()..loadSenderNames(),
+          child: const SenderNameListPage(),
+        );
       case '/template-management':
         return const TemplateListPage();
       case '/recipient-list':
         return const ReceiverListPage();
       case '/send-email':
         return const SendEmailPage();
-              case '/scheduled-email-tasks':
+      case '/scheduled-email-tasks':
         return const ScheduledEmailTaskListPage();
       case '/invalid-addresses':
         return const InvalidAddressesPage();
