@@ -587,13 +587,13 @@ class _TemplateListPageState extends State<TemplateListPage> with AutomaticKeepA
                     child: _buildStatusChip(template),
                   ),
                 ),
-                SizedBox(
-                  width: 150,
-                  child: Text(
-                    template.createTime,
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ),
+                            SizedBox(
+              width: 150,
+              child: Text(
+                template.formattedCreateTime(),
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ),
                 SizedBox(
                   width: 80,
                   child: Row(
