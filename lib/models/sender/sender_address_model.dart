@@ -13,6 +13,10 @@ class SenderAddressModel {
   final String monthCount;
   final String dailyReqCount;
   final String monthReqCount;
+  
+  // 添加缺失的属性
+  String get status => accountStatus;
+  String get mailAddress => accountName;
 
   SenderAddressModel({
     required this.mailAddressId,
