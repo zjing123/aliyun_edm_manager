@@ -48,7 +48,7 @@ class _SendingDataPageState extends State<SendingDataPage> {
           
           return Scaffold(
             backgroundColor: Colors.grey[50],
-            body: Padding(
+            body: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -205,53 +205,52 @@ class _SendingDataPageState extends State<SendingDataPage> {
                   ),
                   const SizedBox(height: 24),
                   // 数据表格
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  '发送数据列表',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                  Container(
+                    height: 400, // 固定高度
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                '发送数据列表',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                if (provider.isLoading)
-                                  const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: SingleChildScrollView(
-                                child: _buildDataTable(provider),
                               ),
+                              if (provider.isLoading)
+                                const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: SingleChildScrollView(
+                              child: _buildDataTable(provider),
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -316,7 +315,7 @@ class _SendingDataPageState extends State<SendingDataPage> {
                   },
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               // 发信地址
               Expanded(
                 child: DropdownButtonFormField<String>(
@@ -343,7 +342,7 @@ class _SendingDataPageState extends State<SendingDataPage> {
                   },
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               // 起始时间
               Expanded(
                 child: InkWell(
@@ -378,7 +377,7 @@ class _SendingDataPageState extends State<SendingDataPage> {
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               // 结束时间
               Expanded(
                 child: InkWell(
@@ -413,40 +412,45 @@ class _SendingDataPageState extends State<SendingDataPage> {
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              OutlinedButton(
-                onPressed: () {
-                  setState(() {
-                    _selectedTagName = null;
-                    _selectedAccountName = null;
-                    _startTime = DateTime.now().subtract(const Duration(days: 7));
-                    _endTime = DateTime.now();
-                  });
-                  provider.resetFilterParams();
-                  provider.loadStatistics(
-                    startTime: _startTime!,
-                    endTime: _endTime!,
-                  );
-                },
-                child: const Text('重置'),
+              const SizedBox(width: 16),
+              // 重置按钮
+              SizedBox(
+                width: 72,
+                height: 40,
+                child: OutlinedButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedTagName = null;
+                      _selectedAccountName = null;
+                      _startTime = DateTime.now().subtract(const Duration(days: 7));
+                      _endTime = DateTime.now();
+                    });
+                    provider.resetFilterParams();
+                    provider.loadStatistics(
+                      startTime: _startTime!,
+                      endTime: _endTime!,
+                    );
+                  },
+                  child: const Text('重置'),
+                ),
               ),
-              const SizedBox(width: 12),
-              ElevatedButton(
-                onPressed: () {
-                  provider.setFilterParams(
-                    tagName: _selectedTagName,
-                    accountName: _selectedAccountName,
-                    startTime: _startTime,
-                    endTime: _endTime,
-                  );
-                  provider.applyFilters();
-                },
-                child: const Text('查询'),
+              const SizedBox(width: 8),
+              // 查询按钮
+              SizedBox(
+                width: 72,
+                height: 40,
+                child: ElevatedButton(
+                  onPressed: () {
+                    provider.setFilterParams(
+                      tagName: _selectedTagName,
+                      accountName: _selectedAccountName,
+                      startTime: _startTime,
+                      endTime: _endTime,
+                    );
+                    provider.applyFilters();
+                  },
+                  child: const Text('查询'),
+                ),
               ),
             ],
           ),
