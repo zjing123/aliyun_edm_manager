@@ -43,7 +43,7 @@ class _TrackDataPageState extends State<TrackDataPage> {
         builder: (context, provider, child) {
           return Scaffold(
             backgroundColor: Colors.grey[50],
-            body: Padding(
+            body: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,6 +204,7 @@ class _TrackDataPageState extends State<TrackDataPage> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 24), // 底部间距，确保内容完全可见
                 ],
               ),
             ),
