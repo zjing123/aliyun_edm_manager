@@ -238,13 +238,10 @@ class _TrackDataPageState extends State<TrackDataPage> {
             ),
           ),
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 16,
-            runSpacing: 16,
+          Row(
             children: [
               // 邮件标签
-              SizedBox(
-                width: 200,
+              Expanded(
                 child: DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
                     labelText: '邮件标签',
@@ -268,10 +265,10 @@ class _TrackDataPageState extends State<TrackDataPage> {
                   },
                 ),
               ),
+              const SizedBox(width: 16),
               
               // 发信地址
-              SizedBox(
-                width: 200,
+              Expanded(
                 child: DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
                     labelText: '发信地址',
@@ -295,10 +292,10 @@ class _TrackDataPageState extends State<TrackDataPage> {
                   },
                 ),
               ),
+              const SizedBox(width: 16),
               
               // 起始时间
-              SizedBox(
-                width: 150,
+              Expanded(
                 child: InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -326,10 +323,10 @@ class _TrackDataPageState extends State<TrackDataPage> {
                   ),
                 ),
               ),
+              const SizedBox(width: 16),
               
               // 结束时间
-              SizedBox(
-                width: 150,
+              Expanded(
                 child: InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -357,50 +354,56 @@ class _TrackDataPageState extends State<TrackDataPage> {
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _selectedTagName = null;
-                    _selectedAccountName = null;
-                    _startTime = null;
-                    _endTime = null;
-                  });
-                  provider.resetFilters();
-                },
-                child: const Text('重置'),
+              const SizedBox(width: 16),
+              
+              // 重置按钮
+              SizedBox(
+                width: 80,
+                child: TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedTagName = null;
+                      _selectedAccountName = null;
+                      _startTime = null;
+                      _endTime = null;
+                    });
+                    provider.resetFilters();
+                  },
+                  child: const Text('重置'),
+                ),
               ),
               const SizedBox(width: 16),
-              ElevatedButton(
-                onPressed: () {
-                  // 验证时间范围
-                  if (!provider.isValidTimeRange(_startTime, _endTime)) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('时间范围不能超过7天，请重新选择'),
-                        backgroundColor: Colors.red,
-                      ),
+              
+              // 查询按钮
+              SizedBox(
+                width: 80,
+                child: ElevatedButton(
+                  onPressed: () {
+                    // 验证时间范围
+                    if (!provider.isValidTimeRange(_startTime, _endTime)) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('时间范围不能超过7天，请重新选择'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+                    
+                    provider.setFilters(
+                      tagName: _selectedTagName,
+                      accountName: _selectedAccountName,
+                      startTime: _startTime,
+                      endTime: _endTime,
                     );
-                    return;
-                  }
-                  
-                  provider.setFilters(
-                    tagName: _selectedTagName,
-                    accountName: _selectedAccountName,
-                    startTime: _startTime,
-                    endTime: _endTime,
-                  );
-                  provider.applyFilters();
-                },
-                child: const Text('查询'),
+                    provider.applyFilters();
+                  },
+                  child: const Text('查询'),
+                ),
               ),
             ],
           ),
+
         ],
       ),
     );
