@@ -77,164 +77,179 @@ class _SendingDetailsPageState extends State<SendingDetailsPage> {
                   ),
                   const SizedBox(height: 16),
                   // 筛选栏
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      // 根据屏幕宽度动态调整控件宽度
-                      final screenWidth = constraints.maxWidth;
-                      final isLargeScreen = screenWidth > 1500;
-                      final itemWidth = isLargeScreen ? 300.0 : 200.0;
-                      final maxContainerWidth = isLargeScreen ? 1400.0 : screenWidth * 0.98;
-                      
-                      return Align(
-                        alignment: Alignment.centerRight,
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: maxContainerWidth),
-                          child: Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: itemWidth,
-                                child: TextField(
-                                  controller: _searchController,
-                                  decoration: const InputDecoration(
-                                    labelText: '搜索收件人',
-                                    prefixIcon: Icon(Icons.search),
-                                    border: OutlineInputBorder(),
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                width: itemWidth,
-                                child: DropdownButtonFormField<String>(
-                                  decoration: const InputDecoration(
-                                    labelText: '状态',
-                                    border: OutlineInputBorder(),
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  ),
-                                  value: _selectedStatus,
-                                  items: const [
-                                    DropdownMenuItem(value: null, child: Text('全部')),
-                                    DropdownMenuItem(value: 'sent', child: Text('已发送')),
-                                    DropdownMenuItem(value: 'opened', child: Text('已打开')),
-                                    DropdownMenuItem(value: 'failed', child: Text('发送失败')),
-                                  ],
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _selectedStatus = value;
-                                    });
-                                  },
-                                ),
-                              ),
-                              SizedBox(
-                                width: itemWidth,
-                                child: InkWell(
-                                  onTap: () async {
-                                    final date = await showDatePicker(
-                                      context: context,
-                                      initialDate: _startDate ?? DateTime.now(),
-                                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                                      lastDate: DateTime.now(),
-                                    );
-                                    if (date != null) {
-                                      setState(() {
-                                        _startDate = date;
-                                      });
-                                    }
-                                  },
-                                  child: InputDecorator(
-                                    decoration: const InputDecoration(
-                                      labelText: '起始时间',
-                                      border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                      suffixIcon: Icon(Icons.calendar_today),
-                                    ),
-                                    child: Text(
-                                      _startDate != null 
-                                          ? '${_startDate!.year}-${_startDate!.month.toString().padLeft(2, '0')}-${_startDate!.day.toString().padLeft(2, '0')}'
-                                          : '请选择日期',
-                                      style: TextStyle(
-                                        color: _startDate != null ? Colors.black : Colors.grey,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                width: itemWidth,
-                                child: InkWell(
-                                  onTap: () async {
-                                    final date = await showDatePicker(
-                                      context: context,
-                                      initialDate: _endDate ?? DateTime.now(),
-                                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                                      lastDate: DateTime.now(),
-                                    );
-                                    if (date != null) {
-                                      setState(() {
-                                        _endDate = date;
-                                      });
-                                    }
-                                  },
-                                  child: InputDecorator(
-                                    decoration: const InputDecoration(
-                                      labelText: '结束时间',
-                                      border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                      suffixIcon: Icon(Icons.calendar_today),
-                                    ),
-                                    child: Text(
-                                      _endDate != null 
-                                          ? '${_endDate!.year}-${_endDate!.month.toString().padLeft(2, '0')}-${_endDate!.day.toString().padLeft(2, '0')}'
-                                          : '请选择日期',
-                                      style: TextStyle(
-                                        color: _endDate != null ? Colors.black : Colors.grey,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 72,
-                                height: 40,
-                                child: OutlinedButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _searchController.clear();
-                                      _selectedStatus = null;
-                                      _startDate = null;
-                                      _endDate = null;
-                                    });
-                                    provider.loadDetails();
-                                  },
-                                  child: const Text('重置'),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 72,
-                                height: 40,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    final recipient = _searchController.text.trim().isEmpty ? null : _searchController.text.trim();
-                                    final status = _selectedStatus == null ? null : _parseStatus(_selectedStatus!);
-                                    
-                                    provider.loadDetails(
-                                      recipient: recipient,
-                                      status: status,
-                                      startDate: _startDate,
-                                      endDate: _endDate,
-                                    );
-                                  },
-                                  child: const Text('筛选'),
-                                ),
-                              ),
-                            ],
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '筛选条件',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      );
-                    },
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            // 搜索收件人
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                decoration: const InputDecoration(
+                                  labelText: '搜索收件人',
+                                  prefixIcon: Icon(Icons.search),
+                                  border: OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // 状态
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                decoration: const InputDecoration(
+                                  labelText: '状态',
+                                  border: OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                ),
+                                value: _selectedStatus,
+                                items: const [
+                                  DropdownMenuItem(value: null, child: Text('全部')),
+                                  DropdownMenuItem(value: 'sent', child: Text('已发送')),
+                                  DropdownMenuItem(value: 'opened', child: Text('已打开')),
+                                  DropdownMenuItem(value: 'failed', child: Text('发送失败')),
+                                ],
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedStatus = value;
+                                  });
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // 起始时间
+                            Expanded(
+                              child: InkWell(
+                                onTap: () async {
+                                  final date = await showDatePicker(
+                                    context: context,
+                                    initialDate: _startDate ?? DateTime.now(),
+                                    firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                                    lastDate: DateTime.now(),
+                                  );
+                                  if (date != null) {
+                                    setState(() {
+                                      _startDate = date;
+                                    });
+                                  }
+                                },
+                                child: InputDecorator(
+                                  decoration: const InputDecoration(
+                                    labelText: '起始时间',
+                                    border: OutlineInputBorder(),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    suffixIcon: Icon(Icons.calendar_today),
+                                  ),
+                                  child: Text(
+                                    _startDate != null 
+                                        ? '${_startDate!.year}-${_startDate!.month.toString().padLeft(2, '0')}-${_startDate!.day.toString().padLeft(2, '0')}'
+                                        : '请选择日期',
+                                    style: TextStyle(
+                                      color: _startDate != null ? Colors.black : Colors.grey,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // 结束时间
+                            Expanded(
+                              child: InkWell(
+                                onTap: () async {
+                                  final date = await showDatePicker(
+                                    context: context,
+                                    initialDate: _endDate ?? DateTime.now(),
+                                    firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                                    lastDate: DateTime.now(),
+                                  );
+                                  if (date != null) {
+                                    setState(() {
+                                      _endDate = date;
+                                    });
+                                  }
+                                },
+                                child: InputDecorator(
+                                  decoration: const InputDecoration(
+                                    labelText: '结束时间',
+                                    border: OutlineInputBorder(),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    suffixIcon: Icon(Icons.calendar_today),
+                                  ),
+                                  child: Text(
+                                    _endDate != null 
+                                        ? '${_endDate!.year}-${_endDate!.month.toString().padLeft(2, '0')}-${_endDate!.day.toString().padLeft(2, '0')}'
+                                        : '请选择日期',
+                                    style: TextStyle(
+                                      color: _endDate != null ? Colors.black : Colors.grey,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // 重置按钮
+                            SizedBox(
+                              width: 60,
+                              height: 40,
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _searchController.clear();
+                                    _selectedStatus = null;
+                                    _startDate = null;
+                                    _endDate = null;
+                                  });
+                                  provider.loadDetails();
+                                },
+                                child: const Text('重置'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // 筛选按钮
+                            SizedBox(
+                              width: 60,
+                              height: 40,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  final recipient = _searchController.text.trim().isEmpty ? null : _searchController.text.trim();
+                                  final status = _selectedStatus == null ? null : _parseStatus(_selectedStatus!);
+                                  
+                                  provider.loadDetails(
+                                    recipient: recipient,
+                                    status: status,
+                                    startDate: _startDate,
+                                    endDate: _endDate,
+                                  );
+                                },
+                                child: const Text('筛选'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 24),
                   // 数据表格
