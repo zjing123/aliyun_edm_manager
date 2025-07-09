@@ -239,195 +239,212 @@ class _TrackDataPageState extends State<TrackDataPage> {
             ),
           ),
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 16,
-            runSpacing: 16,
-            children: [
-              // 邮件标签
-              SizedBox(
-                width: 200,
-                child: DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    labelText: '邮件标签',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  value: _selectedTagName,
-                  items: [
-                    const DropdownMenuItem<String>(
-                      value: null,
-                      child: Text('全部', overflow: TextOverflow.ellipsis),
-                    ),
-                    ...provider.emailTags.map((tag) => DropdownMenuItem<String>(
-                      value: tag.tagName,
-                      child: Text(
-                        tag.tagName,
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
-                    )),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedTagName = value;
-                    });
-                  },
-                  isExpanded: true,
-                  menuMaxHeight: 200,
-                  dropdownColor: Colors.white,
-                  icon: const Icon(Icons.arrow_drop_down),
-                  iconSize: 20,
-                  elevation: 3,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              
-              // 发信地址
-              SizedBox(
-                width: 200,
-                child: DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    labelText: '发信地址',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  value: _selectedAccountName,
-                  items: [
-                    const DropdownMenuItem<String>(
-                      value: null,
-                      child: Text('全部', overflow: TextOverflow.ellipsis),
-                    ),
-                    ...provider.senderAddresses.map((address) => DropdownMenuItem<String>(
-                      value: address.accountName,
-                      child: Text(
-                        address.accountName,
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
-                    )),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedAccountName = value;
-                    });
-                  },
-                  isExpanded: true,
-                  menuMaxHeight: 200,
-                  dropdownColor: Colors.white,
-                  icon: const Icon(Icons.arrow_drop_down),
-                  iconSize: 20,
-                  elevation: 3,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              
-              // 起始时间
-              SizedBox(
-                width: 200,
-                child: InkWell(
-                  onTap: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: _startTime ?? DateTime.now(),
-                      firstDate: DateTime.now().subtract(const Duration(days: 30)),
-                      lastDate: DateTime.now(),
-                    );
-                    if (date != null) {
-                      setState(() {
-                        _startTime = date;
-                      });
-                    }
-                  },
-                  child: InputDecorator(
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                // 邮件标签
+                SizedBox(
+                  width: 180,
+                  child: DropdownButtonFormField<String>(
                     decoration: const InputDecoration(
-                      labelText: '起始时间',
+                      labelText: '邮件标签',
                       border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
-                    child: Text(
-                      _startTime != null
-                          ? '${_startTime!.year}-${_startTime!.month.toString().padLeft(2, '0')}-${_startTime!.day.toString().padLeft(2, '0')}'
-                          : '请选择',
-                    ),
-                  ),
-                ),
-              ),
-              
-              // 结束时间
-              SizedBox(
-                width: 200,
-                child: InkWell(
-                  onTap: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: _endTime ?? DateTime.now(),
-                      firstDate: DateTime.now().subtract(const Duration(days: 30)),
-                      lastDate: DateTime.now(),
-                    );
-                    if (date != null) {
-                      setState(() {
-                        _endTime = date;
-                      });
-                    }
-                  },
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: '结束时间',
-                      border: OutlineInputBorder(),
-                    ),
-                    child: Text(
-                      _endTime != null
-                          ? '${_endTime!.year}-${_endTime!.month.toString().padLeft(2, '0')}-${_endTime!.day.toString().padLeft(2, '0')}'
-                          : '请选择',
-                    ),
-                  ),
-                ),
-              ),
-              
-              // 查询按钮
-              SizedBox(
-                width: 80,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // 验证时间范围
-                    if (!provider.isValidTimeRange(_startTime, _endTime)) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('时间范围不能超过7天，请重新选择'),
-                          backgroundColor: Colors.red,
+                    value: _selectedTagName,
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: null,
+                        child: Text('全部', overflow: TextOverflow.ellipsis),
+                      ),
+                      ...provider.emailTags.map((tag) => DropdownMenuItem<String>(
+                        value: tag.tagName,
+                        child: Text(
+                          tag.tagName,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
+                      )),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedTagName = value;
+                      });
+                    },
+                    isExpanded: true,
+                    menuMaxHeight: 200,
+                    dropdownColor: Colors.white,
+                    icon: const Icon(Icons.arrow_drop_down),
+                    iconSize: 20,
+                    elevation: 3,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                
+                const SizedBox(width: 12),
+                
+                // 发信地址
+                SizedBox(
+                  width: 180,
+                  child: DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      labelText: '发信地址',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    value: _selectedAccountName,
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: null,
+                        child: Text('全部', overflow: TextOverflow.ellipsis),
+                      ),
+                      ...provider.senderAddresses.map((address) => DropdownMenuItem<String>(
+                        value: address.accountName,
+                        child: Text(
+                          address.accountName,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      )),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedAccountName = value;
+                      });
+                    },
+                    isExpanded: true,
+                    menuMaxHeight: 200,
+                    dropdownColor: Colors.white,
+                    icon: const Icon(Icons.arrow_drop_down),
+                    iconSize: 20,
+                    elevation: 3,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                
+                const SizedBox(width: 12),
+                
+                // 起始时间
+                SizedBox(
+                  width: 150,
+                  child: InkWell(
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: _startTime ?? DateTime.now(),
+                        firstDate: DateTime.now().subtract(const Duration(days: 30)),
+                        lastDate: DateTime.now(),
                       );
-                      return;
-                    }
-                    
-                    provider.setFilters(
-                      tagName: _selectedTagName,
-                      accountName: _selectedAccountName,
-                      startTime: _startTime,
-                      endTime: _endTime,
-                    );
-                    provider.applyFilters();
-                  },
-                  child: const Text('查询'),
+                      if (date != null) {
+                        setState(() {
+                          _startTime = date;
+                        });
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: '起始时间',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      child: Text(
+                        _startTime != null
+                            ? '${_startTime!.year}-${_startTime!.month.toString().padLeft(2, '0')}-${_startTime!.day.toString().padLeft(2, '0')}'
+                            : '请选择',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              
-              // 重置按钮
-              SizedBox(
-                width: 80,
-                child: TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _selectedTagName = null;
-                      _selectedAccountName = null;
-                      _startTime = null;
-                      _endTime = null;
-                    });
-                    provider.resetFilters();
-                  },
-                  child: const Text('重置'),
+                
+                const SizedBox(width: 12),
+                
+                // 结束时间
+                SizedBox(
+                  width: 150,
+                  child: InkWell(
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: _endTime ?? DateTime.now(),
+                        firstDate: DateTime.now().subtract(const Duration(days: 30)),
+                        lastDate: DateTime.now(),
+                      );
+                      if (date != null) {
+                        setState(() {
+                          _endTime = date;
+                        });
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: '结束时间',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      child: Text(
+                        _endTime != null
+                            ? '${_endTime!.year}-${_endTime!.month.toString().padLeft(2, '0')}-${_endTime!.day.toString().padLeft(2, '0')}'
+                            : '请选择',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                
+                const SizedBox(width: 12),
+                
+                // 查询按钮
+                SizedBox(
+                  width: 70,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // 验证时间范围
+                      if (!provider.isValidTimeRange(_startTime, _endTime)) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('时间范围不能超过7天，请重新选择'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+                      
+                      provider.setFilters(
+                        tagName: _selectedTagName,
+                        accountName: _selectedAccountName,
+                        startTime: _startTime,
+                        endTime: _endTime,
+                      );
+                      provider.applyFilters();
+                    },
+                    child: const Text('查询'),
+                  ),
+                ),
+                
+                const SizedBox(width: 8),
+                
+                // 重置按钮
+                SizedBox(
+                  width: 70,
+                  height: 56,
+                  child: TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedTagName = null;
+                        _selectedAccountName = null;
+                        _startTime = null;
+                        _endTime = null;
+                      });
+                      provider.resetFilters();
+                    },
+                    child: const Text('重置'),
+                  ),
+                ),
+              ],
+            ),
           ),
 
         ],
