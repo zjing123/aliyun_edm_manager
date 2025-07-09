@@ -5,6 +5,7 @@ import 'package:aliyun_edm_manager/services/aliyun/sender_address/sender_address
 import 'package:aliyun_edm_manager/services/aliyun/email_tag/email_tag_service.dart';
 import 'package:aliyun_edm_manager/services/aliyun/email_task/email_task_service.dart';
 import 'package:aliyun_edm_manager/services/aliyun/scheduled_email/scheduled_email_service.dart';
+import 'package:aliyun_edm_manager/services/aliyun/track/track_service.dart';
 
 /// 阿里云服务管理器
 /// 统一管理所有阿里云子服务，提供便捷的访问接口
@@ -18,6 +19,7 @@ class AliyunServiceManager {
   late final EmailTagService _emailTagService;
   late final EmailTaskService _emailTaskService;
   late final ScheduledEmailService _scheduledEmailService;
+  late final TrackService _trackService;
 
   bool _initialized = false;
 
@@ -31,6 +33,7 @@ class AliyunServiceManager {
     _emailTagService = EmailTagService();
     _emailTaskService = EmailTaskService();
     _scheduledEmailService = ScheduledEmailService();
+    _trackService = TrackService();
 
     // 设置全局配置Provider
     _setGlobalConfigProvider(globalConfigProvider);
@@ -46,6 +49,7 @@ class AliyunServiceManager {
     _emailTagService.setGlobalConfigProvider(provider);
     _emailTaskService.setGlobalConfigProvider(provider);
     _scheduledEmailService.setGlobalConfigProvider(provider);
+    _trackService.setGlobalConfigProvider(provider);
   }
 
   /// 检查是否已初始化
@@ -97,6 +101,14 @@ class AliyunServiceManager {
       throw Exception('AliyunServiceManager未初始化，请先调用initialize方法');
     }
     return _scheduledEmailService;
+  }
+
+  /// 跟踪数据管理服务
+  TrackService get trackService {
+    if (!_initialized) {
+      throw Exception('AliyunServiceManager未初始化，请先调用initialize方法');
+    }
+    return _trackService;
   }
 
   /// 检查配置是否完整
