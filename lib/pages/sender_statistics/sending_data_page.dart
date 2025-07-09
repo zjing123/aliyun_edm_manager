@@ -287,13 +287,10 @@ class _SendingDataPageState extends State<SendingDataPage> {
             ),
           ),
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          Row(
             children: [
               // 邮件标签
-              Flexible(
+              Expanded(
                 child: DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
                     labelText: '邮件标签',
@@ -318,8 +315,9 @@ class _SendingDataPageState extends State<SendingDataPage> {
                   },
                 ),
               ),
+              const SizedBox(width: 12),
               // 发信地址
-              Flexible(
+              Expanded(
                 child: DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
                     labelText: '发信地址',
@@ -344,8 +342,9 @@ class _SendingDataPageState extends State<SendingDataPage> {
                   },
                 ),
               ),
+              const SizedBox(width: 12),
               // 起始时间
-              Flexible(
+              Expanded(
                 child: InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -378,8 +377,9 @@ class _SendingDataPageState extends State<SendingDataPage> {
                   ),
                 ),
               ),
+              const SizedBox(width: 12),
               // 结束时间
-              Flexible(
+              Expanded(
                 child: InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -412,9 +412,10 @@ class _SendingDataPageState extends State<SendingDataPage> {
                   ),
                 ),
               ),
+              const SizedBox(width: 12),
               // 重置按钮
               SizedBox(
-                width: 72,
+                width: 60,
                 height: 40,
                 child: OutlinedButton(
                   onPressed: () {
@@ -433,9 +434,10 @@ class _SendingDataPageState extends State<SendingDataPage> {
                   child: const Text('重置'),
                 ),
               ),
+              const SizedBox(width: 12),
               // 查询按钮
               SizedBox(
-                width: 72,
+                width: 60,
                 height: 40,
                 child: ElevatedButton(
                   onPressed: () {
