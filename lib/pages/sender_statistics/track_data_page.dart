@@ -250,16 +250,21 @@ class _TrackDataPageState extends State<TrackDataPage> {
                   decoration: const InputDecoration(
                     labelText: '邮件标签',
                     border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
                   value: _selectedTagName,
                   items: [
                     const DropdownMenuItem<String>(
                       value: null,
-                      child: Text('全部'),
+                      child: Text('全部', overflow: TextOverflow.ellipsis),
                     ),
                     ...provider.emailTags.map((tag) => DropdownMenuItem<String>(
                       value: tag.tagName,
-                      child: Text(tag.tagName),
+                      child: Text(
+                        tag.tagName,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
                     )),
                   ],
                   onChanged: (value) {
@@ -267,6 +272,13 @@ class _TrackDataPageState extends State<TrackDataPage> {
                       _selectedTagName = value;
                     });
                   },
+                  isExpanded: true,
+                  menuMaxHeight: 200,
+                  dropdownColor: Colors.white,
+                  icon: const Icon(Icons.arrow_drop_down),
+                  iconSize: 20,
+                  elevation: 3,
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
               
@@ -277,16 +289,21 @@ class _TrackDataPageState extends State<TrackDataPage> {
                   decoration: const InputDecoration(
                     labelText: '发信地址',
                     border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
                   value: _selectedAccountName,
                   items: [
                     const DropdownMenuItem<String>(
                       value: null,
-                      child: Text('全部'),
+                      child: Text('全部', overflow: TextOverflow.ellipsis),
                     ),
                     ...provider.senderAddresses.map((address) => DropdownMenuItem<String>(
                       value: address.accountName,
-                      child: Text(address.accountName),
+                      child: Text(
+                        address.accountName,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
                     )),
                   ],
                   onChanged: (value) {
@@ -294,6 +311,13 @@ class _TrackDataPageState extends State<TrackDataPage> {
                       _selectedAccountName = value;
                     });
                   },
+                  isExpanded: true,
+                  menuMaxHeight: 200,
+                  dropdownColor: Colors.white,
+                  icon: const Icon(Icons.arrow_drop_down),
+                  iconSize: 20,
+                  elevation: 3,
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
               
