@@ -26,16 +26,16 @@ class TrackRecord {
 
   factory TrackRecord.fromJson(Map<String, dynamic> json) {
     return TrackRecord(
-      createTime: json['CreateTime'] ?? '',
-      rcptClickCount: json['RcptClickCount'] ?? '0',
-      rcptClickRate: json['RcptClickRate'] ?? '0',
-      rcptUniqueOpenCount: json['RcptUniqueOpenCount'] ?? '0',
-      rcptUniqueOpenRate: json['RcptUniqueOpenRate'] ?? '0',
-      rcptUniqueClickCount: json['RcptUniqueClickCount'] ?? '0',
-      rcptUniqueClickRate: json['RcptUniqueClickRate'] ?? '0',
-      rcptOpenCount: json['RcptOpenCount'] ?? '0',
-      rcptOpenRate: json['RcptOpenRate'] ?? '0',
-      totalNumber: json['TotalNumber'] ?? '0',
+      createTime: _parseString(json['CreateTime']) ?? '',
+      rcptClickCount: _parseString(json['RcptClickCount']) ?? '0',
+      rcptClickRate: _parseString(json['RcptClickRate']) ?? '0',
+      rcptUniqueOpenCount: _parseString(json['RcptUniqueOpenCount']) ?? '0',
+      rcptUniqueOpenRate: _parseString(json['RcptUniqueOpenRate']) ?? '0',
+      rcptUniqueClickCount: _parseString(json['RcptUniqueClickCount']) ?? '0',
+      rcptUniqueClickRate: _parseString(json['RcptUniqueClickRate']) ?? '0',
+      rcptOpenCount: _parseString(json['RcptOpenCount']) ?? '0',
+      rcptOpenRate: _parseString(json['RcptOpenRate']) ?? '0',
+      totalNumber: _parseString(json['TotalNumber']) ?? '0',
     );
   }
 
@@ -52,6 +52,26 @@ class TrackRecord {
       'RcptOpenRate': rcptOpenRate,
       'TotalNumber': totalNumber,
     };
+  }
+
+  // 便利方法
+  int get rcptClickCountInt => int.tryParse(rcptClickCount) ?? 0;
+  int get rcptUniqueOpenCountInt => int.tryParse(rcptUniqueOpenCount) ?? 0;
+  int get rcptUniqueClickCountInt => int.tryParse(rcptUniqueClickCount) ?? 0;
+  int get rcptOpenCountInt => int.tryParse(rcptOpenCount) ?? 0;
+  int get totalNumberInt => int.tryParse(totalNumber) ?? 0;
+  
+  double get rcptClickRateDouble => double.tryParse(rcptClickRate) ?? 0.0;
+  double get rcptUniqueOpenRateDouble => double.tryParse(rcptUniqueOpenRate) ?? 0.0;
+  double get rcptUniqueClickRateDouble => double.tryParse(rcptUniqueClickRate) ?? 0.0;
+  double get rcptOpenRateDouble => double.tryParse(rcptOpenRate) ?? 0.0;
+
+  static String? _parseString(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is int) return value.toString();
+    if (value is double) return value.toString();
+    return value.toString();
   }
 
   @override
@@ -81,12 +101,28 @@ class GetTrackListResponse {
     final stat = data?['stat'] as List<dynamic>? ?? [];
     
     return GetTrackListResponse(
-      requestId: json['RequestId'] ?? '',
-      pageNo: json['PageNo'] ?? 1,
-      pageSize: json['PageSize'] ?? 10,
-      total: json['Total'] ?? 0,
+      requestId: _parseString(json['RequestId']) ?? '',
+      pageNo: _parseInt(json['PageNo']) ?? 1,
+      pageSize: _parseInt(json['PageSize']) ?? 10,
+      total: _parseInt(json['Total']) ?? 0,
       trackList: stat.map((item) => TrackRecord.fromJson(item as Map<String, dynamic>)).toList(),
     );
+  }
+
+  static String? _parseString(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is int) return value.toString();
+    if (value is double) return value.toString();
+    return value.toString();
+  }
+
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value);
+    if (value is double) return value.toInt();
+    return null;
   }
 
   @override
@@ -116,12 +152,28 @@ class GetTrackListByMailFromAndTagNameResponse {
     final stat = trackListData?['Stat'] as List<dynamic>? ?? [];
     
     return GetTrackListByMailFromAndTagNameResponse(
-      requestId: json['RequestId'] ?? '',
-      pageNo: json['PageNo'] ?? 1,
-      pageSize: json['PageSize'] ?? 10,
-      total: json['Total'] ?? 0,
+      requestId: _parseString(json['RequestId']) ?? '',
+      pageNo: _parseInt(json['PageNo']) ?? 1,
+      pageSize: _parseInt(json['PageSize']) ?? 10,
+      total: _parseInt(json['Total']) ?? 0,
       trackList: stat.map((item) => TrackRecord.fromJson(item as Map<String, dynamic>)).toList(),
     );
+  }
+
+  static String? _parseString(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is int) return value.toString();
+    if (value is double) return value.toString();
+    return value.toString();
+  }
+
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value);
+    if (value is double) return value.toInt();
+    return null;
   }
 
   @override
