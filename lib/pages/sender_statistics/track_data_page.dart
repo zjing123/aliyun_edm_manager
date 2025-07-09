@@ -91,120 +91,117 @@ class _TrackDataPageState extends State<TrackDataPage> {
                   const SizedBox(height: 24),
                   
                   // 图表区域
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
+                  Container(
+                    height: 300,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '跟踪趋势',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
                           ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            '跟踪趋势',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                        ),
+                        const SizedBox(height: 16),
+                        if (provider.isLoading)
+                          const Expanded(
+                            child: Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                        else if (provider.trackList.isNotEmpty)
+                          Expanded(
+                            child: _buildTrendChart(provider),
+                          )
+                        else
+                          Expanded(
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.bar_chart,
+                                    size: 64,
+                                    color: Colors.grey[400],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    '暂无跟踪数据',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          if (provider.isLoading)
-                            const Expanded(
-                              child: Center(
-                                child: CircularProgressIndicator(),
-                              ),
-                            )
-                          else if (provider.trackList.isNotEmpty)
-                            Expanded(
-                              child: _buildTrendChart(provider),
-                            )
-                          else
-                            Expanded(
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.bar_chart,
-                                      size: 64,
-                                      color: Colors.grey[400],
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      '暂无跟踪数据',
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 24),
                   
                   // 数据表格
-                  Expanded(
-                    flex: 2,
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                '跟踪数据列表',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                  Container(
+                    height: 400,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              '跟踪数据列表',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
                               ),
-                              Text(
-                                '共 ${provider.total} 条记录',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          if (provider.isLoading)
-                            const Expanded(
-                              child: Center(
-                                child: CircularProgressIndicator(),
-                              ),
-                            )
-                          else
-                            Expanded(
-                              child: _buildDataTable(provider),
                             ),
-                        ],
-                      ),
+                            Text(
+                              '共 ${provider.total} 条记录',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        if (provider.isLoading)
+                          const Expanded(
+                            child: Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                        else
+                          Expanded(
+                            child: _buildDataTable(provider),
+                          ),
+                      ],
                     ),
                   ),
                 ],
@@ -241,10 +238,13 @@ class _TrackDataPageState extends State<TrackDataPage> {
             ),
           ),
           const SizedBox(height: 16),
-          Row(
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
             children: [
               // 邮件标签
-              Expanded(
+              SizedBox(
+                width: 200,
                 child: DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
                     labelText: '邮件标签',
@@ -268,10 +268,10 @@ class _TrackDataPageState extends State<TrackDataPage> {
                   },
                 ),
               ),
-              const SizedBox(width: 16),
               
               // 发信地址
-              Expanded(
+              SizedBox(
+                width: 200,
                 child: DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
                     labelText: '发信地址',
@@ -295,10 +295,10 @@ class _TrackDataPageState extends State<TrackDataPage> {
                   },
                 ),
               ),
-              const SizedBox(width: 16),
               
               // 起始时间
-              Expanded(
+              SizedBox(
+                width: 150,
                 child: InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -326,10 +326,10 @@ class _TrackDataPageState extends State<TrackDataPage> {
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
               
               // 结束时间
-              Expanded(
+              SizedBox(
+                width: 150,
                 child: InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -414,41 +414,54 @@ class _TrackDataPageState extends State<TrackDataPage> {
     final openRate = stats['openRate'] ?? 0.0;
     final clickRate = stats['clickRate'] ?? 0.0;
 
-    return Row(
+    return Wrap(
+      spacing: 16,
+      runSpacing: 16,
       children: [
-        _buildStatCard(
-          title: '总发送量',
-          value: '$totalSent',
-          icon: Icons.email,
-          color: Colors.blue,
+        SizedBox(
+          width: 200,
+          child: _buildStatCard(
+            title: '总发送量',
+            value: '$totalSent',
+            icon: Icons.email,
+            color: Colors.blue,
+          ),
         ),
-        const SizedBox(width: 16),
-        _buildStatCard(
-          title: '总打开量',
-          value: '$totalOpened',
-          icon: Icons.visibility,
-          color: Colors.green,
+        SizedBox(
+          width: 200,
+          child: _buildStatCard(
+            title: '总打开量',
+            value: '$totalOpened',
+            icon: Icons.visibility,
+            color: Colors.green,
+          ),
         ),
-        const SizedBox(width: 16),
-        _buildStatCard(
-          title: '总点击量',
-          value: '$totalClicked',
-          icon: Icons.touch_app,
-          color: Colors.orange,
+        SizedBox(
+          width: 200,
+          child: _buildStatCard(
+            title: '总点击量',
+            value: '$totalClicked',
+            icon: Icons.touch_app,
+            color: Colors.orange,
+          ),
         ),
-        const SizedBox(width: 16),
-        _buildStatCard(
-          title: '打开率',
-          value: '${openRate.toStringAsFixed(2)}%',
-          icon: Icons.trending_up,
-          color: Colors.purple,
+        SizedBox(
+          width: 200,
+          child: _buildStatCard(
+            title: '打开率',
+            value: '${openRate.toStringAsFixed(2)}%',
+            icon: Icons.trending_up,
+            color: Colors.purple,
+          ),
         ),
-        const SizedBox(width: 16),
-        _buildStatCard(
-          title: '点击率',
-          value: '${clickRate.toStringAsFixed(2)}%',
-          icon: Icons.trending_up,
-          color: Colors.red,
+        SizedBox(
+          width: 200,
+          child: _buildStatCard(
+            title: '点击率',
+            value: '${clickRate.toStringAsFixed(2)}%',
+            icon: Icons.trending_up,
+            color: Colors.red,
+          ),
         ),
       ],
     );
@@ -460,42 +473,40 @@ class _TrackDataPageState extends State<TrackDataPage> {
     required IconData icon,
     required Color color,
   }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
             ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
