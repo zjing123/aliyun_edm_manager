@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:aliyun_edm_manager/providers/track/track_provider.dart';
 import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
 import 'package:aliyun_edm_manager/models/track/track_model.dart';
+import 'package:aliyun_edm_manager/services/aliyun/aliyun_service_manager.dart';
 
 class TrackDataPage extends StatefulWidget {
   const TrackDataPage({super.key});
@@ -20,10 +21,10 @@ class _TrackDataPageState extends State<TrackDataPage> {
   @override
   void initState() {
     super.initState();
-    // 设置默认时间范围（最近30天）
+    // 设置默认时间范围（最近7天）
     final now = DateTime.now();
     _endTime = now;
-    _startTime = now.subtract(const Duration(days: 30));
+    _startTime = now.subtract(const Duration(days: 7));
   }
 
   @override
@@ -31,7 +32,9 @@ class _TrackDataPageState extends State<TrackDataPage> {
     return ChangeNotifierProvider(
       create: (context) {
         final globalConfig = context.read<GlobalConfigProvider>();
-        final provider = TrackProvider(globalConfig.serviceManager);
+        final serviceManager = AliyunServiceManager();
+        serviceManager.initialize(globalConfig);
+        final provider = TrackProvider(serviceManager);
         // 初始化数据
         provider.initialize();
         return provider;
@@ -301,7 +304,7 @@ class _TrackDataPageState extends State<TrackDataPage> {
                     final date = await showDatePicker(
                       context: context,
                       initialDate: _startTime ?? DateTime.now(),
-                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                      firstDate: DateTime.now().subtract(const Duration(days: 30)),
                       lastDate: DateTime.now(),
                     );
                     if (date != null) {
@@ -332,7 +335,7 @@ class _TrackDataPageState extends State<TrackDataPage> {
                     final date = await showDatePicker(
                       context: context,
                       initialDate: _endTime ?? DateTime.now(),
-                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                      firstDate: DateTime.now().subtract(const Duration(days: 30)),
                       lastDate: DateTime.now(),
                     );
                     if (date != null) {
@@ -375,6 +378,17 @@ class _TrackDataPageState extends State<TrackDataPage> {
               const SizedBox(width: 16),
               ElevatedButton(
                 onPressed: () {
+                  // 验证时间范围
+                  if (!provider.isValidTimeRange(_startTime, _endTime)) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('时间范围不能超过7天，请重新选择'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+                  
                   provider.setFilters(
                     tagName: _selectedTagName,
                     accountName: _selectedAccountName,

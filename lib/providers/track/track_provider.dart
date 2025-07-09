@@ -158,6 +158,14 @@ class TrackProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 验证时间范围是否有效（不超过7天）
+  bool isValidTimeRange(DateTime? startTime, DateTime? endTime) {
+    if (startTime == null || endTime == null) return true;
+    
+    final difference = endTime.difference(startTime).inDays;
+    return difference <= 7 && difference >= 0;
+  }
+
   /// 重置过滤参数
   void resetFilters() {
     _selectedTagName = null;
@@ -186,11 +194,11 @@ class TrackProvider extends ChangeNotifier {
     }
   }
 
-  /// 获取默认开始时间（30天前）
+  /// 获取默认开始时间（7天前）
   String _getDefaultStartTime() {
     final now = DateTime.now();
-    final thirtyDaysAgo = now.subtract(const Duration(days: 30));
-    return '${thirtyDaysAgo.year}-${thirtyDaysAgo.month.toString().padLeft(2, '0')}-${thirtyDaysAgo.day.toString().padLeft(2, '0')}';
+    final sevenDaysAgo = now.subtract(const Duration(days: 7));
+    return '${sevenDaysAgo.year}-${sevenDaysAgo.month.toString().padLeft(2, '0')}-${sevenDaysAgo.day.toString().padLeft(2, '0')}';
   }
 
   /// 获取默认结束时间（今天）

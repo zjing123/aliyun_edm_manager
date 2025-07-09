@@ -61,7 +61,6 @@ class _MainLayoutState extends State<MainLayout> {
       children: [
         NavigationItem(title: '发送数据', route: '/sending-data'),
         NavigationItem(title: '发送详情', route: '/sending-details'),
-        NavigationItem(title: '发送详情', route: '/sending-details-2'),
         NavigationItem(title: '跟踪数据', route: '/track-data'),
       ],
     ),
@@ -313,8 +312,6 @@ class _MainLayoutState extends State<MainLayout> {
       case '/sending-data':
         return const SendingDataPage();
       case '/sending-details':
-        return const SendingDetailsPage();
-      case '/sending-details-2':
         return const SendingDetailsPage();
       case '/track-data':
         return const TrackDataPage();
