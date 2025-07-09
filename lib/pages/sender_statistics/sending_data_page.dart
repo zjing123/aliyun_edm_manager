@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:aliyun_edm_manager/providers/sender_statistics/sender_statistics_provider.dart';
 import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
-import 'package:aliyun_edm_manager/models/sender_statistics/sending_statistics_model.dart';
+import 'package:aliyun_edm_manager/pages/sender_statistics/sending_details_page.dart';
 
 class SendingDataPage extends StatefulWidget {
   const SendingDataPage({super.key});
@@ -287,10 +287,13 @@ class _SendingDataPageState extends State<SendingDataPage> {
             ),
           ),
           const SizedBox(height: 16),
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               // 邮件标签
-              Expanded(
+              Flexible(
                 child: DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
                     labelText: '邮件标签',
@@ -315,9 +318,8 @@ class _SendingDataPageState extends State<SendingDataPage> {
                   },
                 ),
               ),
-              const SizedBox(width: 12),
               // 发信地址
-              Expanded(
+              Flexible(
                 child: DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
                     labelText: '发信地址',
@@ -342,9 +344,8 @@ class _SendingDataPageState extends State<SendingDataPage> {
                   },
                 ),
               ),
-              const SizedBox(width: 12),
               // 起始时间
-              Expanded(
+              Flexible(
                 child: InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -377,9 +378,8 @@ class _SendingDataPageState extends State<SendingDataPage> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
               // 结束时间
-              Expanded(
+              Flexible(
                 child: InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -412,7 +412,6 @@ class _SendingDataPageState extends State<SendingDataPage> {
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
               // 重置按钮
               SizedBox(
                 width: 72,
@@ -434,7 +433,6 @@ class _SendingDataPageState extends State<SendingDataPage> {
                   child: const Text('重置'),
                 ),
               ),
-              const SizedBox(width: 8),
               // 查询按钮
               SizedBox(
                 width: 72,
@@ -463,7 +461,7 @@ class _SendingDataPageState extends State<SendingDataPage> {
     final records = provider.statistics?.records ?? [];
     
     return DataTable(
-      headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
+      headingRowColor: WidgetStateProperty.all(Colors.grey[100]),
       columns: const [
         DataColumn(label: Text('创建时间（UTC+8）')),
         DataColumn(label: Text('总数')),
@@ -486,7 +484,11 @@ class _SendingDataPageState extends State<SendingDataPage> {
           DataCell(
             TextButton(
               onPressed: () {
-                // TODO: 实现详情查看功能
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const SendingDetailsPage(),
+                  ),
+                );
               },
               child: const Text('详情'),
             ),
