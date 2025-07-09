@@ -413,9 +413,27 @@ class _SendingDataPageState extends State<SendingDataPage> {
                 ),
               ),
               const SizedBox(width: 12),
+              // 查询按钮
+              SizedBox(
+                width: 80,
+                height: 40,
+                child: ElevatedButton(
+                  onPressed: () {
+                    provider.setFilterParams(
+                      tagName: _selectedTagName,
+                      accountName: _selectedAccountName,
+                      startTime: _startTime,
+                      endTime: _endTime,
+                    );
+                    provider.applyFilters();
+                  },
+                  child: const Text('查询'),
+                ),
+              ),
+              const SizedBox(width: 12),
               // 重置按钮
               SizedBox(
-                width: 60,
+                width: 80,
                 height: 40,
                 child: OutlinedButton(
                   onPressed: () {
@@ -432,24 +450,6 @@ class _SendingDataPageState extends State<SendingDataPage> {
                     );
                   },
                   child: const Text('重置'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // 查询按钮
-              SizedBox(
-                width: 60,
-                height: 40,
-                child: ElevatedButton(
-                  onPressed: () {
-                    provider.setFilterParams(
-                      tagName: _selectedTagName,
-                      accountName: _selectedAccountName,
-                      startTime: _startTime,
-                      endTime: _endTime,
-                    );
-                    provider.applyFilters();
-                  },
-                  child: const Text('查询'),
                 ),
               ),
             ],

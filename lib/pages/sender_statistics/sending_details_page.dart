@@ -209,27 +209,9 @@ class _SendingDetailsPageState extends State<SendingDetailsPage> {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            // 重置按钮
-                            SizedBox(
-                              width: 60,
-                              height: 40,
-                              child: OutlinedButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _searchController.clear();
-                                    _selectedStatus = null;
-                                    _startDate = null;
-                                    _endDate = null;
-                                  });
-                                  provider.loadDetails();
-                                },
-                                child: const Text('重置'),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
                             // 筛选按钮
                             SizedBox(
-                              width: 60,
+                              width: 80,
                               height: 40,
                               child: ElevatedButton(
                                 onPressed: () {
@@ -244,6 +226,24 @@ class _SendingDetailsPageState extends State<SendingDetailsPage> {
                                   );
                                 },
                                 child: const Text('筛选'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // 重置按钮
+                            SizedBox(
+                              width: 80,
+                              height: 40,
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _searchController.clear();
+                                    _selectedStatus = null;
+                                    _startDate = null;
+                                    _endDate = null;
+                                  });
+                                  provider.loadDetails();
+                                },
+                                child: const Text('重置'),
                               ),
                             ),
                           ],
