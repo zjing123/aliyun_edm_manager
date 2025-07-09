@@ -10,6 +10,7 @@ import 'package:aliyun_edm_manager/pages/task/scheduled_task/scheduled_email_tas
 import 'package:aliyun_edm_manager/pages/receiver/invalid_addresses_page.dart';
 import 'package:aliyun_edm_manager/pages/sender_statistics/sending_data_page.dart';
 import 'package:aliyun_edm_manager/pages/sender_statistics/sending_details_page.dart';
+import 'package:aliyun_edm_manager/pages/sender_statistics/track_data_page.dart';
 import 'package:aliyun_edm_manager/pages/config/config_page.dart';
 import 'package:aliyun_edm_manager/providers/sender/sender_name_provider.dart';
 import 'package:aliyun_edm_manager/pages/tag/tag_list_page.dart';
@@ -60,6 +61,7 @@ class _MainLayoutState extends State<MainLayout> {
       children: [
         NavigationItem(title: '发送数据', route: '/sending-data'),
         NavigationItem(title: '发送详情', route: '/sending-details'),
+        NavigationItem(title: '跟踪数据', route: '/track-data'),
       ],
     ),
   ];
@@ -311,6 +313,8 @@ class _MainLayoutState extends State<MainLayout> {
         return const SendingDataPage();
       case '/sending-details':
         return const SendingDetailsPage();
+      case '/track-data':
+        return const TrackDataPage();
       default:
         return const OverviewPage();
     }
