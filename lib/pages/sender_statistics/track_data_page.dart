@@ -247,7 +247,7 @@ class _TrackDataPageState extends State<TrackDataPage> {
                   decoration: const InputDecoration(
                     labelText: '邮件标签',
                     border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   ),
                   value: _selectedTagName,
                   items: [
@@ -287,7 +287,7 @@ class _TrackDataPageState extends State<TrackDataPage> {
                   decoration: const InputDecoration(
                     labelText: '发信地址',
                     border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   ),
                   value: _selectedAccountName,
                   items: [
@@ -341,7 +341,7 @@ class _TrackDataPageState extends State<TrackDataPage> {
                     decoration: const InputDecoration(
                       labelText: '起始时间',
                       border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     ),
                     child: Text(
                       _startTime != null
@@ -375,7 +375,7 @@ class _TrackDataPageState extends State<TrackDataPage> {
                     decoration: const InputDecoration(
                       labelText: '结束时间',
                       border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     ),
                     child: Text(
                       _endTime != null
@@ -392,7 +392,7 @@ class _TrackDataPageState extends State<TrackDataPage> {
               // 查询按钮
               SizedBox(
                 width: 80,
-                height: 56,
+                height: 40,
                 child: ElevatedButton(
                   onPressed: () {
                     // 验证时间范围
@@ -423,7 +423,7 @@ class _TrackDataPageState extends State<TrackDataPage> {
               // 重置按钮
               SizedBox(
                 width: 80,
-                height: 56,
+                height: 40,
                 child: TextButton(
                   onPressed: () {
                     setState(() {
