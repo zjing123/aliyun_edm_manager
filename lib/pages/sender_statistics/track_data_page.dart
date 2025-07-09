@@ -417,12 +417,9 @@ class _TrackDataPageState extends State<TrackDataPage> {
     final openRate = stats['openRate'] ?? 0.0;
     final clickRate = stats['clickRate'] ?? 0.0;
 
-    return Wrap(
-      spacing: 16,
-      runSpacing: 16,
+    return Row(
       children: [
-        SizedBox(
-          width: 200,
+        Expanded(
           child: _buildStatCard(
             title: '总发送量',
             value: '$totalSent',
@@ -430,8 +427,8 @@ class _TrackDataPageState extends State<TrackDataPage> {
             color: Colors.blue,
           ),
         ),
-        SizedBox(
-          width: 200,
+        const SizedBox(width: 16),
+        Expanded(
           child: _buildStatCard(
             title: '总打开量',
             value: '$totalOpened',
@@ -439,8 +436,8 @@ class _TrackDataPageState extends State<TrackDataPage> {
             color: Colors.green,
           ),
         ),
-        SizedBox(
-          width: 200,
+        const SizedBox(width: 16),
+        Expanded(
           child: _buildStatCard(
             title: '总点击量',
             value: '$totalClicked',
@@ -448,8 +445,8 @@ class _TrackDataPageState extends State<TrackDataPage> {
             color: Colors.orange,
           ),
         ),
-        SizedBox(
-          width: 200,
+        const SizedBox(width: 16),
+        Expanded(
           child: _buildStatCard(
             title: '打开率',
             value: '${openRate.toStringAsFixed(2)}%',
@@ -457,8 +454,8 @@ class _TrackDataPageState extends State<TrackDataPage> {
             color: Colors.purple,
           ),
         ),
-        SizedBox(
-          width: 200,
+        const SizedBox(width: 16),
+        Expanded(
           child: _buildStatCard(
             title: '点击率',
             value: '${clickRate.toStringAsFixed(2)}%',
