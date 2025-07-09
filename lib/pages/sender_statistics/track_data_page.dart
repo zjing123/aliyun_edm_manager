@@ -239,10 +239,13 @@ class _TrackDataPageState extends State<TrackDataPage> {
             ),
           ),
           const SizedBox(height: 16),
-          Row(
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
             children: [
               // 邮件标签
-              Expanded(
+              SizedBox(
+                width: 200,
                 child: DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
                     labelText: '邮件标签',
@@ -266,10 +269,10 @@ class _TrackDataPageState extends State<TrackDataPage> {
                   },
                 ),
               ),
-              const SizedBox(width: 16),
               
               // 发信地址
-              Expanded(
+              SizedBox(
+                width: 200,
                 child: DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
                     labelText: '发信地址',
@@ -293,10 +296,10 @@ class _TrackDataPageState extends State<TrackDataPage> {
                   },
                 ),
               ),
-              const SizedBox(width: 16),
               
               // 起始时间
-              Expanded(
+              SizedBox(
+                width: 200,
                 child: InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -324,10 +327,10 @@ class _TrackDataPageState extends State<TrackDataPage> {
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
               
               // 结束时间
-              Expanded(
+              SizedBox(
+                width: 200,
                 child: InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -355,25 +358,6 @@ class _TrackDataPageState extends State<TrackDataPage> {
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
-              
-              // 重置按钮
-              SizedBox(
-                width: 80,
-                child: TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _selectedTagName = null;
-                      _selectedAccountName = null;
-                      _startTime = null;
-                      _endTime = null;
-                    });
-                    provider.resetFilters();
-                  },
-                  child: const Text('重置'),
-                ),
-              ),
-              const SizedBox(width: 16),
               
               // 查询按钮
               SizedBox(
@@ -400,6 +384,23 @@ class _TrackDataPageState extends State<TrackDataPage> {
                     provider.applyFilters();
                   },
                   child: const Text('查询'),
+                ),
+              ),
+              
+              // 重置按钮
+              SizedBox(
+                width: 80,
+                child: TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedTagName = null;
+                      _selectedAccountName = null;
+                      _startTime = null;
+                      _endTime = null;
+                    });
+                    provider.resetFilters();
+                  },
+                  child: const Text('重置'),
                 ),
               ),
             ],
