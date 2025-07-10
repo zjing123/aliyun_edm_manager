@@ -86,7 +86,7 @@ class SenderStatisticsProvider extends ChangeNotifier {
     try {
       final response = await _tagService.queryTagByParam(
         pageNo: 1,
-        pageSize: 100, // 获取足够多的标签
+        pageSize: 10, // 获取足够多的标签
       );
       _tags = response.tags;
       _error = null;
@@ -108,7 +108,7 @@ class SenderStatisticsProvider extends ChangeNotifier {
     try {
       final response = await _addressService.queryMailAddressByParam(
         pageNo: 1,
-        pageSize: 100, // 获取足够多的地址
+        pageSize: 10, // 获取足够多的地址
       );
       _addresses = response.addresses;
       _error = null;

@@ -85,115 +85,43 @@ class _TagListPageState extends State<TagListPage> with AutomaticKeepAliveClient
 
   void _showTagDialog({EmailTagModel? tag}) {
     final isEdit = tag != null;
-    final titleController = TextEditingController(text: tag?.tagName ?? '');
-    final descriptionController = TextEditingController(text: tag?.description ?? '');
+    final provider = context.read<TagProvider>();
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(isEdit ? '编辑标签' : '新建标签'),
-          content: SizedBox(
-            width: 400,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: '标签名称',
-                    hintText: '请输入标签名称',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return '请输入标签名称';
-                    }
-                    if (value.length > 50) {
-                      return '标签名称不能超过50个字符';
-                    }
-                    return null;
-                  },
+        return _TagDialog(
+          title: isEdit ? '编辑标签' : '新建标签',
+          initialTagName: tag?.tagName,
+          initialDescription: tag?.description,
+          isEdit: isEdit,
+          tagId: tag?.tagId,
+          onSave: (tagName, description) async {
+            bool success;
+            if (isEdit) {
+              success = await provider.modifyTag(
+                tagId: tag.tagId,
+                tagName: tagName,
+                tagDescription: description.isEmpty ? null : description,
+              );
+            } else {
+              success = await provider.createTag(
+                tagName: tagName,
+                tagDescription: description.isEmpty ? null : description,
+              );
+            }
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(success 
+                      ? (isEdit ? '邮件标签修改成功' : '邮件标签创建成功')
+                      : (isEdit ? '邮件标签修改失败' : '邮件标签创建失败')),
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: '标签说明',
-                    hintText: '请输入标签说明（可选）',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                  validator: (value) {
-                    if (value != null && value.length > 200) {
-                      return '标签说明不能超过200个字符';
-                    }
-                    return null;
-                  },
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('取消'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final tagName = titleController.text.trim();
-                final tagDescription = descriptionController.text.trim();
-
-                if (tagName.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('请输入标签名称')),
-                  );
-                  return;
-                }
-
-                if (tagName.length > 50) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('标签名称不能超过50个字符')),
-                  );
-                  return;
-                }
-
-                if (tagDescription.length > 200) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('标签说明不能超过200个字符')),
-                  );
-                  return;
-                }
-
-                Navigator.of(context).pop();
-
-                bool success;
-                if (isEdit) {
-                  success = await context.read<TagProvider>().modifyTag(
-                    tagId: tag!.tagId,
-                    tagName: tagName,
-                    tagDescription: tagDescription.isEmpty ? null : tagDescription,
-                  );
-                } else {
-                  success = await context.read<TagProvider>().createTag(
-                    tagName: tagName,
-                    tagDescription: tagDescription.isEmpty ? null : tagDescription,
-                  );
-                }
-
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(success 
-                          ? (isEdit ? '标签修改成功' : '标签创建成功')
-                          : (isEdit ? '标签修改失败' : '标签创建失败')),
-                    ),
-                  );
-                }
-              },
-              child: Text(isEdit ? '保存' : '创建'),
-            ),
-          ],
+              );
+            }
+          },
+          provider: provider,
         );
       },
     );
@@ -202,7 +130,7 @@ class _TagListPageState extends State<TagListPage> with AutomaticKeepAliveClient
   Future<void> _showDeleteDialog(EmailTagModel tag) async {
     final confirmed = await DialogUtil.confirm(
       context,
-      '确定要删除标签"${tag.tagName}"吗？此操作不可恢复。',
+      '确定要删除邮件标签"${tag.tagName}"吗？此操作不可恢复。',
     );
 
     if (confirmed == true) {
@@ -213,13 +141,19 @@ class _TagListPageState extends State<TagListPage> with AutomaticKeepAliveClient
       if (success) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('标签删除成功')),
+            SnackBar(
+              content: Text('邮件标签"${tag.tagName}"删除成功'),
+              backgroundColor: Colors.green,
+            ),
           );
         }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('标签删除失败')),
+            SnackBar(
+              content: Text('邮件标签"${tag.tagName}"删除失败'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
       }
@@ -336,18 +270,18 @@ class _TagListPageState extends State<TagListPage> with AutomaticKeepAliveClient
                     style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                   ),
                   Text(
-                    '2. 点击"新建标签"按钮可以创建新的邮件标签。',
+                    '2. 点击"新建邮件标签"按钮可以创建新的邮件标签。',
                     style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                   ),
                   Text(
-                    '3. 标签用于对邮件内容进行分类和管理。',
+                    '3. 邮件标签用于对邮件内容进行分类和管理。',
                     style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
-            // 标签列表
+            // 邮件标签列表
             Expanded(
               child: _buildTagListSelector(),
             ),
@@ -401,18 +335,18 @@ class _TagListPageState extends State<TagListPage> with AutomaticKeepAliveClient
                 Icon(Icons.label, size: 64, color: Colors.grey[400]),
                 const SizedBox(height: 16),
                 Text(
-                  '暂无标签',
+                  '暂无邮件标签',
                   style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '点击"新建标签"按钮创建第一个标签',
+                  '点击"新建邮件标签"按钮创建第一个邮件标签',
                   style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: _showCreateDialog,
-                  child: const Text('新建标签'),
+                  child: const Text('新建邮件标签'),
                 ),
               ],
             ),
@@ -756,34 +690,90 @@ class _TagListPageState extends State<TagListPage> with AutomaticKeepAliveClient
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.warning, color: Colors.orange),
-              const SizedBox(width: 8),
-              Text('批量删除确认'),
-            ],
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-          content: Text(
-            '确定要删除选中的 $selectedCount 个标签吗？\n\n此操作不可恢复，请谨慎操作。',
+          child: Container(
+            width: 400,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 标题栏
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: Colors.orange[600], size: 24),
+                      const SizedBox(width: 12),
+                      const Text(
+                        "批量删除确认",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // 内容区域
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  child: Text(
+                    '确定要删除选中的 $selectedCount 个邮件标签吗？\n\n此操作不可恢复，请谨慎操作。',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+                // 操作按钮
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Colors.grey[200]!),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        ),
+                        child: const Text(
+                          "取消",
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          await _performBatchDelete();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          "确认删除",
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('取消'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await _performBatchDelete();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              child: Text('确认删除'),
-            ),
-          ],
         );
       },
     );
@@ -792,19 +782,35 @@ class _TagListPageState extends State<TagListPage> with AutomaticKeepAliveClient
   // 执行批量删除
   Future<void> _performBatchDelete() async {
     final provider = context.read<TagProvider>();
-    
+    final selectedCount = provider.selectedCount; // 保存删除前的数量
+    BuildContext? dialogContext; // 保存弹窗context
+
     try {
-      // 显示加载对话框
+      // 显示加载对话框，并保存弹窗context
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
+        builder: (BuildContext ctx) {
+          dialogContext = ctx;
           return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             content: Row(
               children: [
-                CircularProgressIndicator(),
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[600]!),
+                  ),
+                ),
                 const SizedBox(width: 16),
-                Text('正在删除标签...'),
+                Expanded(
+                  child: Text(
+                    '正在删除邮件标签...\n请稍候，不要关闭应用',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ),
               ],
             ),
           );
@@ -814,37 +820,354 @@ class _TagListPageState extends State<TagListPage> with AutomaticKeepAliveClient
       // 执行批量删除
       final success = await provider.deleteSelectedTags();
       
-      // 关闭加载对话框
-      Navigator.of(context).pop();
+      // 用弹窗的context关闭加载对话框
+      if (dialogContext != null) {
+        Navigator.of(dialogContext!).pop();
+      }
       
       if (success) {
         // 显示成功消息
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('批量删除成功'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('批量删除成功，共删除 $selectedCount 个邮件标签'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       } else {
         // 显示错误消息
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('批量删除失败，请重试'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // 用弹窗的context关闭加载对话框
+      if (dialogContext != null) {
+        Navigator.of(dialogContext!).pop();
+      }
+      
+      // 显示错误消息
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('批量删除失败，请重试'),
+            content: Text('批量删除失败: $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
-    } catch (e) {
-      // 关闭加载对话框
-      Navigator.of(context).pop();
-      
-      // 显示错误消息
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('批量删除失败: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
+  }
+}
+
+class _TagDialog extends StatefulWidget {
+  final String title;
+  final String? initialTagName;
+  final String? initialDescription;
+  final bool isEdit;
+  final String? tagId;
+  final Function(String tagName, String description) onSave;
+  final TagProvider provider;
+
+  const _TagDialog({
+    required this.title,
+    this.initialTagName,
+    this.initialDescription,
+    required this.isEdit,
+    this.tagId,
+    required this.onSave,
+    required this.provider,
+  });
+
+  @override
+  State<_TagDialog> createState() => _TagDialogState();
+}
+
+class _TagDialogState extends State<_TagDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _tagNameController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tagNameController.text = widget.initialTagName ?? '';
+    _descriptionController.text = widget.initialDescription ?? '';
+  }
+
+  @override
+  void dispose() {
+    _tagNameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  void _handleSave() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final tagName = _tagNameController.text.trim();
+    final description = _descriptionController.text.trim();
+
+    // 检查是否有实际修改
+    if (widget.isEdit) {
+      final originalTagName = widget.initialTagName ?? '';
+      final originalDescription = widget.initialDescription ?? '';
+      
+      if (tagName == originalTagName && description == originalDescription) {
+        // 没有修改任何信息，只显示提示
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('未修改任何信息'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        if (mounted && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+        return;
+      }
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await widget.onSave(tagName, description);
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 8,
+      backgroundColor: Colors.transparent,
+      child: Container(
+        width: 500,
+        padding: const EdgeInsets.all(0),
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 卡片标题
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(Icons.label, color: Colors.blue[600], size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          '标签信息',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    // 标签名称输入框
+                    Text(
+                      '标签名称',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _tagNameController,
+                      decoration: InputDecoration(
+                        hintText: '请输入标签名称',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Colors.blue, width: 2),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return '请输入标签名称';
+                        }
+                        final trimmedValue = value.trim();
+                        if (trimmedValue.length < 1) {
+                          return '标签名称至少1个字符';
+                        }
+                        if (trimmedValue.length > 50) {
+                          return '标签名称不能超过50个字符';
+                        }
+                        // 检查字符格式：只允许英文字母、数字、_、-
+                        final validPattern = RegExp(r'^[a-zA-Z0-9_-]+$');
+                        if (!validPattern.hasMatch(trimmedValue)) {
+                          return '标签名称只能包含英文字母、数字、下划线(_)、连字符(-)';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '标签名称要求：1-50个字符，仅限英文字母、数字、下划线(_)、连字符(-)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // 标签说明输入框
+                    Text(
+                      '标签说明',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _descriptionController,
+                      decoration: InputDecoration(
+                        hintText: '请输入标签说明（可选）',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Colors.blue, width: 2),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      maxLines: 3,
+                      validator: (value) {
+                        if (value != null && value.length > 100) {
+                          return '标签说明不能超过100个字符';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '标签说明：可选，最多100个字符',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    // 操作按钮
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          ),
+                          child: const Text(
+                            '取消',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: _isLoading ? null : _handleSave,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            elevation: 2,
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Text(
+                                  widget.isEdit ? '保存' : '创建',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

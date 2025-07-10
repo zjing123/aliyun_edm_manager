@@ -169,19 +169,26 @@ class EmailTagService extends BaseAliyunService {
   }) async {
     final results = <String, bool>{};
     
-    for (final tagId in tagIds) {
+    print('开始批量删除标签，共 ${tagIds.length} 个标签');
+    
+    for (int i = 0; i < tagIds.length; i++) {
+      final tagId = tagIds[i];
       try {
+        print('正在删除第 ${i + 1}/${tagIds.length} 个标签: $tagId');
         final success = await deleteTag(tagId: tagId);
         results[tagId] = success;
         
-        // 添加小延时避免频繁请求
-        await Future.delayed(const Duration(milliseconds: 200));
+        // 减少延时，避免卡住
+        if (i < tagIds.length - 1) {
+          await Future.delayed(const Duration(milliseconds: 100));
+        }
       } catch (e) {
         print('删除标签 $tagId 失败: $e');
         results[tagId] = false;
       }
     }
     
+    print('批量删除完成，成功: ${results.values.where((success) => success).length}/${tagIds.length}');
     return results;
   }
 } 

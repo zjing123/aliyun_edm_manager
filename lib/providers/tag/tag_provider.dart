@@ -421,9 +421,17 @@ class TagProvider extends ChangeNotifier {
     }
     
     try {
+      print('开始批量删除 ${_selectedTagIds.length} 个标签');
+      
       final results = await _serviceManager.emailTagService.batchDeleteTags(
         tagIds: _selectedTagIds.toList(),
       );
+      
+      // 统计成功和失败的数量
+      final successCount = results.values.where((success) => success).length;
+      final failCount = results.values.where((success) => !success).length;
+      
+      print('批量删除完成: 成功 $successCount 个，失败 $failCount 个');
       
       // 检查是否全部成功
       bool allSuccess = results.values.every((success) => success);
