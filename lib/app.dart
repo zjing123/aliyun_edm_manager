@@ -29,6 +29,13 @@ class _EDMAppState extends State<EDMApp> {
       theme: ThemeData(
         primarySwatch: Colors.blue,
         useMaterial3: true,
+        dialogTheme: DialogTheme(
+          backgroundColor: Colors.white, // 统一背景色
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12), // 统一圆角
+          ),
+          // 可根据需要添加titleTextStyle, contentTextStyle等
+        ),
       ),
       debugShowCheckedModeBanner: false,
       localizationsDelegates: const [

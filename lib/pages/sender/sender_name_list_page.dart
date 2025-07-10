@@ -880,7 +880,6 @@ class _SenderNameDialogState extends State<_SenderNameDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 8,
-      backgroundColor: Colors.transparent,
       child: Container(
         width: 500,
         padding: const EdgeInsets.all(0),

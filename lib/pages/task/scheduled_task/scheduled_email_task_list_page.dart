@@ -650,7 +650,6 @@ class _ScheduledEmailTaskListPageState extends State<ScheduledEmailTaskListPage>
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
@@ -760,7 +759,6 @@ class _ScheduledEmailTaskListPageState extends State<ScheduledEmailTaskListPage>
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

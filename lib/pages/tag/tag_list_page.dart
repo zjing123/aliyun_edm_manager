@@ -44,6 +44,9 @@ class _TagListPageState extends State<TagListPage> with AutomaticKeepAliveClient
   @override
   bool get wantKeepAlive => false;
 
+  /// 用于控制批量删除标签时的加载弹窗显示
+  final ValueNotifier<bool> _showBatchDeleteLoadingDialog = ValueNotifier(false);
+
   @override
   void initState() {
     super.initState();
@@ -158,6 +161,12 @@ class _TagListPageState extends State<TagListPage> with AutomaticKeepAliveClient
         }
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _showBatchDeleteLoadingDialog.dispose();
+    super.dispose();
   }
 
   @override
@@ -697,7 +706,6 @@ class _TagListPageState extends State<TagListPage> with AutomaticKeepAliveClient
           child: Container(
             width: 400,
             decoration: BoxDecoration(
-              color: Colors.white,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -783,50 +791,54 @@ class _TagListPageState extends State<TagListPage> with AutomaticKeepAliveClient
   Future<void> _performBatchDelete() async {
     final provider = context.read<TagProvider>();
     final selectedCount = provider.selectedCount; // 保存删除前的数量
-    BuildContext? dialogContext; // 保存弹窗context
+
+    // 弹窗显示
+    _showBatchDeleteLoadingDialog.value = true;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return ValueListenableBuilder<bool>(
+          valueListenable: _showBatchDeleteLoadingDialog,
+          builder: (context, value, child) {
+            if (!value) {
+              // 关闭弹窗
+              Navigator.of(context).pop();
+            }
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: Row(
+                children: [
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[600]!),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      '正在删除邮件标签...\n请稍候，不要关闭应用',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
 
     try {
-      // 显示加载对话框，并保存弹窗context
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext ctx) {
-          dialogContext = ctx;
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            content: Row(
-              children: [
-                SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[600]!),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    '正在删除邮件标签...\n请稍候，不要关闭应用',
-                    style: TextStyle(fontSize: 14),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      );
-      
       // 执行批量删除
       final success = await provider.deleteSelectedTags();
-      
-      // 用弹窗的context关闭加载对话框
-      if (dialogContext != null) {
-        Navigator.of(dialogContext!).pop();
-      }
-      
+      // 关闭弹窗
+      _showBatchDeleteLoadingDialog.value = false;
+
       if (success) {
-        // 显示成功消息
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -836,7 +848,6 @@ class _TagListPageState extends State<TagListPage> with AutomaticKeepAliveClient
           );
         }
       } else {
-        // 显示错误消息
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -847,12 +858,8 @@ class _TagListPageState extends State<TagListPage> with AutomaticKeepAliveClient
         }
       }
     } catch (e) {
-      // 用弹窗的context关闭加载对话框
-      if (dialogContext != null) {
-        Navigator.of(dialogContext!).pop();
-      }
-      
-      // 显示错误消息
+      // 关闭弹窗
+      _showBatchDeleteLoadingDialog.value = false;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

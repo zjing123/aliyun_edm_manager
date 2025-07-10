@@ -26,7 +26,6 @@ class DialogUtil {
             child: Container(
               width: 400,
               decoration: BoxDecoration(
-                color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -136,7 +135,6 @@ class DialogUtil {
               maxHeight: MediaQuery.of(context).size.height * 0.8,
             ),
             decoration: BoxDecoration(
-              color: Colors.grey[50],
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -146,7 +144,6 @@ class DialogUtil {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(12),
                       topRight: Radius.circular(12),
@@ -322,7 +319,6 @@ class DialogUtil {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(12),
                       bottomRight: Radius.circular(12),
@@ -402,7 +398,6 @@ class DialogUtil {
               maxHeight: MediaQuery.of(context).size.height * 0.8, // 最大高度为屏幕高度的80%
             ),
             decoration: BoxDecoration(
-              color: Colors.grey[50],
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -412,7 +407,6 @@ class DialogUtil {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(12),
                       topRight: Radius.circular(12),
@@ -567,7 +561,6 @@ class DialogUtil {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(12),
                       bottomRight: Radius.circular(12),
