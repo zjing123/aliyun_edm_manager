@@ -1,5 +1,6 @@
 import 'package:aliyun_edm_manager/services/aliyun/base_aliyun_service.dart';
 import 'package:aliyun_edm_manager/models/task/mail_task_model.dart';
+import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
 
 /// 邮件任务管理服务
 /// 提供邮件任务的查询和管理功能
@@ -13,7 +14,7 @@ class EmailTaskService extends BaseAliyunService {
     int pageSize = 10,
   }) async {
     // 参数验证
-    validatePagination(pageNo, pageSize);
+    validatePagination(pageNo, pageSize, maxPageSize: PaginationConstants.emailTaskMaxPageSize);
 
     final params = <String, String>{
       'PageNo': pageNo.toString(),
@@ -65,7 +66,7 @@ class EmailTaskService extends BaseAliyunService {
     String? keyWord,
     String? status,
     int pageNo = 1,
-    int pageSize = 50,
+    int pageSize = PaginationConstants.emailTaskMaxPageSize,
   }) async {
     try {
       final response = await queryTaskByParam(
@@ -87,7 +88,7 @@ class EmailTaskService extends BaseAliyunService {
     required String status,
     String? keyWord,
     int pageNo = 1,
-    int pageSize = 50,
+    int pageSize = PaginationConstants.emailTaskMaxPageSize,
   }) async {
     return await getAllMailTasks(
       keyWord: keyWord,

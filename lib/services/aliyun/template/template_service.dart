@@ -2,6 +2,7 @@ import 'package:aliyun_edm_manager/services/aliyun/base_aliyun_service.dart';
 import 'package:aliyun_edm_manager/models/template/template_model.dart';
 import 'package:aliyun_edm_manager/models/template/template_request_response.dart';
 import 'package:aliyun_edm_manager/constants/template_constants.dart';
+import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
 
 /// 模板管理服务
 /// 提供邮件模板的查询和管理功能
@@ -16,7 +17,7 @@ class TemplateService extends BaseAliyunService {
     int pageSize = 10,
   }) async {
     // 参数验证
-    validatePagination(pageNo, pageSize);
+    validatePagination(pageNo, pageSize, maxPageSize: PaginationConstants.templateMaxPageSize);
 
     final params = <String, String>{
       'PageNo': pageNo.toString(),
@@ -88,8 +89,8 @@ class TemplateService extends BaseAliyunService {
     int pageSize = 10,
   }) async {
     try {
-      if (pageSize > 50) {
-        pageSize = 50;
+      if (pageSize > PaginationConstants.templateMaxPageSize) {
+        pageSize = PaginationConstants.templateMaxPageSize;
       }
 
       final response = await queryTemplateByParam(
@@ -112,7 +113,7 @@ class TemplateService extends BaseAliyunService {
     String? templateName,
     String? templateType,
     int pageNo = 1,
-    int pageSize = 50,
+    int pageSize = PaginationConstants.templateMaxPageSize,
   }) async {
     return await getAllTemplates(
       templateName: templateName,

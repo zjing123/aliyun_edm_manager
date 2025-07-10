@@ -1,5 +1,6 @@
 import 'package:aliyun_edm_manager/services/aliyun/base_aliyun_service.dart';
 import 'package:aliyun_edm_manager/models/task/scheduled_email_task_model.dart';
+import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
 
 /// 定时发送邮件服务
 /// 提供定时发送邮件任务的创建、查询和管理功能
@@ -44,7 +45,7 @@ class ScheduledEmailService extends BaseAliyunService {
     int pageSize = 10,
   }) async {
     // 参数验证
-    validatePagination(pageNo, pageSize);
+    validatePagination(pageNo, pageSize, maxPageSize: PaginationConstants.scheduledEmailTaskMaxPageSize);
 
     final params = <String, String>{
       'PageNo': pageNo.toString(),
@@ -68,7 +69,7 @@ class ScheduledEmailService extends BaseAliyunService {
     String? keyWord,
     String? status,
     int pageNo = 1,
-    int pageSize = 50,
+    int pageSize = PaginationConstants.scheduledEmailTaskMaxPageSize,
   }) async {
     try {
       final response = await queryScheduledEmailTaskByParam(

@@ -1,5 +1,6 @@
 import 'package:aliyun_edm_manager/services/aliyun/base_aliyun_service.dart';
 import 'package:aliyun_edm_manager/models/tag/email_tag_model.dart';
+import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
 
 /// 邮件标签管理服务
 /// 提供邮件标签的查询和管理功能
@@ -12,7 +13,7 @@ class EmailTagService extends BaseAliyunService {
     int pageSize = 10,
   }) async {
     // 参数验证
-    validatePagination(pageNo, pageSize);
+    validatePagination(pageNo, pageSize, maxPageSize: PaginationConstants.emailTagMaxPageSize);
 
     final params = <String, String>{
       'PageNo': pageNo.toString(),
@@ -32,7 +33,7 @@ class EmailTagService extends BaseAliyunService {
   Future<List<EmailTagModel>> getAllEmailTags({
     String? keyWord,
     int pageNo = 1,
-    int pageSize = 50,
+    int pageSize = PaginationConstants.emailTagMaxPageSize,
   }) async {
     try {
       final response = await queryTagByParam(
@@ -52,7 +53,7 @@ class EmailTagService extends BaseAliyunService {
   Future<List<EmailTagModel>> getAvailableEmailTags({
     String? keyWord,
     int pageNo = 1,
-    int pageSize = 50,
+    int pageSize = PaginationConstants.emailTagMaxPageSize,
   }) async {
     try {
       final allTags = await getAllEmailTags(

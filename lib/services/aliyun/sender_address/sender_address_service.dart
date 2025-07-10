@@ -1,5 +1,6 @@
 import 'package:aliyun_edm_manager/services/aliyun/base_aliyun_service.dart';
 import 'package:aliyun_edm_manager/models/sender/sender_address_model.dart';
+import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
 
 /// 发信地址管理服务
 /// 提供发信地址的查询、创建和删除功能
@@ -12,8 +13,12 @@ class SenderAddressService extends BaseAliyunService {
     int pageNo = 1,
     int pageSize = 10,
   }) async {
+    if (pageSize > PaginationConstants.senderAddressMaxPageSize) {
+      pageSize = PaginationConstants.senderAddressMaxPageSize;
+    }
+
     // 参数验证
-    validatePagination(pageNo, pageSize);
+    validatePagination(pageNo, pageSize, maxPageSize: PaginationConstants.senderAddressMaxPageSize);
 
     final params = <String, String>{
       'PageNo': pageNo.toString(),
@@ -95,7 +100,7 @@ class SenderAddressService extends BaseAliyunService {
     String? keyWord,
     String? sendType,
     int pageNo = 1,
-    int pageSize = 50,
+    int pageSize = PaginationConstants.senderAddressMaxPageSize,
   }) async {
     try {
       final response = await queryMailAddressByParam(
@@ -117,7 +122,7 @@ class SenderAddressService extends BaseAliyunService {
     String? keyWord,
     String? sendType,
     int pageNo = 1,
-    int pageSize = 50,
+    int pageSize = PaginationConstants.senderAddressMaxPageSize,
   }) async {
     try {
       final allAddresses = await getAllSenderAddresses(

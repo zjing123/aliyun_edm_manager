@@ -109,7 +109,16 @@ class ReceiverListProvider with ChangeNotifier {
       final receiverService = _serviceManager!.receiverService;
       final receiversData = await receiverService.queryReceivers();
       
-      _receivers = receiversData.map((data) => ReceiverListModel.fromMap(data)).toList();
+      // 获取禁止删除的ID列表
+      final forbiddenIds = _pageConfigProvider?.forbiddenDeleteReceiverIds ?? {};
+      
+      // 设置isDeletable字段
+      _receivers = receiversData.map((data) {
+        final receiver = ReceiverListModel.fromMap(data);
+        final isDeletable = !forbiddenIds.contains(receiver.receiverId);
+        return receiver.copyWith(isDeletable: isDeletable);
+      }).toList();
+      
       _lastUpdated = DateTime.now();
       _error = null;
       

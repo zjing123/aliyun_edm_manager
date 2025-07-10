@@ -134,31 +134,6 @@ class _CreateReceiverDialogState extends State<_CreateReceiverDialog> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  // 说明卡片
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.blue[200]!),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline, color: Colors.blue[600], size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '标有 * 的字段为必填项',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.blue[700],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
                   // 列表名称输入框
                   Row(
                     children: [
@@ -922,6 +897,7 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
                 Checkbox(
                   value: isAllSelected,
                   onChanged: (value) {
+                    // 只全选可删除的
                     context.read<ReceiverListProvider>().toggleSelectAll();
                   },
                 ),
@@ -1031,6 +1007,7 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
     return Selector<ReceiverListProvider, bool>(
       selector: (context, provider) => provider.isReceiverSelected(receiver.receiverId),
       builder: (context, isSelected, child) {
+        final canSelect = receiver.isDeletable;
         return Container(
           decoration: BoxDecoration(
             border: Border(
@@ -1044,13 +1021,32 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Checkbox(
-                  value: isSelected,
-                  onChanged: receiver.isDeletable ? (value) {
-                    context.read<ReceiverListProvider>().toggleReceiverSelection(receiver.receiverId);
-                  } : null,
-                ),
-                const SizedBox(width: 8),
+                if (canSelect)
+                  Checkbox(
+                    value: isSelected,
+                    onChanged: (value) {
+                      context.read<ReceiverListProvider>().toggleReceiverSelection(receiver.receiverId);
+                    },
+                  )
+                else ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[100],
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.orange[300]!),
+                    ),
+                    child: Text(
+                      '只读',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.orange[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 Expanded(
                   flex: 2,
                   child: Row(
@@ -1061,25 +1057,6 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
                           style: TextStyle(color: Colors.grey[600]),
                         ),
                       ),
-                      if (!receiver.isDeletable) ...[
-                        const SizedBox(width: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.orange[100],
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: Colors.orange[300]!),
-                          ),
-                          child: Text(
-                            '只读',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.orange[700],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -1123,11 +1100,12 @@ class _ReceiverListPageState extends State<ReceiverListPage> with AutomaticKeepA
                       ),
                       if (receiver.isDeletable)
                         IconButton(
-                          icon: const Icon(Icons.delete, size: 18),
+                          icon: const Icon(Icons.delete, size: 18, color: Colors.red),
                           onPressed: () => _deleteReceiver(receiver.receiverId, receiver.receiversName),
                           tooltip: '删除',
-                          color: Colors.red,
-                        ),
+                        )
+                      else
+                        const SizedBox(width: 40), // 占位符，保持对齐
                     ],
                   ),
                 ),

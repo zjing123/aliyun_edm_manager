@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:aliyun_edm_manager/utils/aliyun_signer.dart';
 import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
+import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
 
 /// 阿里云服务基础类
 /// 提供通用的配置管理和API请求功能
@@ -145,7 +146,7 @@ abstract class BaseAliyunService {
   }
 
   /// 参数验证：分页参数
-  void validatePagination(int pageNo, int pageSize, {int maxPageSize = 50}) {
+  void validatePagination(int pageNo, int pageSize, {int maxPageSize = PaginationConstants.defaultMaxPageSize}) {
     if (pageNo < 1) {
       throw ArgumentError('页码必须大于0');
     }

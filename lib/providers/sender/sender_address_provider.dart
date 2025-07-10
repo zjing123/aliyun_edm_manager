@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:aliyun_edm_manager/models/sender/sender_address_model.dart';
 import 'package:aliyun_edm_manager/services/aliyun/aliyun_service_manager.dart';
 import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
+import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
 
 /// 缓存数据类
 class _CachedPageData {
@@ -70,7 +71,7 @@ class SenderAddressProvider extends ChangeNotifier {
   
   // 分页信息
   int _currentPage = 1;
-  int _pageSize = 10;
+  int _pageSize = PaginationConstants.defaultPageSize;
   int _totalCount = 0;
   int _totalPages = 0;
   
@@ -367,6 +368,11 @@ class SenderAddressProvider extends ChangeNotifier {
   // 状态更新方法
   void setState(VoidCallback fn) {
     fn();
+    notifyListeners();
+  }
+
+  void setPageSize(int newPageSize) {
+    _pageSize = newPageSize;
     notifyListeners();
   }
 }

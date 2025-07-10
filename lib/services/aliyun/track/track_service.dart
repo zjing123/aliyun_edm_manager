@@ -1,5 +1,6 @@
 import 'package:aliyun_edm_manager/services/aliyun/base_aliyun_service.dart';
 import 'package:aliyun_edm_manager/models/track/track_model.dart';
+import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
 
 /// 跟踪数据管理服务
 /// 提供邮件跟踪数据的查询功能
@@ -13,7 +14,7 @@ class TrackService extends BaseAliyunService {
     int pageSize = 10,
   }) async {
     // 参数验证
-    validatePagination(pageNo, pageSize);
+    validatePagination(pageNo, pageSize, maxPageSize: PaginationConstants.trackMaxPageSize);
 
     final params = <String, String>{
       'PageNo': pageNo.toString(),
@@ -48,7 +49,7 @@ class TrackService extends BaseAliyunService {
     int pageSize = 10,
   }) async {
     // 参数验证
-    validatePagination(pageNo, pageSize);
+    validatePagination(pageNo, pageSize, maxPageSize: PaginationConstants.trackMaxPageSize);
 
     final params = <String, String>{
       'StartTime': startTime,
