@@ -159,10 +159,6 @@ class _ScheduledEmailTaskCreatePageState extends State<ScheduledEmailTaskCreateP
       final serviceManager = AliyunServiceManager();
       serviceManager.initialize(globalConfig);
 
-      if (!serviceManager.isConfigured()) {
-        throw Exception('阿里云AccessKey未配置，请先配置');
-      }
-
       final templateService = serviceManager.templateService;
       final templates = await templateService.getAllTemplates(pageSize: 10);
       setState(() {
@@ -209,10 +205,6 @@ class _ScheduledEmailTaskCreatePageState extends State<ScheduledEmailTaskCreateP
       final serviceManager = AliyunServiceManager();
       serviceManager.initialize(globalConfig);
 
-      if (!serviceManager.isConfigured()) {
-        throw Exception('阿里云AccessKey未配置，请先配置');
-      }
-
       final senderAddressService = serviceManager.senderAddressService;
       final addresses = await senderAddressService.getAvailableSenderAddresses(pageSize: 100);
       setState(() {
@@ -243,10 +235,6 @@ class _ScheduledEmailTaskCreatePageState extends State<ScheduledEmailTaskCreateP
       final globalConfig = context.read<GlobalConfigProvider>();
       final serviceManager = AliyunServiceManager();
       serviceManager.initialize(globalConfig);
-
-      if (!serviceManager.isConfigured()) {
-        throw Exception('阿里云AccessKey未配置，请先配置');
-      }
 
       final emailTagService = serviceManager.emailTagService;
       final emailTags = await emailTagService.getAllEmailTags(pageSize: 100);

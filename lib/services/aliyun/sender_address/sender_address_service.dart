@@ -122,8 +122,12 @@ class SenderAddressService extends BaseAliyunService {
     String? keyWord,
     String? sendType,
     int pageNo = 1,
-    int pageSize = PaginationConstants.senderAddressMaxPageSize,
+    int pageSize = PaginationConstants.senderAddressDefaultPageSize,
   }) async {
+    if (pageSize > PaginationConstants.senderAddressMaxPageSize) {
+      pageSize = PaginationConstants.senderAddressMaxPageSize;
+    }
+
     try {
       final allAddresses = await getAllSenderAddresses(
         keyWord: keyWord,

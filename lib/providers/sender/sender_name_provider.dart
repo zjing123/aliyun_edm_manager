@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:aliyun_edm_manager/services/aliyun/sender_name/sender_name_service.dart';
 import 'package:aliyun_edm_manager/models/sender/sender_name_model.dart';
+import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
 
 class SenderNameProvider extends ChangeNotifier {
   final SenderNameService _senderNameService = SenderNameService();
@@ -16,7 +17,7 @@ class SenderNameProvider extends ChangeNotifier {
   int _currentPage = 1;
   int _totalPages = 1;
   int _totalCount = 0;
-  int _pageSize = 20;
+  int _pageSize = PaginationConstants.senderAddressDefaultPageSize;
 
   // Getters
   List<SenderNameModel> get senderNames => _senderNames;

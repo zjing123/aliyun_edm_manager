@@ -8,6 +8,7 @@ import 'package:aliyun_edm_manager/providers/task/mail_task_provider.dart';
 import 'package:aliyun_edm_manager/providers/receiver/receiver_list_provider.dart';
 import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
 import 'package:aliyun_edm_manager/services/aliyun/aliyun_service_manager.dart';
+import 'package:aliyun_edm_manager/utils/form_validator.dart';
 
 // 发信地址类型常量
 class SenderTypeConstants {
@@ -32,10 +33,8 @@ class SendEmailCreatePage extends StatefulWidget {
   State<SendEmailCreatePage> createState() => _SendEmailCreatePageState();
 }
 
-class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
+class _SendEmailCreatePageState extends State<SendEmailCreatePage> with FormValidationMixin {
   final _formKey = GlobalKey<FormState>();
-  final _taskNameController = TextEditingController();
-  final _replyToController = TextEditingController();
   final _templateSearchController = TextEditingController();
   final _senderAddressSearchController = TextEditingController();
 
@@ -86,8 +85,6 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
 
   @override
   void dispose() {
-    _taskNameController.dispose();
-    _replyToController.dispose();
     _templateSearchController.dispose();
     _senderAddressSearchController.dispose();
     super.dispose();
@@ -129,10 +126,6 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
       final globalConfig = context.read<GlobalConfigProvider>();
       final serviceManager = AliyunServiceManager();
       serviceManager.initialize(globalConfig);
-
-      if (!serviceManager.isConfigured()) {
-        throw Exception('阿里云AccessKey未配置，请先配置');
-      }
 
       final templateService = serviceManager.templateService;
       final templates = await templateService.getAllTemplates(pageSize: 10);
@@ -180,12 +173,12 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
       final serviceManager = AliyunServiceManager();
       serviceManager.initialize(globalConfig);
 
-      if (!serviceManager.isConfigured()) {
-        throw Exception('阿里云AccessKey未配置，请先配置');
-      }
-
       final senderAddressService = serviceManager.senderAddressService;
-      final addresses = await senderAddressService.getAvailableSenderAddresses(pageSize: 100);
+      // 只获取 sendType 为 batch 的发信地址
+      final addresses = await senderAddressService.getAvailableSenderAddresses(
+        sendType: 'batch',
+        pageSize: 20,
+      );
       setState(() {
         _senderAddresses = addresses;
         _filteredSenderAddresses = addresses;
@@ -214,10 +207,6 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
       final globalConfig = context.read<GlobalConfigProvider>();
       final serviceManager = AliyunServiceManager();
       serviceManager.initialize(globalConfig);
-
-      if (!serviceManager.isConfigured()) {
-        throw Exception('阿里云AccessKey未配置，请先配置');
-      }
 
       final emailTagService = serviceManager.emailTagService;
       final emailTags = await emailTagService.getAllEmailTags(pageSize: 100);
@@ -251,19 +240,7 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
     });
   }
 
-  // 获取选中的邮件标签名称
-  String? _getSelectedEmailTagName() {
-    if (_selectedTagName == null) return null;
-    final selectedTag = _emailTags.firstWhere(
-      (tag) => tag.tagId == _selectedTagName,
-      orElse: () => EmailTagModel(
-        tagId: _selectedTagName!,
-        tagName: _selectedTagName!,
-        createTime: '',
-      ),
-    );
-    return selectedTag.tagName;
-  }
+
 
   // 过滤发信地址
   void _filterSenderAddresses(String query) {
@@ -279,6 +256,15 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
       }
     });
   }
+
+  // 获取必填字段列表
+  List<dynamic> get _requiredFields => [
+    _selectedReceiver,
+    _selectedTemplate,
+    _selectedSender,
+    _selectedAddressType,
+    _selectedTagName,
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -356,8 +342,6 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
               ],
             ),
             const SizedBox(height: 24),
-            _buildTaskNameField(),
-            const SizedBox(height: 20),
             _buildReceiverListField(),
             const SizedBox(height: 20),
             _buildTemplateSelector(),
@@ -413,50 +397,10 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
               ],
             ),
             const SizedBox(height: 24),
-            _buildReplyToField(),
-            const SizedBox(height: 20),
             _buildClickTraceSwitch(),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildTaskNameField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '任务名称',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[700],
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _taskNameController,
-          decoration: InputDecoration(
-            hintText: '请输入任务名称（可选）',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey[300]!),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey[300]!),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Colors.blue, width: 2),
-            ),
-            filled: true,
-            fillColor: Colors.grey[50],
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-        ),
-      ],
     );
   }
 
@@ -835,13 +779,21 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '邮件标签',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[700],
-          ),
+        Row(
+          children: [
+            Text(
+              '邮件标签',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[700],
+              ),
+            ),
+            const Text(
+              ' *',
+              style: TextStyle(color: Colors.red),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         GestureDetector(
@@ -862,9 +814,9 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
               children: [
                 Expanded(
                   child: Text(
-                    _getSelectedEmailTagName() ?? '请选择邮件标签（可选）',
+                    _selectedTagName ?? '请选择邮件标签',
                     style: TextStyle(
-                      color: _getSelectedEmailTagName() != null ? Colors.black87 : Colors.grey[500],
+                      color: _selectedTagName != null ? Colors.black87 : Colors.grey[500],
                     ),
                   ),
                 ),
@@ -922,7 +874,7 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
                                   subtitle: tag.description != null ? Text(tag.description!) : null,
                                   onTap: () {
                                     setState(() {
-                                      _selectedTagName = tag.tagId;
+                                      _selectedTagName = tag.tagName;
                                       _showEmailTagDropdown = false;
                                     });
                                   },
@@ -934,52 +886,14 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
             ),
           ),
         ],
-      ],
-    );
-  }
-
-  Widget _buildReplyToField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '回复地址',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[700],
+        if (_showValidationError && _selectedTagName == null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              '请选择邮件标签',
+              style: TextStyle(color: Colors.red[600], fontSize: 12),
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _replyToController,
-          decoration: InputDecoration(
-            hintText: '请输入回复地址（可选）',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey[300]!),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey[300]!),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Colors.blue, width: 2),
-            ),
-            filled: true,
-            fillColor: Colors.grey[50],
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-          validator: (value) {
-            if (value != null && value.isNotEmpty) {
-              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(value)) {
-                return '请输入有效的邮件地址';
-              }
-            }
-            return null;
-          },
-        ),
       ],
     );
   }
@@ -1064,7 +978,11 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
           ),
           const SizedBox(width: 12),
           ElevatedButton(
-            onPressed: _submitForm,
+            onPressed: createFormValidCallback(
+              formKey: _formKey,
+              requiredFields: _requiredFields,
+              callback: _submitForm,
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue,
               foregroundColor: Colors.white,
@@ -1096,7 +1014,7 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
     }
     
     if (_selectedReceiver == null || _selectedTemplate == null || 
-        _selectedSender == null || _selectedAddressType == null) {
+        _selectedSender == null || _selectedAddressType == null || _selectedTagName == null) {
       setState(() {
         _showValidationError = true;
       });
@@ -1116,9 +1034,7 @@ class _SendEmailCreatePageState extends State<SendEmailCreatePage> {
         accountName: _selectedSender!,
         clickTrace: _enableClickTrace ? '1' : '0',
         addressType: _selectedAddressType!,
-        tagName: _selectedTagName ?? '',
-        replyToAddress: _replyToController.text,
-        taskName: _taskNameController.text.isNotEmpty ? _taskNameController.text : null,
+        tagName: _selectedTagName!,
       );
       
       final provider = context.read<MailTaskProvider>();

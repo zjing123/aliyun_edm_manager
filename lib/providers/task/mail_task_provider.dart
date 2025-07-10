@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:aliyun_edm_manager/models/task/mail_task_model.dart';
 import 'package:aliyun_edm_manager/services/aliyun/aliyun_service_manager.dart';
 import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
+import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
 
 class MailTaskProvider with ChangeNotifier {
   final AliyunServiceManager _serviceManager;
@@ -12,7 +13,7 @@ class MailTaskProvider with ChangeNotifier {
   
   // 分页相关 - 统一使用从1开始的页码
   int _currentPage = 1;
-  int _pageSize = 20;
+  int _pageSize = PaginationConstants.mailTaskDefaultPageSize;
   int _totalCount = 0;
   int _totalPages = 0;
   
@@ -73,7 +74,7 @@ class MailTaskProvider with ChangeNotifier {
     String? keyWord,
     String? status,
     int pageNo = 1,
-    int pageSize = 20,
+    int pageSize = PaginationConstants.defaultPageSize,
   }) {
     return '${keyWord ?? ''}_${status ?? ''}_${pageNo}_$pageSize';
   }
@@ -83,7 +84,7 @@ class MailTaskProvider with ChangeNotifier {
     String? keyWord,
     String? status,
     int pageNo = 1,
-    int pageSize = 20,
+    int pageSize = PaginationConstants.defaultPageSize,
   }) {
     final cacheKey = _generateCacheKey(
       keyWord: keyWord,
@@ -99,7 +100,7 @@ class MailTaskProvider with ChangeNotifier {
     String? keyWord,
     String? status,
     int pageNo = 1,
-    int pageSize = 20,
+    int pageSize = PaginationConstants.defaultPageSize,
   }) {
     final cacheKey = _generateCacheKey(
       keyWord: keyWord,
@@ -115,7 +116,7 @@ class MailTaskProvider with ChangeNotifier {
     String? keyWord,
     String? status,
     int pageNo = 1,
-    int pageSize = 20,
+    int pageSize = PaginationConstants.defaultPageSize,
     required List<MailTaskModel> tasks,
   }) {
     final cacheKey = _generateCacheKey(
@@ -137,7 +138,7 @@ class MailTaskProvider with ChangeNotifier {
     String? keyWord,
     String? status,
     int pageNo = 1,
-    int pageSize = 20,
+    int pageSize = PaginationConstants.defaultPageSize,
     bool forceRefresh = false,
   }) async {
     // 检查缓存，如果存在且不强制刷新，直接使用缓存数据
@@ -211,7 +212,7 @@ class MailTaskProvider with ChangeNotifier {
     String? keyWord,
     String? status,
     int pageNo = 1,
-    int pageSize = 20,
+    int pageSize = PaginationConstants.defaultPageSize,
   }) async {
     _tasks.clear();
     // 清除缓存，强制重新加载

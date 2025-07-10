@@ -3,6 +3,7 @@ import 'package:aliyun_edm_manager/services/aliyun/aliyun_service_manager.dart';
 import 'package:aliyun_edm_manager/models/track/track_model.dart';
 import 'package:aliyun_edm_manager/models/tag/email_tag_model.dart';
 import 'package:aliyun_edm_manager/models/sender/sender_address_model.dart';
+import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
 
 /// 跟踪数据状态管理Provider
 class TrackProvider extends ChangeNotifier {
@@ -26,7 +27,7 @@ class TrackProvider extends ChangeNotifier {
   
   // 分页参数
   int _currentPage = 1;
-  int _pageSize = 10;
+  int _pageSize = PaginationConstants.trackDefaultPageSize;
   int _total = 0;
 
   TrackProvider(this._serviceManager);

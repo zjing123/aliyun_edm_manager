@@ -725,16 +725,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
     }
 
     // 检查阿里云配置
-    final serviceManager = AliyunServiceManager();
-    if (!await serviceManager.isConfigured()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('请先在设置中配置阿里云AccessKey'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+    // final serviceManager = AliyunServiceManager();
 
     setState(() {
       _isProcessing = true;

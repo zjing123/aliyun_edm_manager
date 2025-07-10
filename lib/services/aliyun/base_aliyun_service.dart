@@ -52,6 +52,29 @@ abstract class BaseAliyunService {
     return _isConfigured();
   }
 
+  /// 配置检查装饰器 - 自动检查配置并执行方法
+  /// 使用示例:
+  /// Future<T> myMethod() async {
+  ///   return await withConfigCheck(() async {
+  ///     // 你的服务逻辑
+  ///     return result;
+  ///   });
+  /// }
+  Future<T> withConfigCheck<T>(Future<T> Function() method) async {
+    if (!_isConfigured()) {
+      throw Exception('阿里云AccessKey未配置，请先配置');
+    }
+    return await method();
+  }
+
+  /// 配置检查装饰器 - 同步版本
+  T withConfigCheckSync<T>(T Function() method) {
+    if (!_isConfigured()) {
+      throw Exception('阿里云AccessKey未配置，请先配置');
+    }
+    return method();
+  }
+
   /// 构建通用请求参数
   Map<String, String> _buildCommonParams(String action) {
     final params = <String, String>{};

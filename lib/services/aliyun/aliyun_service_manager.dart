@@ -55,59 +55,56 @@ class AliyunServiceManager {
   /// 检查是否已初始化
   bool get isInitialized => _initialized;
 
-  /// 收件人管理服务
-  ReceiverService get receiverService {
+  /// 统一的配置检查方法
+  /// 检查初始化状态和配置状态
+  void _checkConfiguration() {
     if (!_initialized) {
       throw Exception('AliyunServiceManager未初始化，请先调用initialize方法');
     }
+    if (!_receiverService.isConfigured()) {
+      throw Exception('阿里云AccessKey未配置，请先配置');
+    }
+  }
+
+  /// 收件人管理服务
+  ReceiverService get receiverService {
+    _checkConfiguration();
     return _receiverService;
   }
 
   /// 模板管理服务
   TemplateService get templateService {
-    if (!_initialized) {
-      throw Exception('AliyunServiceManager未初始化，请先调用initialize方法');
-    }
+    _checkConfiguration();
     return _templateService;
   }
 
   /// 发信地址管理服务
   SenderAddressService get senderAddressService {
-    if (!_initialized) {
-      throw Exception('AliyunServiceManager未初始化，请先调用initialize方法');
-    }
+    _checkConfiguration();
     return _senderAddressService;
   }
 
   /// 邮件标签管理服务
   EmailTagService get emailTagService {
-    if (!_initialized) {
-      throw Exception('AliyunServiceManager未初始化，请先调用initialize方法');
-    }
+    _checkConfiguration();
     return _emailTagService;
   }
 
   /// 邮件任务管理服务
   EmailTaskService get emailTaskService {
-    if (!_initialized) {
-      throw Exception('AliyunServiceManager未初始化，请先调用initialize方法');
-    }
+    _checkConfiguration();
     return _emailTaskService;
   }
 
   /// 定时发送邮件服务
   ScheduledEmailService get scheduledEmailService {
-    if (!_initialized) {
-      throw Exception('AliyunServiceManager未初始化，请先调用initialize方法');
-    }
+    _checkConfiguration();
     return _scheduledEmailService;
   }
 
   /// 跟踪数据管理服务
   TrackService get trackService {
-    if (!_initialized) {
-      throw Exception('AliyunServiceManager未初始化，请先调用initialize方法');
-    }
+    _checkConfiguration();
     return _trackService;
   }
 
@@ -115,13 +112,6 @@ class AliyunServiceManager {
   bool isConfigured() {
     if (!_initialized) return false;
     return _receiverService.isConfigured();
-  }
-
-  /// 检查是否已初始化
-  void _checkInitialized() {
-    if (!_initialized) {
-      throw Exception('AliyunServiceManager未初始化，请先调用initialize方法');
-    }
   }
 
   /// 更新全局配置Provider

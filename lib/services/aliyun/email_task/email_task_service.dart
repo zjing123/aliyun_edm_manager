@@ -43,8 +43,11 @@ class EmailTaskService extends BaseAliyunService {
         'ClickTrace': request.clickTrace,
         'AddressType': request.addressType,
         'TagName': request.tagName,
-        'ReplyToAddress': request.replyToAddress,
       };
+      
+      if (request.replyToAddress != null && request.replyToAddress!.isNotEmpty) {
+        params['ReplyToAddress'] = request.replyToAddress!;
+      }
       
       if (request.taskName != null && request.taskName!.isNotEmpty) {
         params['TaskName'] = request.taskName!;

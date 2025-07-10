@@ -7,6 +7,7 @@ import 'package:aliyun_edm_manager/models/tag/email_tag_model.dart';
 import 'package:aliyun_edm_manager/models/sender/sender_address_model.dart';
 import 'package:aliyun_edm_manager/services/aliyun/email_tag/email_tag_service.dart';
 import 'package:aliyun_edm_manager/services/aliyun/sender_address/sender_address_service.dart';
+import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
 
 class SenderStatisticsProvider extends ChangeNotifier {
   final SenderStatisticsService _service;
@@ -77,16 +78,10 @@ class SenderStatisticsProvider extends ChangeNotifier {
 
   /// 加载邮件标签列表
   Future<void> loadTags() async {
-    if (!_tagService.isConfigured()) {
-      _error = '阿里云配置未完成，请先配置AccessKey';
-      notifyListeners();
-      return;
-    }
-
     try {
       final response = await _tagService.queryTagByParam(
         pageNo: 1,
-        pageSize: 10, // 获取足够多的标签
+        pageSize: PaginationConstants.defaultPageSize, // 获取足够多的标签
       );
       _tags = response.tags;
       _error = null;
@@ -99,16 +94,10 @@ class SenderStatisticsProvider extends ChangeNotifier {
 
   /// 加载发信地址列表
   Future<void> loadAddresses() async {
-    if (!_addressService.isConfigured()) {
-      _error = '阿里云配置未完成，请先配置AccessKey';
-      notifyListeners();
-      return;
-    }
-
     try {
       final response = await _addressService.queryMailAddressByParam(
         pageNo: 1,
-        pageSize: 10, // 获取足够多的地址
+        pageSize: PaginationConstants.defaultPageSize, // 获取足够多的地址
       );
       _addresses = response.addresses;
       _error = null;
@@ -145,12 +134,6 @@ class SenderStatisticsProvider extends ChangeNotifier {
     String? dedicatedIp,
     String? esp,
   }) async {
-    if (!_service.isConfigured()) {
-      _error = '阿里云配置未完成，请先配置AccessKey';
-      notifyListeners();
-      return;
-    }
-
     _setLoading(true);
     try {
       _statistics = await _service.getSendingStatistics(
@@ -177,14 +160,8 @@ class SenderStatisticsProvider extends ChangeNotifier {
     DateTime? startDate,
     DateTime? endDate,
     int page = 1,
-    int pageSize = 20,
+    int pageSize = PaginationConstants.defaultPageSize,
   }) async {
-    if (!_service.isConfigured()) {
-      _error = '阿里云配置未完成，请先配置AccessKey';
-      notifyListeners();
-      return;
-    }
-
     _setLoading(true);
     try {
       _details = await _service.getSendingDetails(
@@ -209,12 +186,6 @@ class SenderStatisticsProvider extends ChangeNotifier {
     String? accountName,
     String? tagName,
   }) async {
-    if (!_service.isConfigured()) {
-      _error = '阿里云配置未完成，请先配置AccessKey';
-      notifyListeners();
-      return;
-    }
-
     _setLoading(true);
     try {
       _trend = await _service.getSendingTrend(

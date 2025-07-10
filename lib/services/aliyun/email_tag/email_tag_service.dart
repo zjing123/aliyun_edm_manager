@@ -12,21 +12,23 @@ class EmailTagService extends BaseAliyunService {
     int pageNo = 1,
     int pageSize = 10,
   }) async {
-    // 参数验证
-    validatePagination(pageNo, pageSize, maxPageSize: PaginationConstants.emailTagMaxPageSize);
+    return await withConfigCheck(() async {
+      // 参数验证
+      validatePagination(pageNo, pageSize, maxPageSize: PaginationConstants.emailTagMaxPageSize);
 
-    final params = <String, String>{
-      'PageNo': pageNo.toString(),
-      'PageSize': pageSize.toString(),
-    };
-    
-    // 可选参数
-    if (keyWord != null && keyWord.isNotEmpty) {
-      params['KeyWord'] = keyWord;
-    }
+      final params = <String, String>{
+        'PageNo': pageNo.toString(),
+        'PageSize': pageSize.toString(),
+      };
+      
+      // 可选参数
+      if (keyWord != null && keyWord.isNotEmpty) {
+        params['KeyWord'] = keyWord;
+      }
 
-    final response = await get("QueryTagByParam", params);
-    return QueryTagByParamResponse.fromJson(response.data as Map<String, dynamic>);
+      final response = await get("QueryTagByParam", params);
+      return QueryTagByParamResponse.fromJson(response.data as Map<String, dynamic>);
+    });
   }
 
   /// 获取所有邮件标签
@@ -35,6 +37,10 @@ class EmailTagService extends BaseAliyunService {
     int pageNo = 1,
     int pageSize = PaginationConstants.emailTagMaxPageSize,
   }) async {
+    if (pageSize > PaginationConstants.emailTagMaxPageSize) {
+      pageSize = PaginationConstants.emailTagMaxPageSize;
+    }
+
     try {
       final response = await queryTagByParam(
         keyWord: keyWord,
@@ -75,29 +81,31 @@ class EmailTagService extends BaseAliyunService {
     required String tagName,
     String? tagDescription,
   }) async {
-    // 参数验证
-    validateStringLength(tagName, '标签名称', 50);
-    if (tagDescription != null) {
-      validateStringLength(tagDescription, '标签描述', 200);
-    }
+    return await withConfigCheck(() async {
+      // 参数验证
+      validateStringLength(tagName, '标签名称', 50);
+      if (tagDescription != null) {
+        validateStringLength(tagDescription, '标签描述', 200);
+      }
 
-    final params = <String, String>{
-      'TagName': tagName,
-    };
-    
-    // 可选参数
-    if (tagDescription != null && tagDescription.isNotEmpty) {
-      params['TagDescription'] = tagDescription;
-    }
+      final params = <String, String>{
+        'TagName': tagName,
+      };
+      
+      // 可选参数
+      if (tagDescription != null && tagDescription.isNotEmpty) {
+        params['TagDescription'] = tagDescription;
+      }
 
-    final response = await post("CreateTag", params);
-    final responseData = response.data as Map<String, dynamic>;
-    
-    // 打印API返回数据用于调试
-    print('CreateTag API 返回数据: $responseData');
-    
-    // 返回新创建的标签ID
-    return responseData['TagId']?.toString() ?? '';
+      final response = await post("CreateTag", params);
+      final responseData = response.data as Map<String, dynamic>;
+      
+      // 打印API返回数据用于调试
+      print('CreateTag API 返回数据: $responseData');
+      
+      // 返回新创建的标签ID
+      return responseData['TagId']?.toString() ?? '';
+    });
   }
 
   /// 修改标签
@@ -106,62 +114,66 @@ class EmailTagService extends BaseAliyunService {
     String? tagName,
     String? tagDescription,
   }) async {
-    // 参数验证
-    if (tagName != null) {
-      validateStringLength(tagName, '标签名称', 50);
-    }
-    if (tagDescription != null) {
-      validateStringLength(tagDescription, '标签描述', 200);
-    }
+    return await withConfigCheck(() async {
+      // 参数验证
+      if (tagName != null) {
+        validateStringLength(tagName, '标签名称', 50);
+      }
+      if (tagDescription != null) {
+        validateStringLength(tagDescription, '标签描述', 200);
+      }
 
-    final params = <String, String>{
-      'TagId': tagId,
-    };
-    
-    // 可选参数
-    if (tagName != null && tagName.isNotEmpty) {
-      params['TagName'] = tagName;
-    }
-    if (tagDescription != null && tagDescription.isNotEmpty) {
-      params['TagDescription'] = tagDescription;
-    }
+      final params = <String, String>{
+        'TagId': tagId,
+      };
+      
+      // 可选参数
+      if (tagName != null && tagName.isNotEmpty) {
+        params['TagName'] = tagName;
+      }
+      if (tagDescription != null && tagDescription.isNotEmpty) {
+        params['TagDescription'] = tagDescription;
+      }
 
-    try {
-      final response = await post("ModifyTag", params);
-      final responseData = response.data as Map<String, dynamic>;
-      
-      // 打印API返回数据用于调试
-      print('ModifyTag API 返回数据: $responseData');
-      
-      // 检查是否有RequestId，表示请求成功
-      return responseData['RequestId'] != null;
-    } catch (e) {
-      print('修改标签失败: $e');
-      return false;
-    }
+      try {
+        final response = await post("ModifyTag", params);
+        final responseData = response.data as Map<String, dynamic>;
+        
+        // 打印API返回数据用于调试
+        print('ModifyTag API 返回数据: $responseData');
+        
+        // 检查是否有RequestId，表示请求成功
+        return responseData['RequestId'] != null;
+      } catch (e) {
+        print('修改标签失败: $e');
+        return false;
+      }
+    });
   }
 
   /// 删除标签
   Future<bool> deleteTag({
     required String tagId,
   }) async {
-    final params = <String, String>{
-      'TagId': tagId,
-    };
+    return await withConfigCheck(() async {
+      final params = <String, String>{
+        'TagId': tagId,
+      };
 
-    try {
-      final response = await post("DeleteTag", params);
-      final responseData = response.data as Map<String, dynamic>;
-      
-      // 打印API返回数据用于调试
-      print('DeleteTag API 返回数据: $responseData');
-      
-      // 检查是否有RequestId，表示请求成功
-      return responseData['RequestId'] != null;
-    } catch (e) {
-      print('删除标签失败: $e');
-      return false;
-    }
+      try {
+        final response = await post("DeleteTag", params);
+        final responseData = response.data as Map<String, dynamic>;
+        
+        // 打印API返回数据用于调试
+        print('DeleteTag API 返回数据: $responseData');
+        
+        // 检查是否有RequestId，表示请求成功
+        return responseData['RequestId'] != null;
+      } catch (e) {
+        print('删除标签失败: $e');
+        return false;
+      }
+    });
   }
 
   /// 批量删除标签

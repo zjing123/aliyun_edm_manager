@@ -3,6 +3,7 @@ import 'package:aliyun_edm_manager/models/template/template_model.dart';
 import 'package:aliyun_edm_manager/models/template/template_request_response.dart';
 import 'package:aliyun_edm_manager/services/aliyun/aliyun_service_manager.dart';
 import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
+import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
 
 /// 缓存数据类
 class _CachedPageData {
@@ -75,7 +76,7 @@ class TemplateProvider extends ChangeNotifier {
   
   // 分页信息
   int _currentPage = 1;
-  int _pageSize = 10;
+  int _pageSize = PaginationConstants.templateDefaultPageSize;
   int _totalCount = 0;
   int _totalPages = 0;
   
@@ -175,10 +176,6 @@ class TemplateProvider extends ChangeNotifier {
     });
     
     try {
-      if (!_serviceManager.isConfigured()) {
-        throw Exception('阿里云AccessKey未配置，请先配置');
-      }
-      
       final request = QueryTemplateByParamRequest(
         pageNo: _currentPage,
         pageSize: _pageSize,
@@ -276,10 +273,6 @@ class TemplateProvider extends ChangeNotifier {
     String? templateText,
   }) async {
     try {
-      if (!_serviceManager.isConfigured()) {
-        throw Exception('阿里云AccessKey未配置，请先配置');
-      }
-      
       final request = CreateTemplateRequest(
         templateType: templateType,
         templateName: templateName,
@@ -313,10 +306,6 @@ class TemplateProvider extends ChangeNotifier {
     int? fromType,
   }) async {
     try {
-      if (!_serviceManager.isConfigured()) {
-        throw Exception('阿里云AccessKey未配置，请先配置');
-      }
-      
       final request = ModifyTemplateRequest(
         templateId: templateId,
         templateName: templateName,
@@ -347,10 +336,6 @@ class TemplateProvider extends ChangeNotifier {
     int? fromType,
   }) async {
     try {
-      if (!_serviceManager.isConfigured()) {
-        throw Exception('阿里云AccessKey未配置，请先配置');
-      }
-      
       final request = DeleteTemplateRequest(
         templateId: templateId,
         fromType: fromType,

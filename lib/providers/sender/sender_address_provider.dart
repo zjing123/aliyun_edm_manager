@@ -71,7 +71,7 @@ class SenderAddressProvider extends ChangeNotifier {
   
   // 分页信息
   int _currentPage = 1;
-  int _pageSize = PaginationConstants.defaultPageSize;
+  int _pageSize = PaginationConstants.senderAddressDefaultPageSize;
   int _totalCount = 0;
   int _totalPages = 0;
   
@@ -107,6 +107,10 @@ class SenderAddressProvider extends ChangeNotifier {
   bool get selectAll => _selectAll;
   int get selectedCount => _selectedAddressIds.length;
   bool get hasSelection => _selectedAddressIds.isNotEmpty;
+  
+  // 获取仅 sendType 为 batch 的发信地址列表
+  List<SenderAddressModel> get batchSenderAddresses =>
+      _addresses.where((a) => a.sendType == 'batch').toList();
   
   // 设置全局配置Provider
   void setGlobalConfigProvider(GlobalConfigProvider provider) {
@@ -166,10 +170,6 @@ class SenderAddressProvider extends ChangeNotifier {
     });
     
     try {
-      if (!_serviceManager.isConfigured()) {
-        throw Exception('阿里云AccessKey未配置，请先配置');
-      }
-      
       final response = await _serviceManager.senderAddressService.queryMailAddressByParam(
         keyWord: _keyWord,
         sendType: _sendType,
@@ -250,10 +250,6 @@ class SenderAddressProvider extends ChangeNotifier {
     String? password,
   }) async {
     try {
-      if (!_serviceManager.isConfigured()) {
-        throw Exception('阿里云AccessKey未配置，请先配置');
-      }
-      
       final response = await _serviceManager.senderAddressService.createMailAddress(
         accountName: accountName,
         replyAddress: replyAddress,
@@ -277,10 +273,6 @@ class SenderAddressProvider extends ChangeNotifier {
   // 删除发信地址
   Future<bool> deleteAddress({required int mailAddressId}) async {
     try {
-      if (!_serviceManager.isConfigured()) {
-        throw Exception('阿里云AccessKey未配置，请先配置');
-      }
-      
       final response = await _serviceManager.senderAddressService.deleteMailAddress(
         mailAddressId: mailAddressId,
       );

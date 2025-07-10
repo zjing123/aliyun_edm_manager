@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:aliyun_edm_manager/models/tag/email_tag_model.dart';
 import 'package:aliyun_edm_manager/services/aliyun/aliyun_service_manager.dart';
 import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
+import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
 
 /// 缓存数据类
 class _CachedPageData {
@@ -65,7 +66,7 @@ class TagProvider extends ChangeNotifier {
   
   // 分页信息
   int _currentPage = 1;
-  int _pageSize = 10;
+  int _pageSize = PaginationConstants.tagDefaultPageSize;
   int _totalCount = 0;
   int _totalPages = 0;
   
@@ -155,10 +156,6 @@ class TagProvider extends ChangeNotifier {
     });
     
     try {
-      if (!_serviceManager.isConfigured()) {
-        throw Exception('阿里云AccessKey未配置，请先配置');
-      }
-      
       final response = await _serviceManager.emailTagService.queryTagByParam(
         pageNo: _currentPage,
         pageSize: _pageSize,
@@ -252,10 +249,6 @@ class TagProvider extends ChangeNotifier {
     String? tagDescription,
   }) async {
     try {
-      if (!_serviceManager.isConfigured()) {
-        throw Exception('阿里云AccessKey未配置，请先配置');
-      }
-      
       final tagId = await _serviceManager.emailTagService.createTag(
         tagName: tagName,
         tagDescription: tagDescription,
@@ -281,10 +274,6 @@ class TagProvider extends ChangeNotifier {
     String? tagDescription,
   }) async {
     try {
-      if (!_serviceManager.isConfigured()) {
-        throw Exception('阿里云AccessKey未配置，请先配置');
-      }
-      
       final success = await _serviceManager.emailTagService.modifyTag(
         tagId: tagId,
         tagName: tagName,
@@ -311,10 +300,6 @@ class TagProvider extends ChangeNotifier {
     required String tagId,
   }) async {
     try {
-      if (!_serviceManager.isConfigured()) {
-        throw Exception('阿里云AccessKey未配置，请先配置');
-      }
-      
       final success = await _serviceManager.emailTagService.deleteTag(
         tagId: tagId,
       );

@@ -16,28 +16,30 @@ class TemplateService extends BaseAliyunService {
     int pageNo = 1,
     int pageSize = 10,
   }) async {
-    // 参数验证
-    validatePagination(pageNo, pageSize, maxPageSize: PaginationConstants.templateMaxPageSize);
+    return await withConfigCheck(() async {
+      // 参数验证
+      validatePagination(pageNo, pageSize, maxPageSize: PaginationConstants.templateMaxPageSize);
 
-    final params = <String, String>{
-      'PageNo': pageNo.toString(),
-      'PageSize': pageSize.toString(),
-    };
-    
-    // 添加可选参数
-    if (templateName != null && templateName.isNotEmpty) {
-      params['TemplateName'] = templateName;
-    }
-    if (templateStatus != null && templateStatus.isNotEmpty) {
-      params['TemplateStatus'] = templateStatus;
-    }
-    if (templateType != null && templateType.isNotEmpty) {
-      params['TemplateType'] = templateType;
-    }
+      final params = <String, String>{
+        'PageNo': pageNo.toString(),
+        'PageSize': pageSize.toString(),
+      };
+      
+      // 添加可选参数
+      if (templateName != null && templateName.isNotEmpty) {
+        params['TemplateName'] = templateName;
+      }
+      if (templateStatus != null && templateStatus.isNotEmpty) {
+        params['TemplateStatus'] = templateStatus;
+      }
+      if (templateType != null && templateType.isNotEmpty) {
+        params['TemplateType'] = templateType;
+      }
 
-    final response = await get("QueryTemplateByParam", params);
-    print('QueryTemplateByParam API 返回数据: ${response.data}');
-    return QueryTemplateByParamResponse.fromJson(response.data as Map<String, dynamic>);
+      final response = await get("QueryTemplateByParam", params);
+      print('QueryTemplateByParam API 返回数据: ${response.data}');
+      return QueryTemplateByParamResponse.fromJson(response.data as Map<String, dynamic>);
+    });
   }
 
   /// 使用新的Request类查询模板

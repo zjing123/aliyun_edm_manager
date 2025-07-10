@@ -131,7 +131,7 @@ class BatchSendMailRequest {
   final String clickTrace;
   final String addressType;
   final String tagName;
-  final String replyToAddress;
+  final String? replyToAddress;
   final String? taskName;
 
   BatchSendMailRequest({
@@ -141,7 +141,7 @@ class BatchSendMailRequest {
     required this.clickTrace,
     required this.addressType,
     required this.tagName,
-    required this.replyToAddress,
+    this.replyToAddress,
     this.taskName,
   });
 
@@ -153,8 +153,11 @@ class BatchSendMailRequest {
       'ClickTrace': clickTrace,
       'AddressType': addressType,
       'TagName': tagName,
-      'ReplyToAddress': replyToAddress,
     };
+    
+    if (replyToAddress != null && replyToAddress!.isNotEmpty) {
+      data['ReplyToAddress'] = replyToAddress!;
+    }
     
     if (taskName != null && taskName!.isNotEmpty) {
       data['TaskName'] = taskName!;

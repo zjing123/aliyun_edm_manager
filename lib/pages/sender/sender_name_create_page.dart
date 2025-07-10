@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:aliyun_edm_manager/providers/sender/sender_name_provider.dart';
+import 'package:aliyun_edm_manager/utils/form_validator.dart';
 
 class SenderNameCreatePage extends StatefulWidget {
   const SenderNameCreatePage({super.key});
@@ -9,7 +10,7 @@ class SenderNameCreatePage extends StatefulWidget {
   State<SenderNameCreatePage> createState() => _SenderNameCreatePageState();
 }
 
-class _SenderNameCreatePageState extends State<SenderNameCreatePage> {
+class _SenderNameCreatePageState extends State<SenderNameCreatePage> with FormValidationMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   bool _isLoading = false;
@@ -116,7 +117,10 @@ class _SenderNameCreatePageState extends State<SenderNameCreatePage> {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: _isLoading ? null : () => Navigator.pop(context),
+                          onPressed: createLoadingCallback(
+                            isLoading: _isLoading,
+                            callback: () => Navigator.pop(context),
+                          ),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             side: BorderSide(color: Colors.grey[400]!),
@@ -130,7 +134,10 @@ class _SenderNameCreatePageState extends State<SenderNameCreatePage> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: _isLoading ? null : _saveSenderName,
+                          onPressed: createLoadingCallback(
+                            isLoading: _isLoading,
+                            callback: _saveSenderName,
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1976D2),
                             foregroundColor: Colors.white,
