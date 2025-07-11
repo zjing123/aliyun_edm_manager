@@ -299,6 +299,91 @@ class BackgroundReceiverService {
     final totalEmails = emails.length;
     debugPrint('📝 [后台处理] 开始添加收件人到列表: $receiverId (${totalEmails} 个收件人)');
     
+    // 检查收件人列表数量限制（每个列表最多2000个收件人）
+    const maxReceiversPerList = 2000;
+    
+    try {
+      // 查询当前收件人列表中的收件人数量
+      final currentDetail = await receiverService.getReceiverDetail(receiverId, pageSize: 1);
+      final currentCount = currentDetail?.members.length ?? 0;
+      
+      debugPrint('📊 [后台处理] 收件人列表状态检查:');
+      debugPrint('   - 收件人列表ID: $receiverId');
+      debugPrint('   - 当前收件人数量: $currentCount');
+      debugPrint('   - 本次添加数量: $totalEmails');
+      debugPrint('   - 添加后总数量: ${currentCount + totalEmails}');
+      debugPrint('   - 最大允许数量: $maxReceiversPerList');
+      
+      // 检查是否会超过限制
+      if (currentCount + totalEmails > maxReceiversPerList) {
+        final canAddCount = maxReceiversPerList - currentCount;
+        debugPrint('⚠️ [后台处理] 警告: 添加后将超过收件人列表限制');
+        debugPrint('📝 [后台处理] 当前列表已有: $currentCount 个收件人');
+        debugPrint('📝 [后台处理] 本次尝试添加: $totalEmails 个收件人');
+        debugPrint('📝 [后台处理] 最多还能添加: $canAddCount 个收件人');
+        
+        if (canAddCount <= 0) {
+          debugPrint('❌ [后台处理] 收件人列表已达到最大限制($maxReceiversPerList个)，无法添加更多收件人');
+          return;
+        }
+        
+        // 如果超过限制，只添加能添加的部分
+        debugPrint('🔄 [后台处理] 自动调整添加数量: $totalEmails -> $canAddCount');
+        final adjustedEmails = emails.take(canAddCount.toInt()).toList();
+        
+        // 使用调整后的邮箱列表继续处理
+        await _processEmailsInChunks(
+          receiverService, 
+          receiverId, 
+          adjustedEmails,
+          batchSize: batchSize,
+          maxConcurrent: maxConcurrent,
+          enablePerformanceMode: enablePerformanceMode,
+        );
+        
+        // 将未添加的邮箱计入失败
+        final unaddedEmails = emails.skip(canAddCount.toInt()).toList();
+        if (unaddedEmails.isNotEmpty) {
+          debugPrint('⚠️ [后台处理] 由于列表限制，${unaddedEmails.length} 个收件人未添加');
+        }
+      } else {
+        // 没有超过限制，正常处理
+        await _processEmailsInChunks(
+          receiverService, 
+          receiverId, 
+          emails,
+          batchSize: batchSize,
+          maxConcurrent: maxConcurrent,
+          enablePerformanceMode: enablePerformanceMode,
+        );
+      }
+    } catch (e) {
+      debugPrint('⚠️ [后台处理] 无法查询当前收件人数量，继续执行: $e');
+      // 如果无法查询当前数量，继续执行，但给出警告
+      debugPrint('⚠️ [后台处理] 建议: 检查收件人列表是否存在或网络连接是否正常');
+      await _processEmailsInChunks(
+        receiverService, 
+        receiverId, 
+        emails,
+        batchSize: batchSize,
+        maxConcurrent: maxConcurrent,
+        enablePerformanceMode: enablePerformanceMode,
+      );
+    }
+  }
+
+  /// 分批处理邮箱数据
+  Future<void> _processEmailsInChunks(
+    dynamic receiverService, 
+    String receiverId, 
+    List<String> emails, {
+    int batchSize = 500,
+    int maxConcurrent = 3,
+    bool enablePerformanceMode = true,
+  }) async {
+    final startTime = DateTime.now();
+    final totalEmails = emails.length;
+    
     // 使用配置的批量大小
     final emailChunks = _chunkEmails(emails, batchSize);
     debugPrint('📦 [后台处理] 数据分片完成: ${emailChunks.length} 个分片, 每片最多 $batchSize 个');
