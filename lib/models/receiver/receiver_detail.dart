@@ -98,9 +98,15 @@ class ReceiverDetailParams {
     return jsonEncode([detailMap]);
   }
 
-  /// 批量转换为API需要的Detail JSON格式
+  /// 批量转换为API需要的Detail JSON格式（优化版本）
   static String toBatchDetailJson(List<ReceiverDetailParams> paramsList) {
-    final details = paramsList.map((params) {
+    if (paramsList.isEmpty) return '[]';
+    
+    // 预分配容量以提高性能
+    final details = List<Map<String, String>>.filled(paramsList.length, {});
+    
+    for (int i = 0; i < paramsList.length; i++) {
+      final params = paramsList[i];
       final detailMap = <String, String>{'e': params.email};
       
       // 处理所有字段值
@@ -117,10 +123,9 @@ class ReceiverDetailParams {
         }
       });
       
-      return detailMap;
-    }).toList();
+      details[i] = detailMap;
+    }
     
-    // 使用JSON编码确保格式正确
     return jsonEncode(details);
   }
 

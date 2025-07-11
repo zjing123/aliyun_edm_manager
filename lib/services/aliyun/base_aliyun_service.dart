@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:aliyun_edm_manager/utils/aliyun_signer.dart';
 import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
 import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
+import 'package:flutter/foundation.dart'; // Added for debugPrint
 
 /// 阿里云服务基础类
 /// 提供通用的配置管理和API请求功能
@@ -10,7 +11,21 @@ abstract class BaseAliyunService {
   late final Dio _dio;
 
   BaseAliyunService() {
-    _dio = Dio(BaseOptions(baseUrl: 'https://dm.aliyuncs.com'));
+    _dio = Dio(BaseOptions(
+      baseUrl: 'https://dm.aliyuncs.com',
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 60),
+      sendTimeout: const Duration(seconds: 30),
+      // 设置连接池
+      maxRedirects: 3,
+    ));
+    
+    // 设置拦截器用于日志
+    _dio.interceptors.add(LogInterceptor(
+      requestBody: true,
+      responseBody: true,
+      logPrint: (obj) => debugPrint(obj.toString()),
+    ));
   }
 
   /// 设置全局配置Provider
