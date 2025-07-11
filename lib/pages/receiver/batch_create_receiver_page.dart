@@ -10,7 +10,7 @@ import 'package:aliyun_edm_manager/providers/receiver/receiver_list_provider.dar
 import 'package:aliyun_edm_manager/models/receiver/receiver_detail.dart';
 import 'package:aliyun_edm_manager/services/background_receiver_service.dart';
 import 'package:aliyun_edm_manager/pages/receiver/background_processing_page.dart';
-import 'package:aliyun_edm_manager/utils/performance_test.dart';
+import 'package:aliyun_edm_manager/utils/performance_optimizer.dart';
 
 /// 收件人列表冲突处理选项
 enum ConflictAction {
@@ -717,22 +717,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
         
         // 性能测试按钮
         const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: _isProcessing ? null : () => _performPerformanceTest(),
-            icon: const Icon(Icons.speed),
-            label: const Text('性能测试'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.purple,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-        ),
+
         
         // 说明文字
         const SizedBox(height: 12),
@@ -1173,30 +1158,58 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
     String receiverId, 
     List<String> emails
   ) async {
-    // 分批添加收件人（每次最多500个）
-    final emailChunks = _chunkEmails(emails, 500);
-    for (int j = 0; j < emailChunks.length; j++) {
-      final chunk = emailChunks[j];
-      if (mounted) {
-        setState(() {
-          _currentStatus = '正在添加收件人到列表 (${j + 1}/${emailChunks.length})';
-        });
-      }
-      
-      // 为每个邮箱创建收件人参数
-      final receiverParamsList = chunk.map((email) => 
-        ReceiverDetailParams(email: email, fieldValues: {})
-      ).toList();
-      
-      // 批量添加收件人
-      await receiverService.saveReceiverDetails(receiverId, receiverParamsList);
-      
-      if (mounted) {
-        setState(() {
-          _processedEmails += chunk.length;
-        });
-      }
+    // 数据预处理（去重、验证）
+    final preprocessResult = DataPreprocessor.preprocessData(emails);
+    final validEmails = preprocessResult['validEmails'] as List<String>;
+    final invalidEmails = preprocessResult['invalidEmails'] as List<String>;
+    final duplicateEmails = preprocessResult['duplicateEmails'] as List<String>;
+    if (mounted && invalidEmails.isNotEmpty) {
+      setState(() {
+        _invalidEmails.addAll(invalidEmails);
+      });
     }
+    if (validEmails.isEmpty) return;
+
+    // 分批处理+性能监控
+    await MemoryManager.processLargeData(
+      validEmails,
+      (chunk) async {
+        // 跳过已处理邮箱
+        final unprocessedEmails = chunk.where((e) => !CacheManager.isProcessed(e)).toList();
+        if (unprocessedEmails.isEmpty) return;
+        final receiverParamsList = unprocessedEmails.map((email) => ReceiverDetailParams(email: email, fieldValues: {})).toList();
+        final startTime = DateTime.now();
+        try {
+          await RetryManager.retryWithSmartStrategy(
+            () => receiverService.saveReceiverDetails(receiverId, receiverParamsList),
+            operationName: '批量添加收件人',
+          );
+          final duration = DateTime.now().difference(startTime);
+          PerformanceOptimizer.recordResponseTime(duration.inMilliseconds);
+          PerformanceOptimizer.recordResult(true);
+          for (final email in unprocessedEmails) {
+            CacheManager.markProcessed(email);
+          }
+        } catch (e) {
+          final duration = DateTime.now().difference(startTime);
+          PerformanceOptimizer.recordResponseTime(duration.inMilliseconds);
+          PerformanceOptimizer.recordResult(false, e.toString());
+          for (final email in unprocessedEmails) {
+            CacheManager.markFailed(email);
+          }
+          rethrow;
+        }
+        if (mounted) {
+          setState(() {
+            _processedEmails += unprocessedEmails.length;
+          });
+        }
+      },
+      chunkSize: PerformanceOptimizer.currentBatchSize,
+      operationName: '批量添加收件人',
+    );
+    // 动态调整参数
+    PerformanceOptimizer.performDynamicAdjustment();
   }
 
   /// 删除现有列表并创建新列表
@@ -1442,75 +1455,5 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
     );
   }
 
-  /// 执行性能测试
-  Future<void> _performPerformanceTest() async {
-    final globalConfig = context.read<GlobalConfigProvider>();
-    
-    if (!globalConfig.isConfigured) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('请先配置阿里云AccessKey'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return;
-    }
 
-    setState(() {
-      _isProcessing = true;
-      _currentStatus = '正在执行性能测试...';
-    });
-
-    try {
-      debugPrint('🚀 开始执行性能测试...');
-      
-      final testResult = await PerformanceTest.testBatchSavePerformance(
-        globalConfig: globalConfig,
-        batchSize: 500,
-      );
-
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
-          _currentStatus = '性能测试完成';
-        });
-
-        final report = PerformanceTest.formatPerformanceReport(testResult);
-        
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('性能测试结果'),
-              content: SingleChildScrollView(
-                child: Text(report),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('关闭'),
-                ),
-              ],
-            );
-          },
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
-          _currentStatus = '性能测试失败';
-        });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('性能测试失败: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
 } 
