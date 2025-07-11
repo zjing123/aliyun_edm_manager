@@ -11,6 +11,8 @@ import 'package:aliyun_edm_manager/models/receiver/receiver_detail.dart';
 import 'package:aliyun_edm_manager/services/background_receiver_service.dart';
 import 'package:aliyun_edm_manager/pages/receiver/background_processing_page.dart';
 import 'package:aliyun_edm_manager/utils/performance_optimizer.dart';
+import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
+import 'package:aliyun_edm_manager/constants/receiver_constants.dart';
 
 
 /// 收件人列表冲突处理选项
@@ -368,11 +370,60 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
           TextFormField(
             controller: _countController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: '每个列表包含的收件人数量',
               hintText: '例如：1000',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
+              helperText: '每个收件人列表最多可添加${ReceiverConstants.maxReceiversPerList}个收件人',
+              helperMaxLines: 2,
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.info_outline),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('收件人列表数量限制'),
+                      content: Text(
+                        '根据阿里云API限制，每个收件人列表最多只能添加${ReceiverConstants.maxReceiversPerList}个收件人。\n\n'
+                        '如果输入的数量超过此限制，系统会自动调整每个列表的收件人数量，确保不超过限制。\n\n'
+                        '建议：根据您的需求合理设置每个列表的收件人数量，避免超过限制。',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('知道了'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return '请输入收件人数量';
+              }
+              final count = int.tryParse(value);
+              if (count == null) {
+                return '请输入有效的数字';
+              }
+              if (count <= 0) {
+                return '收件人数量必须大于0';
+              }
+              if (count > ReceiverConstants.maxReceiversPerList) {
+                return '收件人数量不能超过${ReceiverConstants.maxReceiversPerList}个';
+              }
+              return null;
+            },
+            onChanged: (value) {
+              // 实时验证输入值
+              final count = int.tryParse(value);
+              if (count != null && count > ReceiverConstants.maxReceiversPerList) {
+                setState(() {
+                  // 可以在这里添加视觉提示
+                });
+              }
+            },
           ),
           const SizedBox(height: 16),
           
@@ -1175,7 +1226,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
     if (validEmails.isEmpty) return;
 
     // 检查收件人列表数量限制（每个列表最多2000个收件人）
-    const maxReceiversPerList = 2000;
+    const maxReceiversPerList = ReceiverConstants.maxReceiversPerList;
     
     try {
       // 查询当前收件人列表中的收件人数量
