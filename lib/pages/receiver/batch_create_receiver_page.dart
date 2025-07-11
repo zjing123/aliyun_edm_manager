@@ -1174,10 +1174,82 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
     }
     if (validEmails.isEmpty) return;
 
+    // 检查收件人列表数量限制（每个列表最多2000个收件人）
+    const maxReceiversPerList = 2000;
+    
+    try {
+      // 查询当前收件人列表中的收件人数量
+      final currentDetail = await receiverService.getReceiverDetail(receiverId, pageSize: 1);
+      final currentCount = currentDetail?.members.length ?? 0;
+      
+      debugPrint('📊 [批量创建] 收件人列表状态检查:');
+      debugPrint('   - 收件人列表ID: $receiverId');
+      debugPrint('   - 当前收件人数量: $currentCount');
+      debugPrint('   - 本次添加数量: ${validEmails.length}');
+      debugPrint('   - 添加后总数量: ${currentCount + validEmails.length}');
+      debugPrint('   - 最大允许数量: $maxReceiversPerList');
+      
+      // 检查是否会超过限制
+      if (currentCount + validEmails.length > maxReceiversPerList) {
+        final canAddCount = maxReceiversPerList - currentCount;
+        debugPrint('⚠️ [批量创建] 警告: 添加后将超过收件人列表限制');
+        debugPrint('📝 [批量创建] 当前列表已有: $currentCount 个收件人');
+        debugPrint('📝 [批量创建] 本次尝试添加: ${validEmails.length} 个收件人');
+        debugPrint('📝 [批量创建] 最多还能添加: $canAddCount 个收件人');
+        
+        if (canAddCount <= 0) {
+          debugPrint('❌ [批量创建] 收件人列表已达到最大限制($maxReceiversPerList个)，无法添加更多收件人');
+          if (mounted) {
+            setState(() {
+              _currentStatus = '错误: 收件人列表已达到最大限制($maxReceiversPerList个)';
+            });
+          }
+          return;
+        }
+        
+        // 如果超过限制，只添加能添加的部分
+        debugPrint('🔄 [批量创建] 自动调整添加数量: ${validEmails.length} -> $canAddCount');
+                 final adjustedEmails = validEmails.take(canAddCount.toInt()).toList();
+        
+        if (mounted) {
+          setState(() {
+            _currentStatus = '由于列表限制，只添加 $canAddCount 个收件人，剩余 ${validEmails.length - canAddCount} 个未添加';
+          });
+        }
+        
+        // 使用调整后的邮箱列表继续处理
+        await _processEmailsInBatches(receiverService, receiverId, adjustedEmails);
+        
+        // 将未添加的邮箱计入失败
+                 final unaddedEmails = validEmails.skip(canAddCount.toInt()).toList();
+        if (unaddedEmails.isNotEmpty) {
+          debugPrint('⚠️ [批量创建] 由于列表限制，${unaddedEmails.length} 个收件人未添加');
+          for (final email in unaddedEmails) {
+            CacheManager.markFailed(email);
+          }
+        }
+      } else {
+        // 没有超过限制，正常处理
+        await _processEmailsInBatches(receiverService, receiverId, validEmails);
+      }
+    } catch (e) {
+      debugPrint('⚠️ [批量创建] 无法查询当前收件人数量，继续执行: $e');
+      // 如果无法查询当前数量，继续执行，但给出警告
+      debugPrint('⚠️ [批量创建] 建议: 检查收件人列表是否存在或网络连接是否正常');
+      await _processEmailsInBatches(receiverService, receiverId, validEmails);
+    }
+  }
+
+  /// 分批处理邮箱数据
+  Future<void> _processEmailsInBatches(
+    dynamic receiverService, 
+    String receiverId, 
+    List<String> emails
+  ) async {
     // 分批处理+性能监控
     int batchCount = 0;
     await MemoryManager.processLargeData(
-      validEmails,
+      emails,
       (chunk) async {
         batchCount++;
         
