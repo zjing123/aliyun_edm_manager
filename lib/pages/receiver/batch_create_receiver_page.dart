@@ -11,6 +11,7 @@ import 'package:aliyun_edm_manager/models/receiver/receiver_detail.dart';
 import 'package:aliyun_edm_manager/services/background_receiver_service.dart';
 import 'package:aliyun_edm_manager/pages/receiver/background_processing_page.dart';
 import 'package:aliyun_edm_manager/utils/performance_optimizer.dart';
+import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
 
 
 /// 收件人列表冲突处理选项
@@ -1175,7 +1176,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
     if (validEmails.isEmpty) return;
 
     // 检查收件人列表数量限制（每个列表最多2000个收件人）
-    const maxReceiversPerList = 2000;
+    const maxReceiversPerList = ReceiverConstants.maxReceiversPerList;
     
     try {
       // 查询当前收件人列表中的收件人数量

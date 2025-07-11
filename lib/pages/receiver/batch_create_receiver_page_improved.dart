@@ -9,6 +9,7 @@ import 'package:aliyun_edm_manager/providers/receiver/receiver_list_provider.dar
 import 'package:aliyun_edm_manager/services/config/config_service.dart';
 import 'package:aliyun_edm_manager/models/receiver/receiver_detail.dart';
 import 'package:aliyun_edm_manager/models/receiver/receiver_list_model.dart';
+import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
 
 /// 改进的批量创建收件人页面 - 使用依赖注入模式
 class BatchCreateReceiverPageImproved extends StatefulWidget {
@@ -912,7 +913,7 @@ class _BatchCreateReceiverPageImprovedState extends State<BatchCreateReceiverPag
       }
       
       // 检查收件人列表数量限制（每个列表最多2000个收件人）
-      const maxReceiversPerList = 2000;
+      const maxReceiversPerList = ReceiverConstants.maxReceiversPerList;
       
       try {
         // 查询当前收件人列表中的收件人数量

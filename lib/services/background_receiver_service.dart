@@ -5,6 +5,7 @@ import 'package:synchronized/synchronized.dart';
 import 'package:aliyun_edm_manager/services/aliyun/aliyun_service_manager.dart';
 import 'package:aliyun_edm_manager/models/receiver/receiver_detail.dart';
 import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
+import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
 
 /// 后台收件人处理服务
 /// 用于在后台执行批量添加收件人的操作，避免阻塞UI
@@ -300,7 +301,7 @@ class BackgroundReceiverService {
     debugPrint('📝 [后台处理] 开始添加收件人到列表: $receiverId (${totalEmails} 个收件人)');
     
     // 检查收件人列表数量限制（每个列表最多2000个收件人）
-    const maxReceiversPerList = 2000;
+    const maxReceiversPerList = ReceiverConstants.maxReceiversPerList;
     
     try {
       // 查询当前收件人列表中的收件人数量

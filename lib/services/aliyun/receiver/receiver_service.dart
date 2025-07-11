@@ -195,7 +195,7 @@ class ReceiverService extends BaseAliyunService {
     debugPrint('💾 [收件人服务] 开始批量保存收件人详情: $receiverId, 数量: $batchSize - ${startTime.toIso8601String()}');
     
     // 检查收件人列表总数量限制（每个列表最多2000个收件人）
-    const maxReceiversPerList = 2000;
+    const maxReceiversPerList = ReceiverConstants.maxReceiversPerList;
     
     // 首先查询当前收件人列表中的收件人数量
     try {
@@ -252,19 +252,19 @@ class ReceiverService extends BaseAliyunService {
     debugPrint('📋 [收件人服务] 批量数据JSON大小: $jsonSize 字符 (${jsonSizeKB}KB)');
     
     // 检查批量大小是否符合API限制（500条记录）
-    if (batchSize > 500) {
-      debugPrint('⚠️ [收件人服务] 警告: 批量大小超过API限制 (500条记录)，当前: $batchSize');
-      throw Exception('批量大小超过API限制，每次最多500条记录');
+    if (batchSize > ReceiverConstants.maxBatchSize) {
+      debugPrint('⚠️ [收件人服务] 警告: 批量大小超过API限制 (${ReceiverConstants.maxBatchSize}条记录)，当前: $batchSize');
+      throw Exception('批量大小超过API限制，每次最多${ReceiverConstants.maxBatchSize}条记录');
     }
     
     // 检查数据大小是否超过1MB限制
-    if (jsonSize > 1024 * 1024) {
+    if (jsonSize > ReceiverConstants.maxDataSizeBytes) {
       debugPrint('⚠️ [收件人服务] 警告: 数据大小超过1MB限制 (${jsonSizeKB}KB)');
       throw Exception('数据大小超过1MB限制，请减少批量大小');
     }
     
     // 如果数据大小接近1MB，给出警告
-    if (jsonSize > 900 * 1024) {
+    if (jsonSize > ReceiverConstants.dataSizeWarningThresholdBytes) {
       debugPrint('⚠️ [收件人服务] 警告: 数据大小接近1MB限制 (${jsonSizeKB}KB)，建议减少批量大小');
     }
     
