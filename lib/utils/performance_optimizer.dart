@@ -3,17 +3,43 @@ import 'dart:developer' as developer;
 
 /// 性能优化器 - 用于优化批量创建收件人列表的性能
 class PerformanceOptimizer {
-  // 基础配置
+  // ==================== 批量大小配置 ====================
+  /// 推荐的批量大小 - 在性能和稳定性之间的平衡点
+  /// 从原来的500减少到200，避免触发InvalidReceiverDetailMax.Malformed错误
   static const int RECOMMENDED_BATCH_SIZE = 200;
+  
+  /// 最大批量大小 - 不超过阿里云API的500个限制
+  /// 设置为300，为动态调整留出空间
   static const int MAX_BATCH_SIZE = 300;
+  
+  /// 最小批量大小 - 确保处理效率的最低阈值
+  /// 设置为50，避免过于频繁的API调用
   static const int MIN_BATCH_SIZE = 50;
   
+  // ==================== 并发控制配置 ====================
+  /// 推荐的并发数 - 平衡处理速度和API限制
+  /// 从原来的3减少到2，避免触发频率限制
   static const int RECOMMENDED_CONCURRENCY = 2;
+  
+  /// 最大并发数 - 不超过阿里云API的每分钟100次限制
+  /// 设置为3，为动态调整留出空间
   static const int MAX_CONCURRENCY = 3;
+  
+  /// 最小并发数 - 确保基本处理能力
+  /// 设置为1，在极端情况下仍能正常工作
   static const int MIN_CONCURRENCY = 1;
   
+  // ==================== 请求间隔配置 ====================
+  /// 推荐的请求间隔（毫秒）- 平衡处理速度和API限制
+  /// 设置为150ms，确保每分钟不超过100次请求
   static const int RECOMMENDED_INTERVAL = 150;
+  
+  /// 最大请求间隔（毫秒）- 避免处理速度过慢
+  /// 设置为300ms，在API限制严格时的最大间隔
   static const int MAX_INTERVAL = 300;
+  
+  /// 最小请求间隔（毫秒）- 避免请求过于频繁
+  /// 设置为100ms，在性能良好时的最小间隔
   static const int MIN_INTERVAL = 100;
   
   // 性能监控数据
@@ -222,6 +248,11 @@ class PerformanceOptimizer {
 /// 智能重试机制
 class RetryManager {
   /// 指数退避重试
+  /// 
+  /// [operation] 需要重试的操作函数
+  /// [maxRetries] 最大重试次数，默认3次
+  /// [initialDelay] 初始延迟时间，默认1秒，每次重试延迟翻倍
+  /// [operationName] 操作名称，用于日志记录
   static Future<T> retryWithBackoff<T>(
     Future<T> Function() operation, {
     int maxRetries = 3,
@@ -300,8 +331,14 @@ class RetryManager {
 
 /// 缓存管理器
 class CacheManager {
+  /// 已处理邮箱缓存 - 存储邮箱地址和处理状态
   static final Map<String, bool> _processedEmails = {};
+  
+  /// 缓存时间戳 - 记录每个邮箱的缓存时间，用于过期管理
   static final Map<String, DateTime> _cacheTimestamps = {};
+  
+  /// 缓存过期时间 - 1小时后自动清除过期缓存
+  /// 避免内存泄漏，同时保持缓存的有效性
   static const Duration _cacheExpiry = Duration(hours: 1);
   
   /// 检查邮箱是否已处理
@@ -384,6 +421,9 @@ class CacheManager {
 /// 数据预处理优化器
 class DataPreprocessor {
   /// 邮箱验证正则表达式
+  /// 验证邮箱格式：用户名@域名
+  /// 支持：字母、数字、点号、连字符
+  /// 限制：用户名和域名长度，避免无效邮箱
   static final RegExp _emailRegex = RegExp(
     r'^[a-zA-Z0-9.]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$',
   );
@@ -504,7 +544,12 @@ class DataPreprocessor {
 
 /// 内存管理优化器
 class MemoryManager {
+  /// 最大内存使用量 - 100MB，超过此值会触发内存清理
+  /// 防止内存溢出，确保应用稳定性
   static const int _maxMemoryUsage = 100 * 1024 * 1024; // 100MB
+  
+  /// 分片大小 - 每批处理1000个数据
+  /// 平衡内存使用和处理效率，避免一次性加载过多数据
   static const int _chunkSize = 1000; // 每批处理1000个
   
   /// 分批处理大数据
