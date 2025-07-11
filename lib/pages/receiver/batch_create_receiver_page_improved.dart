@@ -413,7 +413,45 @@ class _BatchCreateReceiverPageImprovedState extends State<BatchCreateReceiverPag
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
+                  helperText: '每个收件人列表最多可添加${ReceiverConstants.maxReceiversPerList}个收件人',
+                  helperMaxLines: 2,
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.info_outline),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('收件人列表数量限制'),
+                          content: Text(
+                            '根据阿里云API限制，每个收件人列表最多只能添加${ReceiverConstants.maxReceiversPerList}个收件人。\n\n'
+                            '如果输入的数量超过此限制，系统会自动调整每个列表的收件人数量，确保不超过限制。\n\n'
+                            '建议：根据您的需求合理设置每个列表的收件人数量，避免超过限制。',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('知道了'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
+                onChanged: (value) {
+                  // 实时验证输入值
+                  final count = int.tryParse(value);
+                  if (count != null && count > ReceiverConstants.maxReceiversPerList) {
+                    // 可以在这里添加视觉提示
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('收件人数量不能超过${ReceiverConstants.maxReceiversPerList}个'),
+                        backgroundColor: Colors.orange,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                },
               ),
             ],
           ),
