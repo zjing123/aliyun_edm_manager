@@ -6,6 +6,7 @@ import 'package:aliyun_edm_manager/services/aliyun/aliyun_service_manager.dart';
 import 'package:aliyun_edm_manager/models/receiver/receiver_detail.dart';
 import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
 import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
+import 'package:aliyun_edm_manager/constants/receiver_constants.dart';
 
 /// 后台收件人处理服务
 /// 用于在后台执行批量添加收件人的操作，避免阻塞UI
