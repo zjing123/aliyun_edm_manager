@@ -153,7 +153,8 @@ class _BatchCreateReceiverPageImprovedState extends State<BatchCreateReceiverPag
                     '• 使用依赖注入模式，降低耦合度\n'
                     '• 统一的服务管理，便于测试和维护\n'
                     '• 自动配置检查，减少重复代码\n'
-                    '• 更好的错误处理和状态管理',
+                    '• 更好的错误处理和状态管理\n'
+                    '• 支持收件人列表数量限制检查（每个列表最多2000个收件人）',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.blue[700],

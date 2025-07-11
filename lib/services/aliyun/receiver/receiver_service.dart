@@ -194,6 +194,57 @@ class ReceiverService extends BaseAliyunService {
     final batchSize = receiverParamsList.length;
     debugPrint('💾 [收件人服务] 开始批量保存收件人详情: $receiverId, 数量: $batchSize - ${startTime.toIso8601String()}');
     
+    // 检查收件人列表总数量限制（每个列表最多2000个收件人）
+    const maxReceiversPerList = 2000;
+    
+    // 首先查询当前收件人列表中的收件人数量
+    try {
+      final currentDetail = await getReceiverDetail(receiverId, pageSize: 1);
+      final currentCount = currentDetail?.members.length ?? 0;
+      
+      debugPrint('📊 [收件人服务] 当前收件人列表状态:');
+      debugPrint('   - 收件人列表ID: $receiverId');
+      debugPrint('   - 当前收件人数量: $currentCount');
+      debugPrint('   - 本次添加数量: $batchSize');
+      debugPrint('   - 添加后总数量: ${currentCount + batchSize}');
+      debugPrint('   - 最大允许数量: $maxReceiversPerList');
+      
+      // 检查是否会超过限制
+      if (currentCount + batchSize > maxReceiversPerList) {
+        final canAddCount = maxReceiversPerList - currentCount;
+        debugPrint('⚠️ [收件人服务] 警告: 添加后将超过收件人列表限制');
+        debugPrint('📝 [收件人服务] 当前列表已有: $currentCount 个收件人');
+        debugPrint('📝 [收件人服务] 本次尝试添加: $batchSize 个收件人');
+        debugPrint('📝 [收件人服务] 最多还能添加: $canAddCount 个收件人');
+        
+        if (canAddCount <= 0) {
+          throw Exception('收件人列表已达到最大限制($maxReceiversPerList个)，无法添加更多收件人');
+        }
+        
+        // 如果超过限制，只添加能添加的部分
+        debugPrint('🔄 [收件人服务] 自动调整批量大小: $batchSize -> $canAddCount');
+        final adjustedList = receiverParamsList.take(canAddCount.toInt()).toList();
+        
+        // 递归调用，只添加能添加的部分
+        final result = await saveReceiverDetails(receiverId, adjustedList);
+        
+        // 返回调整后的结果，并提示用户
+        debugPrint('⚠️ [收件人服务] 由于列表限制，只添加了 $canAddCount 个收件人，剩余 ${batchSize - canAddCount} 个未添加');
+        
+        return SaveReceiverDetailResponse(
+          requestId: result.requestId,
+          successCount: result.successCount,
+          errorCount: result.errorCount + (batchSize - canAddCount.toInt()), // 将未添加的计入失败
+          existList: result.existList,
+          failList: result.failList,
+        );
+      }
+    } catch (e) {
+      debugPrint('⚠️ [收件人服务] 无法查询当前收件人数量，继续执行: $e');
+      // 如果无法查询当前数量，继续执行，但给出警告
+      debugPrint('⚠️ [收件人服务] 建议: 检查收件人列表是否存在或网络连接是否正常');
+    }
+    
     final detailJson = ReceiverDetailParams.toBatchDetailJson(receiverParamsList);
     final jsonSize = detailJson.length;
     final jsonSizeKB = (jsonSize / 1024).toStringAsFixed(2);

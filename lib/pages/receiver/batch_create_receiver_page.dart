@@ -132,7 +132,8 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
                     '• 自动按指定数量拆分邮箱数据\n'
                     '• 支持邮箱去重、无效邮箱过滤\n'
                     '• 自动创建收件人列表并添加收件人\n'
-                    '• 支持过滤特定邮箱列表',
+                    '• 支持过滤特定邮箱列表\n'
+                    '• 支持收件人列表数量限制检查（每个列表最多2000个收件人）',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.blue[700],
