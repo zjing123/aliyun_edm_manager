@@ -358,6 +358,43 @@ class BackgroundReceiverService {
             final chunkDuration = DateTime.now().difference(chunkStartTime);
             debugPrint('❌ [后台处理] 分片 ${chunkIndex + 1} 处理失败: ${chunk.length} 个收件人 - 耗时: ${chunkDuration.inMilliseconds}ms, 错误: $e');
             
+            // 检查是否是InvalidReceiverDetailMax.Malformed错误
+            if (e.toString().contains('InvalidReceiverDetailMax.Malformed')) {
+              debugPrint('⚠️ [后台处理] 检测到InvalidReceiverDetailMax.Malformed错误');
+              debugPrint('📝 [后台处理] 错误说明: 收件人详情中的地址数量超过了最大值');
+              debugPrint('💡 [后台处理] 建议: 减少批量大小，当前批量大小: ${chunk.length}');
+              
+              // 如果批量大小大于50，尝试减少批量大小
+              if (chunk.length > 50) {
+                final newChunkSize = (chunk.length / 2).round();
+                debugPrint('🔄 [后台处理] 自动减少批量大小: ${chunk.length} -> $newChunkSize');
+                
+                // 分割数据并递归处理
+                final firstHalf = chunk.take(newChunkSize).toList();
+                final secondHalf = chunk.skip(newChunkSize).toList();
+                
+                // 先处理前半部分
+                final firstReceiverParamsList = firstHalf.map((email) => 
+                  ReceiverDetailParams(email: email, fieldValues: {})
+                ).toList();
+                await receiverService.saveReceiverDetails(receiverId, firstReceiverParamsList);
+                
+                // 如果还有后半部分，继续处理
+                if (secondHalf.isNotEmpty) {
+                  final secondReceiverParamsList = secondHalf.map((email) => 
+                    ReceiverDetailParams(email: email, fieldValues: {})
+                  ).toList();
+                  await receiverService.saveReceiverDetails(receiverId, secondReceiverParamsList);
+                }
+                
+                debugPrint('✅ [后台处理] 分片 ${chunkIndex + 1} 通过减少批量大小处理成功');
+                // 继续处理下一个分片，不需要continue
+              } else {
+                debugPrint('⚠️ [后台处理] 批量大小已经很小(${chunk.length})，无法进一步减少');
+                debugPrint('💡 [后台处理] 建议: 检查收件人数据格式是否正确');
+              }
+            }
+            
             // 如果是网络错误或超时，等待更长时间后重试
             if (e.toString().contains('timeout') || e.toString().contains('connection')) {
               debugPrint('🔄 [后台处理] 检测到网络问题，等待5秒后重试...');
@@ -437,6 +474,43 @@ class BackgroundReceiverService {
         } catch (e) {
           final chunkDuration = DateTime.now().difference(chunkStartTime);
           debugPrint('❌ [后台处理] 分片 ${j + 1} 处理失败: ${chunk.length} 个收件人 - 耗时: ${chunkDuration.inMilliseconds}ms, 错误: $e');
+          
+          // 检查是否是InvalidReceiverDetailMax.Malformed错误
+          if (e.toString().contains('InvalidReceiverDetailMax.Malformed')) {
+            debugPrint('⚠️ [后台处理] 检测到InvalidReceiverDetailMax.Malformed错误');
+            debugPrint('📝 [后台处理] 错误说明: 收件人详情中的地址数量超过了最大值');
+            debugPrint('💡 [后台处理] 建议: 减少批量大小，当前批量大小: ${chunk.length}');
+            
+            // 如果批量大小大于50，尝试减少批量大小
+            if (chunk.length > 50) {
+              final newChunkSize = (chunk.length / 2).round();
+              debugPrint('🔄 [后台处理] 自动减少批量大小: ${chunk.length} -> $newChunkSize');
+              
+              // 分割数据并递归处理
+              final firstHalf = chunk.take(newChunkSize).toList();
+              final secondHalf = chunk.skip(newChunkSize).toList();
+              
+              // 先处理前半部分
+              final firstReceiverParamsList = firstHalf.map((email) => 
+                ReceiverDetailParams(email: email, fieldValues: {})
+              ).toList();
+              await receiverService.saveReceiverDetails(receiverId, firstReceiverParamsList);
+              
+              // 如果还有后半部分，继续处理
+              if (secondHalf.isNotEmpty) {
+                final secondReceiverParamsList = secondHalf.map((email) => 
+                  ReceiverDetailParams(email: email, fieldValues: {})
+                ).toList();
+                await receiverService.saveReceiverDetails(receiverId, secondReceiverParamsList);
+              }
+              
+              debugPrint('✅ [后台处理] 分片 ${j + 1} 通过减少批量大小处理成功');
+              continue; // 继续处理下一个分片
+            } else {
+              debugPrint('⚠️ [后台处理] 批量大小已经很小(${chunk.length})，无法进一步减少');
+              debugPrint('💡 [后台处理] 建议: 检查收件人数据格式是否正确');
+            }
+          }
           
           // 如果是网络错误或超时，等待更长时间后重试
           if (e.toString().contains('timeout') || e.toString().contains('connection')) {

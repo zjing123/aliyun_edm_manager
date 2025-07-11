@@ -226,6 +226,45 @@ class ReceiverService extends BaseAliyunService {
         debugPrint('❌ [收件人服务] 批量保存收件人详情失败: $receiverId - 耗时: ${duration.inMilliseconds}ms, 错误: $e');
         debugPrint('🔄 [收件人服务] 重试 ${retryCount}/$maxRetries');
         
+        // 检查是否是InvalidReceiverDetailMax.Malformed错误
+        if (e.toString().contains('InvalidReceiverDetailMax.Malformed')) {
+          debugPrint('⚠️ [收件人服务] 检测到InvalidReceiverDetailMax.Malformed错误');
+          debugPrint('📝 [收件人服务] 错误说明: 收件人详情中的地址数量超过了最大值');
+          debugPrint('💡 [收件人服务] 建议: 减少批量大小，当前批量大小: $batchSize');
+          
+          // 如果批量大小大于100，尝试减少批量大小
+          if (batchSize > 100) {
+            final newBatchSize = (batchSize / 2).round();
+            debugPrint('🔄 [收件人服务] 自动减少批量大小: $batchSize -> $newBatchSize');
+            
+            // 分割数据并递归调用
+            final firstHalf = receiverParamsList.take(newBatchSize).toList();
+            final secondHalf = receiverParamsList.skip(newBatchSize).toList();
+            
+            // 先处理前半部分
+            final firstResult = await saveReceiverDetails(receiverId, firstHalf);
+            
+            // 如果还有后半部分，继续处理
+            if (secondHalf.isNotEmpty) {
+              final secondResult = await saveReceiverDetails(receiverId, secondHalf);
+              
+              // 合并结果
+              return SaveReceiverDetailResponse(
+                requestId: firstResult.requestId,
+                successCount: firstResult.successCount + secondResult.successCount,
+                errorCount: firstResult.errorCount + secondResult.errorCount,
+                existList: [...?firstResult.existList, ...?secondResult.existList],
+                failList: [...?firstResult.failList, ...?secondResult.failList],
+              );
+            }
+            
+            return firstResult;
+          } else {
+            debugPrint('⚠️ [收件人服务] 批量大小已经很小($batchSize)，无法进一步减少');
+            debugPrint('💡 [收件人服务] 建议: 检查收件人数据格式是否正确');
+          }
+        }
+        
         if (retryCount <= maxRetries) {
           debugPrint('⏳ [收件人服务] 等待${retryDelay.inSeconds}秒后重试...');
           await Future.delayed(retryDelay);
