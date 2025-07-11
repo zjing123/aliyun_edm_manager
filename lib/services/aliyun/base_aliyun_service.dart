@@ -13,11 +13,15 @@ abstract class BaseAliyunService {
   BaseAliyunService() {
     _dio = Dio(BaseOptions(
       baseUrl: 'https://dm.aliyuncs.com',
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 60),
-      sendTimeout: const Duration(seconds: 30),
+      connectTimeout: const Duration(seconds: 60), // 增加连接超时时间
+      receiveTimeout: const Duration(seconds: 120), // 增加接收超时时间，特别是批量操作
+      sendTimeout: const Duration(seconds: 60), // 增加发送超时时间
       // 设置连接池
       maxRedirects: 3,
+      // 添加重试配置
+      validateStatus: (status) {
+        return status != null && status < 500; // 只对5xx错误重试
+      },
     ));
     
     // 设置拦截器用于日志
@@ -26,6 +30,9 @@ abstract class BaseAliyunService {
       responseBody: true,
       logPrint: (obj) => debugPrint(obj.toString()),
     ));
+    
+    // 添加重试拦截器
+    _dio.interceptors.add(RetryInterceptor());
   }
 
   /// 设置全局配置Provider
@@ -120,6 +127,11 @@ abstract class BaseAliyunService {
 
   /// 执行GET请求
   Future<Response> get(String action, Map<String, String> params) async {
+    final requestStartTime = DateTime.now();
+    final requestId = _generateRequestId();
+    
+    debugPrint('🚀 [API请求开始] $action (ID: $requestId) - ${requestStartTime.toIso8601String()}');
+    
     final commonParams = _buildCommonParams(action);
     commonParams.addAll(params);
     
@@ -127,20 +139,34 @@ abstract class BaseAliyunService {
     final signature = AliyunSigner.sign(commonParams, accessKeySecret, 'GET');
     commonParams['Signature'] = signature;
 
-    _logRequest(action, commonParams);
+    _logRequest(action, commonParams, requestId);
 
     try {
       final response = await _dio.get('', queryParameters: commonParams);
-      _logResponse(action, response.data);
+      final requestEndTime = DateTime.now();
+      final duration = requestEndTime.difference(requestStartTime);
+      
+      _logResponse(action, response.data, requestId, duration);
+      debugPrint('✅ [API请求成功] $action (ID: $requestId) - 耗时: ${duration.inMilliseconds}ms');
+      
       return response;
     } catch (e) {
-      _logError(action, e);
+      final requestEndTime = DateTime.now();
+      final duration = requestEndTime.difference(requestStartTime);
+      
+      _logError(action, e, requestId, duration);
+      debugPrint('❌ [API请求失败] $action (ID: $requestId) - 耗时: ${duration.inMilliseconds}ms - 错误: $e');
       rethrow;
     }
   }
 
   /// 执行POST请求
   Future<Response> post(String action, Map<String, String> params) async {
+    final requestStartTime = DateTime.now();
+    final requestId = _generateRequestId();
+    
+    debugPrint('🚀 [API请求开始] $action (ID: $requestId) - ${requestStartTime.toIso8601String()}');
+    
     final commonParams = _buildCommonParams(action);
     commonParams.addAll(params);
     
@@ -148,38 +174,57 @@ abstract class BaseAliyunService {
     final signature = AliyunSigner.sign(commonParams, accessKeySecret, 'POST');
     commonParams['Signature'] = signature;
 
-    _logRequest(action, commonParams);
+    _logRequest(action, commonParams, requestId);
 
     try {
       final response = await _dio.post('', queryParameters: commonParams);
-      _logResponse(action, response.data);
+      final requestEndTime = DateTime.now();
+      final duration = requestEndTime.difference(requestStartTime);
+      
+      _logResponse(action, response.data, requestId, duration);
+      debugPrint('✅ [API请求成功] $action (ID: $requestId) - 耗时: ${duration.inMilliseconds}ms');
+      
       return response;
     } catch (e) {
-      _logError(action, e);
+      final requestEndTime = DateTime.now();
+      final duration = requestEndTime.difference(requestStartTime);
+      
+      _logError(action, e, requestId, duration);
+      debugPrint('❌ [API请求失败] $action (ID: $requestId) - 耗时: ${duration.inMilliseconds}ms - 错误: $e');
       rethrow;
     }
   }
 
+  /// 生成请求ID
+  String _generateRequestId() {
+    return DateTime.now().millisecondsSinceEpoch.toString();
+  }
+
   /// 记录请求日志
-  void _logRequest(String action, Map<String, String> params) {
-    print('$action 请求参数:');
+  void _logRequest(String action, Map<String, String> params, String requestId) {
+    debugPrint('📤 [请求参数] $action (ID: $requestId):');
     params.forEach((key, value) {
-      print('  $key: $value');
+      if (key != 'AccessKeyId' && key != 'AccessKeySecret') { // 不记录敏感信息
+        debugPrint('  $key: $value');
+      }
     });
   }
 
   /// 记录响应日志
-  void _logResponse(String action, dynamic data) {
-    print('$action 响应: $data');
+  void _logResponse(String action, dynamic data, String requestId, Duration duration) {
+    debugPrint('📥 [响应数据] $action (ID: $requestId) - 耗时: ${duration.inMilliseconds}ms:');
+    debugPrint('  $data');
   }
 
   /// 记录错误日志
-  void _logError(String action, dynamic error) {
-    print('$action 错误: $error');
+  void _logError(String action, dynamic error, String requestId, Duration duration) {
+    debugPrint('💥 [错误详情] $action (ID: $requestId) - 耗时: ${duration.inMilliseconds}ms:');
+    debugPrint('  错误: $error');
     if (error is DioException) {
-      print('错误详情: ${error.response?.data}');
-      print('状态码: ${error.response?.statusCode}');
-      print('错误信息: ${error.message}');
+      debugPrint('  状态码: ${error.response?.statusCode}');
+      debugPrint('  错误类型: ${error.type}');
+      debugPrint('  错误信息: ${error.message}');
+      debugPrint('  响应数据: ${error.response?.data}');
     }
   }
 
@@ -201,5 +246,50 @@ abstract class BaseAliyunService {
     if (value.length > maxLength) {
       throw ArgumentError('$fieldName 长度不能超过$maxLength字符');
     }
+  }
+}
+
+/// 重试拦截器
+class RetryInterceptor extends Interceptor {
+  static const int maxRetries = 3;
+  static const Duration retryDelay = Duration(seconds: 2);
+
+  @override
+  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
+    final requestOptions = err.requestOptions;
+    final retryCount = requestOptions.extra['retryCount'] ?? 0;
+    
+    if (retryCount < maxRetries && _shouldRetry(err)) {
+      debugPrint('🔄 [重试] 请求失败，准备重试 (${retryCount + 1}/$maxRetries) - ${requestOptions.path}');
+      
+      // 等待一段时间后重试
+      await Future.delayed(retryDelay);
+      
+      // 更新重试计数
+      requestOptions.extra['retryCount'] = retryCount + 1;
+      
+      try {
+        final response = await Dio().fetch(requestOptions);
+        debugPrint('✅ [重试成功] 请求重试成功 - ${requestOptions.path}');
+        handler.resolve(response);
+        return;
+      } catch (e) {
+        debugPrint('❌ [重试失败] 请求重试失败 - ${requestOptions.path}, 错误: $e');
+        handler.reject(err);
+        return;
+      }
+    }
+    
+    handler.reject(err);
+  }
+
+  /// 判断是否应该重试
+  bool _shouldRetry(DioException err) {
+    // 网络错误、超时错误、服务器错误都应该重试
+    return err.type == DioExceptionType.connectionTimeout ||
+           err.type == DioExceptionType.receiveTimeout ||
+           err.type == DioExceptionType.sendTimeout ||
+           err.type == DioExceptionType.connectionError ||
+           (err.response?.statusCode != null && err.response!.statusCode! >= 500);
   }
 } 

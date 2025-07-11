@@ -10,6 +10,7 @@ import 'package:aliyun_edm_manager/providers/receiver/receiver_list_provider.dar
 import 'package:aliyun_edm_manager/models/receiver/receiver_detail.dart';
 import 'package:aliyun_edm_manager/services/background_receiver_service.dart';
 import 'package:aliyun_edm_manager/pages/receiver/background_processing_page.dart';
+import 'package:aliyun_edm_manager/utils/performance_test.dart';
 
 /// 收件人列表冲突处理选项
 enum ConflictAction {
@@ -714,6 +715,25 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
           ),
         ),
         
+        // 性能测试按钮
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _isProcessing ? null : () => _performPerformanceTest(),
+            icon: const Icon(Icons.speed),
+            label: const Text('性能测试'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purple,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
+        
         // 说明文字
         const SizedBox(height: 12),
         Container(
@@ -981,6 +1001,9 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
 
   /// 解析收件人文件数据
   Future<List<List<String>>> _parseReceiverFile(int countPerList) async {
+    final startTime = DateTime.now();
+    debugPrint('📁 [批量创建] 开始解析收件人文件 - ${startTime.toIso8601String()}');
+    
     if (mounted) {
       setState(() {
         _currentStatus = '正在读取文件...';
@@ -988,7 +1011,10 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
     }
 
     // 读取文件内容
+    final fileReadStartTime = DateTime.now();
     List<String> emails = await _readEmailsFromFile();
+    final fileReadDuration = DateTime.now().difference(fileReadStartTime);
+    debugPrint('📖 [批量创建] 文件读取完成 - 耗时: ${fileReadDuration.inMilliseconds}ms, 原始邮箱数量: ${emails.length}');
     
     if (mounted) {
       setState(() {
@@ -997,7 +1023,10 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
     }
     
     // 过滤邮箱
+    final filterStartTime = DateTime.now();
     emails = await _filterEmails(emails);
+    final filterDuration = DateTime.now().difference(filterStartTime);
+    debugPrint('🔍 [批量创建] 邮箱过滤完成 - 耗时: ${filterDuration.inMilliseconds}ms, 过滤后邮箱数量: ${emails.length}');
     
     if (emails.isEmpty) {
       if (mounted) {
@@ -1005,11 +1034,15 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
           _currentStatus = '没有有效的邮箱地址';
         });
       }
+      debugPrint('⚠️ [批量创建] 过滤后没有有效邮箱地址');
       return [];
     }
 
     // 拆分邮箱列表
+    final splitStartTime = DateTime.now();
     final emailBatches = _splitEmails(emails, countPerList);
+    final splitDuration = DateTime.now().difference(splitStartTime);
+    debugPrint('✂️ [批量创建] 邮箱列表拆分完成 - 耗时: ${splitDuration.inMilliseconds}ms, 批次数量: ${emailBatches.length}');
     
     if (mounted) {
       setState(() {
@@ -1018,6 +1051,17 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
         _currentStatus = '开始处理收件人列表...';
       });
     }
+    
+    final totalDuration = DateTime.now().difference(startTime);
+    debugPrint('✅ [批量创建] 文件解析完成 - 总耗时: ${totalDuration.inMilliseconds}ms');
+    debugPrint('   📊 解析统计:');
+    debugPrint('   - 文件读取: ${fileReadDuration.inMilliseconds}ms');
+    debugPrint('   - 邮箱过滤: ${filterDuration.inMilliseconds}ms');
+    debugPrint('   - 列表拆分: ${splitDuration.inMilliseconds}ms');
+    debugPrint('   - 原始邮箱: ${emails.length} 个');
+    debugPrint('   - 有效邮箱: ${emails.length} 个');
+    debugPrint('   - 批次数量: ${emailBatches.length} 个');
+    debugPrint('   - 每批次大小: $countPerList 个');
     
     return emailBatches;
   }
@@ -1214,30 +1258,50 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
   Future<List<String>> _readEmailsFromFile() async {
     if (_selectedFile == null) return [];
     
+    final startTime = DateTime.now();
+    debugPrint('📖 [批量创建] 开始读取文件: ${_selectedFile!.name} (${(_selectedFile!.size / 1024).toStringAsFixed(1)}KB)');
+    
     try {
       final file = File(_selectedFile!.path!);
       final content = await file.readAsString(encoding: utf8);
       final lines = content.split('\n');
       
-      return lines
+      final result = lines
           .map((line) => line.trim())
           .where((line) => line.isNotEmpty)
           .toList();
+      
+      final duration = DateTime.now().difference(startTime);
+      debugPrint('✅ [批量创建] 文件读取完成 - 耗时: ${duration.inMilliseconds}ms, 读取行数: ${lines.length}, 有效行数: ${result.length}');
+      
+      return result;
     } catch (e) {
+      final duration = DateTime.now().difference(startTime);
+      debugPrint('❌ [批量创建] 文件读取失败 - 耗时: ${duration.inMilliseconds}ms, 错误: $e');
       throw Exception('读取文件失败: $e');
     }
   }
 
   Future<List<String>> _filterEmails(List<String> emails) async {
+    final startTime = DateTime.now();
+    debugPrint('🔍 [批量创建] 开始过滤邮箱 - 原始数量: ${emails.length}');
+    
     List<String> filteredEmails = List.from(emails);
     
     // 跳过空邮箱
     if (_skipEmptyEmails) {
+      final emptyFilterStartTime = DateTime.now();
+      final beforeEmptyFilter = filteredEmails.length;
       filteredEmails = filteredEmails.where((email) => email.isNotEmpty).toList();
+      final emptyFilterDuration = DateTime.now().difference(emptyFilterStartTime);
+      final afterEmptyFilter = filteredEmails.length;
+      debugPrint('🚫 [批量创建] 空邮箱过滤 - 耗时: ${emptyFilterDuration.inMilliseconds}ms, 过滤前: $beforeEmptyFilter, 过滤后: $afterEmptyFilter');
     }
     
     // 过滤无效邮箱
     if (_ignoreInvalidEmails) {
+      final invalidFilterStartTime = DateTime.now();
+      final beforeInvalidFilter = filteredEmails.length;
       final validEmails = <String>[];
       for (final email in filteredEmails) {
         if (_isValidEmail(email)) {
@@ -1247,11 +1311,20 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
         }
       }
       filteredEmails = validEmails;
+      final invalidFilterDuration = DateTime.now().difference(invalidFilterStartTime);
+      final afterInvalidFilter = filteredEmails.length;
+      debugPrint('❌ [批量创建] 无效邮箱过滤 - 耗时: ${invalidFilterDuration.inMilliseconds}ms, 过滤前: $beforeInvalidFilter, 过滤后: $afterInvalidFilter, 无效邮箱: ${_invalidEmails.length}');
     }
     
     // 邮箱去重
     if (_removeDuplicates) {
+      final duplicateFilterStartTime = DateTime.now();
+      final beforeDuplicateFilter = filteredEmails.length;
       filteredEmails = filteredEmails.toSet().toList();
+      final duplicateFilterDuration = DateTime.now().difference(duplicateFilterStartTime);
+      final afterDuplicateFilter = filteredEmails.length;
+      final removedDuplicates = beforeDuplicateFilter - afterDuplicateFilter;
+      debugPrint('🔄 [批量创建] 邮箱去重 - 耗时: ${duplicateFilterDuration.inMilliseconds}ms, 去重前: $beforeDuplicateFilter, 去重后: $afterDuplicateFilter, 移除重复: $removedDuplicates');
     }
     
     // 合并默认过滤邮箱和页面输入的过滤邮箱（可选）
@@ -1262,21 +1335,38 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
         .where((e) => e.isNotEmpty)
         .toList();
     if (_mergeDefaultFilterEmails) {
+      final configFilterStartTime = DateTime.now();
       final configService = await ConfigService.getInstance();
       final defaultFilterEmails = configService.getFilterEmails();
       allFilterEmails = {...defaultFilterEmails, ...pageFilterEmails};
+      final configFilterDuration = DateTime.now().difference(configFilterStartTime);
+      debugPrint('⚙️ [批量创建] 配置过滤邮箱加载 - 耗时: ${configFilterDuration.inMilliseconds}ms, 默认过滤: ${defaultFilterEmails.length}, 页面过滤: ${pageFilterEmails.length}, 总过滤: ${allFilterEmails.length}');
     } else {
       allFilterEmails = {...pageFilterEmails};
+      debugPrint('📝 [批量创建] 仅使用页面过滤邮箱 - 数量: ${allFilterEmails.length}');
     }
+    
     if (allFilterEmails.isNotEmpty) {
-      debugPrint('=== 过滤邮件列表 ===');
-      debugPrint('过滤列表中的邮箱: $allFilterEmails');
-      debugPrint('过滤前邮箱数量: ${filteredEmails.length}');
+      final customFilterStartTime = DateTime.now();
+      final beforeCustomFilter = filteredEmails.length;
+      debugPrint('🚫 [批量创建] 开始自定义邮箱过滤 - 过滤列表: $allFilterEmails');
+      debugPrint('📊 [批量创建] 过滤前邮箱数量: ${filteredEmails.length}');
       final beforeFilter = List<String>.from(filteredEmails);
       filteredEmails = filteredEmails.where((email) => !allFilterEmails.contains(email)).toList();
-      debugPrint('过滤后邮箱数量: ${filteredEmails.length}');
-      debugPrint('被过滤掉的邮箱: ${beforeFilter.where((email) => allFilterEmails.contains(email)).toList()}');
+      final customFilterDuration = DateTime.now().difference(customFilterStartTime);
+      final afterCustomFilter = filteredEmails.length;
+      final removedByCustomFilter = beforeCustomFilter - afterCustomFilter;
+      debugPrint('✅ [批量创建] 自定义邮箱过滤完成 - 耗时: ${customFilterDuration.inMilliseconds}ms, 过滤前: $beforeCustomFilter, 过滤后: $afterCustomFilter, 移除: $removedByCustomFilter');
+      debugPrint('📋 [批量创建] 被过滤掉的邮箱: ${beforeFilter.where((email) => allFilterEmails.contains(email)).take(10).join(', ')}${beforeFilter.where((email) => allFilterEmails.contains(email)).length > 10 ? '...' : ''}');
     }
+    
+    final totalDuration = DateTime.now().difference(startTime);
+    debugPrint('✅ [批量创建] 邮箱过滤完成 - 总耗时: ${totalDuration.inMilliseconds}ms');
+    debugPrint('   📊 过滤统计:');
+    debugPrint('   - 原始邮箱: ${emails.length} 个');
+    debugPrint('   - 最终邮箱: ${filteredEmails.length} 个');
+    debugPrint('   - 无效邮箱: ${_invalidEmails.length} 个');
+    debugPrint('   - 过滤比例: ${((emails.length - filteredEmails.length) / emails.length * 100).toStringAsFixed(2)}%');
     
     return filteredEmails;
   }
@@ -1350,5 +1440,77 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
       maxConcurrent: _maxConcurrent,
       enablePerformanceMode: _enablePerformanceMode,
     );
+  }
+
+  /// 执行性能测试
+  Future<void> _performPerformanceTest() async {
+    final globalConfig = context.read<GlobalConfigProvider>();
+    
+    if (!globalConfig.isConfigured) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('请先配置阿里云AccessKey'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _isProcessing = true;
+      _currentStatus = '正在执行性能测试...';
+    });
+
+    try {
+      debugPrint('🚀 开始执行性能测试...');
+      
+      final testResult = await PerformanceTest.testBatchSavePerformance(
+        globalConfig: globalConfig,
+        batchSize: 500,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          _currentStatus = '性能测试完成';
+        });
+
+        final report = PerformanceTest.formatPerformanceReport(testResult);
+        
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('性能测试结果'),
+              content: SingleChildScrollView(
+                child: Text(report),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('关闭'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          _currentStatus = '性能测试失败';
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('性能测试失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 } 
