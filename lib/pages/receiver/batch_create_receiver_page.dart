@@ -45,7 +45,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
   bool _mergeDefaultFilterEmails = true;
   
   // 性能优化配置
-  int _batchSize = 1000; // 每批处理数量
+  int _batchSize = 500; // 修正为500，符合阿里云API限制
   int _maxConcurrent = 3; // 最大并发数
   bool _enablePerformanceMode = true; // 启用性能模式
   
@@ -553,7 +553,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
-                        items: [500, 1000, 1500, 2000].map((size) {
+                        items: [200, 300, 500].map((size) {
                           return DropdownMenuItem(
                             value: size,
                             child: Text('$size 个'),

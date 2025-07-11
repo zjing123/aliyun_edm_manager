@@ -45,7 +45,7 @@ class BackgroundReceiverService {
     required String prefix,
     required String suffix,
     required List<String> existingNames,
-    int batchSize = 1000,
+    int batchSize = 500, // 修正为500，符合阿里云API限制
     int maxConcurrent = 3,
     bool enablePerformanceMode = true,
   }) async {
@@ -81,7 +81,7 @@ class BackgroundReceiverService {
     required String prefix,
     required String suffix,
     required List<String> existingNames,
-    int batchSize = 1000,
+    int batchSize = 500, // 修正为500，符合阿里云API限制
     int maxConcurrent = 3,
     bool enablePerformanceMode = true,
   }) async {
@@ -184,7 +184,7 @@ class BackgroundReceiverService {
     String listName, 
     String alias, 
     List<String> emails, {
-    int batchSize = 1000,
+    int batchSize = 500, // 修正为500，符合阿里云API限制
     int maxConcurrent = 3,
     bool enablePerformanceMode = true,
   }) async {
@@ -208,7 +208,7 @@ class BackgroundReceiverService {
     dynamic receiverService, 
     String receiverId, 
     List<String> emails, {
-    int batchSize = 1000,
+    int batchSize = 500, // 修正为500，符合阿里云API限制
     int maxConcurrent = 3,
     bool enablePerformanceMode = true,
   }) async {
