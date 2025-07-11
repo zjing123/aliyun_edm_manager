@@ -910,8 +910,8 @@ class _BatchCreateReceiverPageImprovedState extends State<BatchCreateReceiverPag
         }
       }
       
-      // 分批添加收件人（每次最多500个）
-      final emailChunks = _chunkEmails(batch, 500);
+      // 分批添加收件人（每次最多200个，避免API限制）
+      final emailChunks = _chunkEmails(batch, 200);
       for (int j = 0; j < emailChunks.length; j++) {
         final chunk = emailChunks[j];
         setState(() {
@@ -924,11 +924,76 @@ class _BatchCreateReceiverPageImprovedState extends State<BatchCreateReceiverPag
         ).toList();
         
         // 批量添加收件人
-        await receiverService.saveReceiverDetails(receiverId, receiverParamsList);
-        
-        setState(() {
-          _processedEmails += chunk.length;
-        });
+        try {
+          final saveResult = await receiverService.saveReceiverDetails(receiverId, receiverParamsList);
+          
+          // 记录处理结果
+          if (saveResult.hasFailed) {
+            print('⚠️ [批量创建] 部分收件人添加失败:');
+            print('   - 成功: ${saveResult.successCount} 个');
+            print('   - 失败: ${saveResult.errorCount} 个');
+            print('   - 已存在: ${saveResult.existList?.length ?? 0} 个');
+            if (saveResult.failList != null) {
+              print('   - 失败列表: ${saveResult.failList!.take(3).join(', ')}${saveResult.failList!.length > 3 ? '...' : ''}');
+            }
+          }
+          
+          setState(() {
+            _processedEmails += chunk.length;
+          });
+          
+          // 添加请求间隔，避免API调用过于频繁
+          if (j < emailChunks.length - 1) {
+            await Future.delayed(const Duration(milliseconds: 500));
+          }
+        } catch (e) {
+          print('❌ [批量创建] 添加收件人失败: $e');
+          
+          // 检查是否是收件人列表ID错误
+          if (e.toString().contains('InvalidReceiverId.Malformed')) {
+            setState(() {
+              _currentStatus = '错误: 收件人列表ID不存在或格式错误，跳过此批次';
+            });
+            _failedLists.add(finalListName);
+            continue;
+          }
+          
+          // 检查是否是批量大小错误
+          if (e.toString().contains('InvalidReceiverDetailMax.Malformed')) {
+            setState(() {
+              _currentStatus = '错误: 批量大小超过限制，尝试减少批量大小...';
+            });
+            
+            // 尝试减少批量大小重试
+            try {
+              final smallerChunks = _chunkEmails(chunk, (chunk.length / 2).round());
+              for (final smallerChunk in smallerChunks) {
+                final smallerParamsList = smallerChunk.map((email) => 
+                  ReceiverDetailParams(email: email, fieldValues: {})
+                ).toList();
+                
+                await receiverService.saveReceiverDetails(receiverId, smallerParamsList);
+                setState(() {
+                  _processedEmails += smallerChunk.length;
+                });
+              }
+            } catch (retryError) {
+              print('❌ [批量创建] 减少批量大小后仍然失败: $retryError');
+              setState(() {
+                _currentStatus = '错误: 即使减少批量大小仍然失败，跳过此批次';
+              });
+              _failedLists.add(finalListName);
+              continue;
+            }
+          } else {
+            // 其他错误
+            setState(() {
+              _currentStatus = '错误: 添加收件人失败，跳过此批次';
+            });
+            _failedLists.add(finalListName);
+            continue;
+          }
+        }
       }
       
       setState(() {
@@ -1026,9 +1091,11 @@ class _BatchCreateReceiverPageImprovedState extends State<BatchCreateReceiverPag
   }
 
   List<List<String>> _chunkEmails(List<String> emails, int chunkSize) {
+    // 限制最大批量大小为200，避免API限制
+    final maxChunkSize = chunkSize > 200 ? 200 : chunkSize;
     final chunks = <List<String>>[];
-    for (int i = 0; i < emails.length; i += chunkSize) {
-      final end = (i + chunkSize < emails.length) ? i + chunkSize : emails.length;
+    for (int i = 0; i < emails.length; i += maxChunkSize) {
+      final end = (i + maxChunkSize < emails.length) ? i + maxChunkSize : emails.length;
       chunks.add(emails.sublist(i, end));
     }
     return chunks;

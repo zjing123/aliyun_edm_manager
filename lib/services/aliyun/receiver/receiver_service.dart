@@ -2,6 +2,8 @@ import 'package:aliyun_edm_manager/services/aliyun/base_aliyun_service.dart';
 import 'package:aliyun_edm_manager/models/receiver/receiver_detail.dart';
 import 'package:aliyun_edm_manager/constants/pagination_constants.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:convert'; // Added for jsonEncode
+import 'dart:core'; // Added for Stopwatch
 
 /// 收件人管理服务
 /// 提供收件人列表和收件人详情的增删改查功能
@@ -145,7 +147,33 @@ class ReceiverService extends BaseAliyunService {
 
     try {
       final response = await post("SaveReceiverDetail", params);
-      final result = SaveReceiverDetailResponse.fromJson(response.data as Map<String, dynamic>);
+      
+      // 检查响应中是否包含错误信息
+      final responseData = response.data as Map<String, dynamic>;
+      
+      // 检查是否有错误码
+      if (responseData.containsKey('Code') && responseData['Code'] != 'OK') {
+        final errorCode = responseData['Code'] as String;
+        final errorMessage = responseData['Message'] as String? ?? '未知错误';
+        
+        debugPrint('❌ [收件人服务] API返回错误: $errorCode - $errorMessage');
+        
+        // 处理特定的错误类型
+        if (errorCode == 'InvalidReceiverId.Malformed') {
+          debugPrint('⚠️ [收件人服务] 检测到InvalidReceiverId.Malformed错误');
+          debugPrint('📝 [收件人服务] 错误说明: 收件人列表ID不存在或格式错误');
+          debugPrint('💡 [收件人服务] 建议: 检查收件人列表ID: $receiverId');
+          throw Exception('收件人列表ID不存在或格式错误: $receiverId');
+        } else if (errorCode == 'InvalidReceiverDetailMax.Malformed') {
+          debugPrint('⚠️ [收件人服务] 检测到InvalidReceiverDetailMax.Malformed错误');
+          debugPrint('📝 [收件人服务] 错误说明: 收件人详情中的地址数量超过了最大值');
+          throw Exception('收件人详情中的地址数量超过了最大值');
+        } else {
+          throw Exception('API错误: $errorCode - $errorMessage');
+        }
+      }
+      
+      final result = SaveReceiverDetailResponse.fromJson(responseData);
       
       final endTime = DateTime.now();
       final duration = endTime.difference(startTime);
@@ -188,15 +216,110 @@ class ReceiverService extends BaseAliyunService {
       'Detail': detailJson,
     };
 
-    // 添加重试机制
+    // 智能重试机制
     int retryCount = 0;
     const maxRetries = 3;
-    const retryDelay = Duration(seconds: 2);
+    Duration retryDelay = const Duration(seconds: 2);
     
     while (retryCount <= maxRetries) {
       try {
+        // 添加请求间隔，避免频率限制
+        if (retryCount > 0) {
+          debugPrint('⏳ [收件人服务] 等待${retryDelay.inSeconds}秒后重试...');
+          await Future.delayed(retryDelay);
+        }
+        
         final response = await post("SaveReceiverDetail", params);
-        final result = SaveReceiverDetailResponse.fromJson(response.data as Map<String, dynamic>);
+        
+        // 检查响应中是否包含错误信息
+        final responseData = response.data as Map<String, dynamic>;
+        
+        // 检查是否有错误码
+        if (responseData.containsKey('Code') && responseData['Code'] != 'OK') {
+          final errorCode = responseData['Code'] as String;
+          final errorMessage = responseData['Message'] as String? ?? '未知错误';
+          
+          debugPrint('❌ [收件人服务] API返回错误: $errorCode - $errorMessage');
+          
+          // 处理特定的错误类型
+          if (errorCode == 'InvalidReceiverDetailMax.Malformed') {
+            debugPrint('⚠️ [收件人服务] 检测到InvalidReceiverDetailMax.Malformed错误');
+            debugPrint('📝 [收件人服务] 错误说明: 收件人详情中的地址数量超过了最大值');
+            debugPrint('💡 [收件人服务] 建议: 减少批量大小，当前批量大小: $batchSize');
+            
+            // 智能调整批量大小
+            if (batchSize > 100) {
+              final newBatchSize = (batchSize / 2).round();
+              debugPrint('🔄 [收件人服务] 自动减少批量大小: $batchSize -> $newBatchSize');
+              
+              // 分割数据并递归调用
+              final firstHalf = receiverParamsList.take(newBatchSize).toList();
+              final secondHalf = receiverParamsList.skip(newBatchSize).toList();
+              
+              // 先处理前半部分
+              final firstResult = await saveReceiverDetails(receiverId, firstHalf);
+              
+              // 如果还有后半部分，继续处理
+              if (secondHalf.isNotEmpty) {
+                // 添加更长的间隔，避免频率限制
+                await Future.delayed(const Duration(seconds: 3));
+                final secondResult = await saveReceiverDetails(receiverId, secondHalf);
+                
+                // 合并结果
+                return SaveReceiverDetailResponse(
+                  requestId: firstResult.requestId,
+                  successCount: firstResult.successCount + secondResult.successCount,
+                  errorCount: firstResult.errorCount + secondResult.errorCount,
+                  existList: [...?firstResult.existList, ...?secondResult.existList],
+                  failList: [...?firstResult.failList, ...?secondResult.failList],
+                );
+              }
+              
+              return firstResult;
+            } else {
+              debugPrint('⚠️ [收件人服务] 批量大小已经很小($batchSize)，无法进一步减少');
+              debugPrint('💡 [收件人服务] 建议: 检查收件人数据格式是否正确');
+              
+              // 增加重试间隔
+              retryDelay = const Duration(seconds: 5);
+            }
+          } else if (errorCode == 'InvalidReceiverId.Malformed') {
+            debugPrint('⚠️ [收件人服务] 检测到InvalidReceiverId.Malformed错误');
+            debugPrint('📝 [收件人服务] 错误说明: 收件人列表ID不存在或格式错误');
+            debugPrint('💡 [收件人服务] 建议: 检查收件人列表ID: $receiverId');
+            
+            // 这个错误通常无法通过重试解决，直接抛出异常
+            throw Exception('收件人列表ID不存在或格式错误: $receiverId');
+          } else if (errorCode == 'Throttling' || errorCode == 'RequestLimitExceeded') {
+            debugPrint('⚠️ [收件人服务] 检测到频率限制错误');
+            debugPrint('💡 [收件人服务] 建议: 增加请求间隔');
+            
+            // 增加重试间隔
+            retryDelay = Duration(seconds: 5 + (retryCount * 2));
+          } else {
+            // 其他错误，记录并重试
+            debugPrint('⚠️ [收件人服务] 检测到其他API错误: $errorCode');
+            debugPrint('💡 [收件人服务] 错误信息: $errorMessage');
+            
+            // 增加重试间隔
+            retryDelay = Duration(seconds: 3 + retryCount);
+          }
+          
+          // 如果不是致命错误，继续重试
+          if (errorCode != 'InvalidReceiverId.Malformed') {
+            if (retryCount < maxRetries) {
+              retryCount++;
+              continue;
+            } else {
+              throw Exception('API错误: $errorCode - $errorMessage');
+            }
+          } else {
+            throw Exception('API错误: $errorCode - $errorMessage');
+          }
+        }
+        
+        // 正常响应，解析结果
+        final result = SaveReceiverDetailResponse.fromJson(responseData);
         
         final endTime = DateTime.now();
         final duration = endTime.difference(startTime);
@@ -226,43 +349,15 @@ class ReceiverService extends BaseAliyunService {
         debugPrint('❌ [收件人服务] 批量保存收件人详情失败: $receiverId - 耗时: ${duration.inMilliseconds}ms, 错误: $e');
         debugPrint('🔄 [收件人服务] 重试 ${retryCount}/$maxRetries');
         
-        // 检查是否是InvalidReceiverDetailMax.Malformed错误
-        if (e.toString().contains('InvalidReceiverDetailMax.Malformed')) {
-          debugPrint('⚠️ [收件人服务] 检测到InvalidReceiverDetailMax.Malformed错误');
-          debugPrint('📝 [收件人服务] 错误说明: 收件人详情中的地址数量超过了最大值');
-          debugPrint('💡 [收件人服务] 建议: 减少批量大小，当前批量大小: $batchSize');
+        // 检查是否是网络或超时错误
+        if (e.toString().contains('Timeout') || 
+            e.toString().contains('Connection') ||
+            e.toString().contains('Network')) {
+          debugPrint('⚠️ [收件人服务] 检测到网络或超时错误');
+          debugPrint('💡 [收件人服务] 建议: 检查网络连接');
           
-          // 如果批量大小大于100，尝试减少批量大小
-          if (batchSize > 100) {
-            final newBatchSize = (batchSize / 2).round();
-            debugPrint('🔄 [收件人服务] 自动减少批量大小: $batchSize -> $newBatchSize');
-            
-            // 分割数据并递归调用
-            final firstHalf = receiverParamsList.take(newBatchSize).toList();
-            final secondHalf = receiverParamsList.skip(newBatchSize).toList();
-            
-            // 先处理前半部分
-            final firstResult = await saveReceiverDetails(receiverId, firstHalf);
-            
-            // 如果还有后半部分，继续处理
-            if (secondHalf.isNotEmpty) {
-              final secondResult = await saveReceiverDetails(receiverId, secondHalf);
-              
-              // 合并结果
-              return SaveReceiverDetailResponse(
-                requestId: firstResult.requestId,
-                successCount: firstResult.successCount + secondResult.successCount,
-                errorCount: firstResult.errorCount + secondResult.errorCount,
-                existList: [...?firstResult.existList, ...?secondResult.existList],
-                failList: [...?firstResult.failList, ...?secondResult.failList],
-              );
-            }
-            
-            return firstResult;
-          } else {
-            debugPrint('⚠️ [收件人服务] 批量大小已经很小($batchSize)，无法进一步减少');
-            debugPrint('💡 [收件人服务] 建议: 检查收件人数据格式是否正确');
-          }
+          // 增加重试间隔
+          retryDelay = Duration(seconds: 3 + (retryCount * 2));
         }
         
         if (retryCount <= maxRetries) {

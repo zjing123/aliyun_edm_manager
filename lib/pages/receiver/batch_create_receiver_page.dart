@@ -11,6 +11,7 @@ import 'package:aliyun_edm_manager/models/receiver/receiver_detail.dart';
 import 'package:aliyun_edm_manager/services/background_receiver_service.dart';
 import 'package:aliyun_edm_manager/pages/receiver/background_processing_page.dart';
 import 'package:aliyun_edm_manager/utils/performance_optimizer.dart';
+import 'package:aliyun_edm_manager/pages/receiver/data_loss_analysis_page.dart';
 
 /// 收件人列表冲突处理选项
 enum ConflictAction {
@@ -160,6 +161,10 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
             
             // 开始创建按钮
             _buildCreateButton(),
+            const SizedBox(height: 24),
+            
+            // 数据丢失分析按钮
+            if (_successLists.isNotEmpty || _failedLists.isNotEmpty) _buildDataLossAnalysisButton(),
             const SizedBox(height: 24),
             
             // 处理结果
@@ -1171,14 +1176,26 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
     if (validEmails.isEmpty) return;
 
     // 分批处理+性能监控
+    int batchCount = 0;
     await MemoryManager.processLargeData(
       validEmails,
       (chunk) async {
+        batchCount++;
+        
         // 跳过已处理邮箱
         final unprocessedEmails = chunk.where((e) => !CacheManager.isProcessed(e)).toList();
         if (unprocessedEmails.isEmpty) return;
+        
+        // 添加请求间隔，避免频率限制
+        if (batchCount > 1) {
+          final interval = Duration(milliseconds: 500 + (batchCount * 100)); // 递增间隔
+          debugPrint('⏳ [批量创建] 批次 $batchCount 等待 ${interval.inMilliseconds}ms 后继续...');
+          await Future.delayed(interval);
+        }
+        
         final receiverParamsList = unprocessedEmails.map((email) => ReceiverDetailParams(email: email, fieldValues: {})).toList();
         final startTime = DateTime.now();
+        
         try {
           await RetryManager.retryWithSmartStrategy(
             () => receiverService.saveReceiverDetails(receiverId, receiverParamsList),
@@ -1187,18 +1204,25 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
           final duration = DateTime.now().difference(startTime);
           PerformanceOptimizer.recordResponseTime(duration.inMilliseconds);
           PerformanceOptimizer.recordResult(true);
+          
           for (final email in unprocessedEmails) {
             CacheManager.markProcessed(email);
           }
+          
+          debugPrint('✅ [批量创建] 批次 $batchCount 处理完成 - 成功: ${unprocessedEmails.length} 个');
         } catch (e) {
           final duration = DateTime.now().difference(startTime);
           PerformanceOptimizer.recordResponseTime(duration.inMilliseconds);
           PerformanceOptimizer.recordResult(false, e.toString());
+          
           for (final email in unprocessedEmails) {
             CacheManager.markFailed(email);
           }
+          
+          debugPrint('❌ [批量创建] 批次 $batchCount 处理失败 - 错误: $e');
           rethrow;
         }
+        
         if (mounted) {
           setState(() {
             _processedEmails += unprocessedEmails.length;
@@ -1208,6 +1232,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
       chunkSize: PerformanceOptimizer.currentBatchSize,
       operationName: '批量添加收件人',
     );
+    
     // 动态调整参数
     PerformanceOptimizer.performDynamicAdjustment();
   }
@@ -1420,6 +1445,52 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
     return '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}'
            '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}'
            '${now.second.toString().padLeft(2, '0')}';
+  }
+
+  /// 构建数据丢失分析按钮
+  Widget _buildDataLossAnalysisButton() {
+    return Container(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: _selectedFile == null ? null : _openDataLossAnalysis,
+        icon: const Icon(Icons.analytics, color: Colors.white),
+        label: const Text('数据丢失分析'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.orange,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 打开数据丢失分析页面
+  Future<void> _openDataLossAnalysis() async {
+    if (_selectedFile == null) return;
+    
+    // 收集最终处理的邮箱列表
+    final finalEmails = <String>[];
+    for (final batch in _getProcessedEmailBatches()) {
+      finalEmails.addAll(batch);
+    }
+    
+    // 跳转到数据丢失分析页面
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const DataLossAnalysisPage(),
+      ),
+    );
+  }
+
+  /// 获取已处理的邮箱批次
+  List<List<String>> _getProcessedEmailBatches() {
+    // 这里需要根据实际的处理逻辑来获取最终处理的邮箱列表
+    // 暂时返回空列表，实际使用时需要从处理结果中获取
+    return [];
   }
 
   /// 开始后台处理
