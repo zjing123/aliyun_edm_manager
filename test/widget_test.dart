@@ -11,6 +11,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('EDM应用启动测试', (WidgetTester tester) async {
+    // 确保Flutter绑定已初始化
+    TestWidgetsFlutterBinding.ensureInitialized();
+    
     // Build our app and trigger a frame.
     await tester.pumpWidget(const EDMApp());
 

@@ -76,9 +76,13 @@ class ReceiverService extends BaseAliyunService {
 
   /// 保存单个收件人详情
   Future<SaveReceiverDetailResponse> saveReceiverDetail(String receiverId, ReceiverDetailParams receiverParams) async {
+    final detailJson = receiverParams.toDetailJson();
+    print('保存收件人详情 - ReceiverId: $receiverId');
+    print('Detail JSON: $detailJson');
+    
     final params = <String, String>{
       'ReceiverId': receiverId,
-      'Detail': receiverParams.toDetailJson(),
+      'Detail': detailJson,
     };
 
     final response = await post("SaveReceiverDetail", params);
@@ -87,9 +91,13 @@ class ReceiverService extends BaseAliyunService {
 
   /// 批量保存收件人详情
   Future<SaveReceiverDetailResponse> saveReceiverDetails(String receiverId, List<ReceiverDetailParams> receiverParamsList) async {
+    final detailJson = ReceiverDetailParams.toBatchDetailJson(receiverParamsList);
+    print('批量保存收件人详情 - ReceiverId: $receiverId, 数量: ${receiverParamsList.length}');
+    print('Detail JSON: $detailJson');
+    
     final params = <String, String>{
       'ReceiverId': receiverId,
-      'Detail': receiverParamsList.map((param) => param.toDetailJson()).join(','),
+      'Detail': detailJson,
     };
 
     final response = await post("SaveReceiverDetail", params);

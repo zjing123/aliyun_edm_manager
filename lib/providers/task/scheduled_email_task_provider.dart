@@ -55,9 +55,9 @@ class ScheduledEmailTaskProvider extends ChangeNotifier {
     try {
       final pendingTasks = await _databaseService.getTasksByStatus('pending');
       for (final task in pendingTasks) {
-        if (task.scheduledStartTime != null) {
+        if (task.scheduledTime != null) {
           final now = DateTime.now();
-          if (task.scheduledStartTime!.isAfter(now)) {
+          if (task.scheduledTime!.isAfter(now)) {
             // 任务尚未到达执行时间，重新设置定时器
             _scheduleTask(task);
           } else {
@@ -96,7 +96,7 @@ class ScheduledEmailTaskProvider extends ChangeNotifier {
       _tasks.add(task);
       
       // 如果是定时任务，设置定时器
-      if (task.scheduledStartTime != null) {
+      if (task.scheduledTime != null) {
         _scheduleTask(task);
       }
       
@@ -236,7 +236,7 @@ class ScheduledEmailTaskProvider extends ChangeNotifier {
       return _tasks.where((task) {
         return task.taskName.toLowerCase().contains(query.toLowerCase()) ||
                task.templateName.toLowerCase().contains(query.toLowerCase()) ||
-               task.senderName.toLowerCase().contains(query.toLowerCase());
+               task.receiversName.toLowerCase().contains(query.toLowerCase());
       }).toList();
     }
   }
@@ -272,9 +272,9 @@ class ScheduledEmailTaskProvider extends ChangeNotifier {
     required String taskName,
     required List<String> selectedReceiverIds,
     required String? selectedTemplateId,
-    required String? selectedSenderAddress,
-    required String? selectedSenderType,
-    required String? selectedEmailTag,
+    required String? selectedMailAddress,
+    required String? selectedMailAddressType,
+    required String? selectedEmailTagId,
     required bool enableScheduledSend,
     required DateTime? startSendTime,
     required String? sendIntervalText,
@@ -301,17 +301,17 @@ class ScheduledEmailTaskProvider extends ChangeNotifier {
     }
 
     // 验证发信地址
-    if (selectedSenderAddress == null || selectedSenderAddress.isEmpty) {
+    if (selectedMailAddress == null || selectedMailAddress.isEmpty) {
       return '请选择发信地址';
     }
 
     // 验证发信地址类型
-    if (selectedSenderType == null || selectedSenderType.isEmpty) {
+    if (selectedMailAddressType == null || selectedMailAddressType.isEmpty) {
       return '请选择发信地址类型';
     }
 
     // 验证邮件标签
-    if (selectedEmailTag == null || selectedEmailTag.isEmpty) {
+    if (selectedEmailTagId == null || selectedEmailTagId.isEmpty) {
       return '请选择邮件标签';
     }
 
@@ -342,11 +342,11 @@ class ScheduledEmailTaskProvider extends ChangeNotifier {
     required List<String> selectedReceiverIds,
     required String templateId,
     required String templateName,
-    required String senderAddress,
-    required String senderName,
-    required String senderType,
-    required String emailTag,
-    required bool enableTracking,
+    required String mailAddress,
+    required String mailAddressType,
+    required String emailTagId,
+    required String emailTagName,
+    required bool clickTrack,
     required bool enableScheduledSend,
     required DateTime? startSendTime,
     required int? sendInterval,
@@ -357,9 +357,9 @@ class ScheduledEmailTaskProvider extends ChangeNotifier {
         taskName: taskName,
         selectedReceiverIds: selectedReceiverIds,
         selectedTemplateId: templateId,
-        selectedSenderAddress: senderAddress,
-        selectedSenderType: senderType,
-        selectedEmailTag: emailTag,
+        selectedMailAddress: mailAddress,
+        selectedMailAddressType: mailAddressType,
+        selectedEmailTagId: emailTagId,
         enableScheduledSend: enableScheduledSend,
         startSendTime: startSendTime,
         sendIntervalText: sendInterval?.toString(),
@@ -372,89 +372,85 @@ class ScheduledEmailTaskProvider extends ChangeNotifier {
       }
 
       // 获取收件人列表信息
-      final receiverLists = <ReceiverListConfig>[];
-      for (final id in selectedReceiverIds) {
-        if (_receiverListProvider != null) {
-          final receiverList = _receiverListProvider!.findReceiverById(id);
-          if (receiverList != null) {
-            receiverLists.add(ReceiverListConfig(
-              receiverId: receiverList.receiverId,
-              receiverName: receiverList.receiversName,
-              intervalMinutes: 0,
-              emailCount: receiverList.count,
-              listId: receiverList.receiverId,
-              listName: receiverList.receiversName,
-              receiverCount: receiverList.count,
-            ));
-          }
-        } else {
-          // 如果ReceiverListProvider不可用，使用简单的映射
-          receiverLists.add(ReceiverListConfig(
-            receiverId: id,
-            receiverName: '收件人列表_$id',
-            intervalMinutes: 0,
-            emailCount: 0,
-            listId: id,
-            listName: '收件人列表_$id',
-            receiverCount: 100, // 默认值
-          ));
+      String receiversId = '';
+      String receiversName = '';
+      
+      if (_receiverListProvider != null && selectedReceiverIds.isNotEmpty) {
+        final receiverList = _receiverListProvider!.findReceiverById(selectedReceiverIds.first);
+        if (receiverList != null) {
+          receiversId = receiverList.receiverId;
+          receiversName = receiverList.receiversName;
         }
       }
-
-      if (receiverLists.isEmpty) {
-        _error = '未找到有效的收件人列表';
-        notifyListeners();
-        return false;
+      
+      if (receiversId.isEmpty) {
+        receiversId = selectedReceiverIds.first;
+        receiversName = '收件人列表_${selectedReceiverIds.first}';
       }
 
       // 创建任务
-      if (receiverLists.length == 1) {
+      if (selectedReceiverIds.length == 1) {
         // 单个收件人列表
         final task = ScheduledEmailTaskModel(
           taskId: _generateTaskId(),
           taskName: taskName,
           templateId: templateId,
           templateName: templateName,
-          receiverLists: receiverLists,
-          senderAddress: senderAddress,
-          senderName: senderName,
-          senderType: senderType,
-          tag: emailTag,
-          enableTracking: enableTracking,
           status: 'pending',
           createdAt: DateTime.now(),
-          scheduledStartTime: enableScheduledSend ? startSendTime : null,
           sendIntervalMinutes: sendInterval,
-          totalEmails: receiverLists.first.receiverCount ?? 0,
+          receiversId: receiversId,
+          receiversName: receiversName,
+          mailAddressId: mailAddress,
+          mailAddress: mailAddress,
+          mailAddressType: mailAddressType,
+          emailTagId: emailTagId,
+          emailTagName: emailTagName,
+          clickTrack: clickTrack,
+          scheduledTime: enableScheduledSend ? startSendTime : null,
         );
 
+        // 保存到数据库
         return await addTask(task);
       } else {
         // 多个收件人列表
         bool allSuccess = true;
         DateTime? currentStartTime = enableScheduledSend ? startSendTime : null;
         
-        for (int i = 0; i < receiverLists.length; i++) {
-          final receiverList = receiverLists[i];
+        for (int i = 0; i < selectedReceiverIds.length; i++) {
+          final receiverId = selectedReceiverIds[i];
+          String currentReceiversId = receiverId;
+          String currentReceiversName = '收件人列表_$receiverId';
+          
+          if (_receiverListProvider != null) {
+            final receiverList = _receiverListProvider!.findReceiverById(receiverId);
+            if (receiverList != null) {
+              currentReceiversId = receiverList.receiverId;
+              currentReceiversName = receiverList.receiversName;
+            }
+          }
+          
           final task = ScheduledEmailTaskModel(
             taskId: _generateTaskId(),
             taskName: '${taskName}_${i + 1}',
             templateId: templateId,
             templateName: templateName,
-            receiverLists: [receiverList],
-            senderAddress: senderAddress,
-            senderName: senderName,
-            senderType: senderType,
-            tag: emailTag,
-            enableTracking: enableTracking,
             status: 'pending',
             createdAt: DateTime.now(),
-            scheduledStartTime: currentStartTime,
             sendIntervalMinutes: sendInterval,
-            totalEmails: receiverList.receiverCount ?? 0,
+            receiversId: currentReceiversId,
+            receiversName: currentReceiversName,
+            mailAddressId: mailAddress,
+            mailAddress: mailAddress,
+            mailAddressType: mailAddressType,
+            emailTagId: emailTagId,
+            emailTagName: emailTagName,
+            clickTrack: clickTrack,
+            scheduledTime: currentStartTime,
           );
 
           final success = await addTask(task);
+          
           if (!success) {
             allSuccess = false;
           }
@@ -481,11 +477,11 @@ class ScheduledEmailTaskProvider extends ChangeNotifier {
     required List<String> selectedReceiverIds,
     required String templateId,
     required String templateName,
-    required String senderAddress,
-    required String senderName,
-    required String senderType,
-    required String emailTag,
-    required bool enableTracking,
+    required String mailAddress,
+    required String mailAddressType,
+    required String emailTagId,
+    required String emailTagName,
+    required bool clickTrack,
     required bool enableScheduledSend,
     required DateTime? startSendTime,
     required int? sendInterval,
@@ -496,9 +492,9 @@ class ScheduledEmailTaskProvider extends ChangeNotifier {
         taskName: taskName,
         selectedReceiverIds: selectedReceiverIds,
         selectedTemplateId: templateId,
-        selectedSenderAddress: senderAddress,
-        selectedSenderType: senderType,
-        selectedEmailTag: emailTag,
+        selectedMailAddress: mailAddress,
+        selectedMailAddressType: mailAddressType,
+        selectedEmailTagId: emailTagId,
         enableScheduledSend: enableScheduledSend,
         startSendTime: startSendTime,
         sendIntervalText: sendInterval?.toString(),
@@ -521,39 +517,20 @@ class ScheduledEmailTaskProvider extends ChangeNotifier {
       final existingTask = _tasks[taskIndex];
 
       // 获取收件人列表信息
-      final receiverLists = <ReceiverListConfig>[];
-      for (final id in selectedReceiverIds) {
-        if (_receiverListProvider != null) {
-          final receiverList = _receiverListProvider!.findReceiverById(id);
-          if (receiverList != null) {
-            receiverLists.add(ReceiverListConfig(
-              receiverId: receiverList.receiverId,
-              receiverName: receiverList.receiversName,
-              intervalMinutes: 0,
-              emailCount: receiverList.count,
-              listId: receiverList.receiverId,
-              listName: receiverList.receiversName,
-              receiverCount: receiverList.count,
-            ));
-          }
-        } else {
-          // 如果ReceiverListProvider不可用，使用简单的映射
-          receiverLists.add(ReceiverListConfig(
-            receiverId: id,
-            receiverName: '收件人列表_$id',
-            intervalMinutes: 0,
-            emailCount: 0,
-            listId: id,
-            listName: '收件人列表_$id',
-            receiverCount: 100, // 默认值
-          ));
+      String receiversId = '';
+      String receiversName = '';
+      
+      if (_receiverListProvider != null && selectedReceiverIds.isNotEmpty) {
+        final receiverList = _receiverListProvider!.findReceiverById(selectedReceiverIds.first);
+        if (receiverList != null) {
+          receiversId = receiverList.receiverId;
+          receiversName = receiverList.receiversName;
         }
       }
-
-      if (receiverLists.isEmpty) {
-        _error = '未找到有效的收件人列表';
-        notifyListeners();
-        return false;
+      
+      if (receiversId.isEmpty) {
+        receiversId = selectedReceiverIds.first;
+        receiversName = '收件人列表_${selectedReceiverIds.first}';
       }
 
       // 创建更新后的任务
@@ -561,15 +538,16 @@ class ScheduledEmailTaskProvider extends ChangeNotifier {
         taskName: taskName,
         templateId: templateId,
         templateName: templateName,
-        receiverLists: receiverLists,
-        senderAddress: senderAddress,
-        senderName: senderName,
-        senderType: senderType,
-        tag: emailTag,
-        enableTracking: enableTracking,
-        scheduledStartTime: enableScheduledSend ? startSendTime : null,
         sendIntervalMinutes: sendInterval,
-        totalEmails: receiverLists.fold<int>(0, (sum, list) => sum + (list.receiverCount ?? 0)),
+        receiversId: receiversId,
+        receiversName: receiversName,
+        mailAddressId: mailAddress,
+        mailAddress: mailAddress,
+        mailAddressType: mailAddressType,
+        emailTagId: emailTagId,
+        emailTagName: emailTagName,
+        clickTrack: clickTrack,
+        scheduledTime: enableScheduledSend ? startSendTime : null,
       );
 
       // 更新数据库
@@ -592,10 +570,10 @@ class ScheduledEmailTaskProvider extends ChangeNotifier {
 
   // 定时任务相关方法
   void _scheduleTask(ScheduledEmailTaskModel task) {
-    if (task.scheduledStartTime == null) return;
+    if (task.scheduledTime == null) return;
 
     final now = DateTime.now();
-    final delay = task.scheduledStartTime!.difference(now);
+    final delay = task.scheduledTime!.difference(now);
     
     if (delay.inMilliseconds <= 0) {
       // 立即执行
@@ -619,9 +597,9 @@ class ScheduledEmailTaskProvider extends ChangeNotifier {
       // 模拟发送邮件
       debugPrint('开始执行任务: ${task.taskName}');
       debugPrint('模板ID: ${task.templateId}');
-      debugPrint('发信地址: ${task.senderAddress}');
-      debugPrint('收件人列表: ${task.receiverLists.map((e) => e.listName ?? e.receiverName).join(', ')}');
-      debugPrint('总邮件数: ${task.totalEmails}');
+      debugPrint('发信地址: ${task.mailAddress}');
+      debugPrint('收件人列表: ${task.receiversName}');
+      debugPrint('邮件标签: ${task.emailTagName}');
 
       // 模拟发送过程
       await Future.delayed(const Duration(seconds: 2));

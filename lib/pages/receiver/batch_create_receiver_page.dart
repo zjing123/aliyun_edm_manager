@@ -1,14 +1,25 @@
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
-import 'dart:io';
-import 'dart:convert';
 import 'package:aliyun_edm_manager/services/aliyun/aliyun_service_manager.dart';
 import 'package:aliyun_edm_manager/services/config/config_service.dart';
-import 'package:aliyun_edm_manager/models/receiver/receiver_detail.dart';
+import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
 import 'package:aliyun_edm_manager/providers/receiver/receiver_list_provider.dart';
-import 'package:aliyun_edm_manager/utils/dialog_util.dart';
-import 'package:aliyun_edm_manager/pages/tag/filter_emails_config_page.dart';
+import 'package:aliyun_edm_manager/models/receiver/receiver_detail.dart';
+import 'package:aliyun_edm_manager/services/background_receiver_service.dart';
+import 'package:aliyun_edm_manager/pages/receiver/background_processing_page.dart';
+
+/// 收件人列表冲突处理选项
+enum ConflictAction {
+  /// 删除现有列表并创建新列表
+  deleteAndCreate,
+  /// 直接追加到现有列表
+  append,
+  /// 取消操作
+  cancel,
+}
 
 class BatchCreateReceiverPage extends StatefulWidget {
   const BatchCreateReceiverPage({super.key});
@@ -41,9 +52,9 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
   String _currentStatus = '';
   
   // 处理结果
-  List<String> _successLists = [];
-  List<String> _failedLists = [];
-  List<String> _invalidEmails = [];
+  final List<String> _successLists = [];
+  final List<String> _failedLists = [];
+  final List<String> _invalidEmails = [];
 
   @override
   void initState() {
@@ -162,7 +173,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withAlpha(13),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -297,7 +308,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withAlpha(13),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -372,10 +383,16 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
                   ),
                   TextButton.icon(
                     onPressed: () async {
-                      final result = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const FilterEmailsConfigPage(),
+                      // TODO: 暂时注释掉，等待FilterEmailsConfigPage页面完善
+                      // final result = await Navigator.push(
+                      //   context,
+                      //   MaterialPageRoute(
+                      //     builder: (context) => const FilterEmailsConfigPage(),
+                      //   ),
+                      // );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('过滤邮箱配置功能正在开发中'),
                         ),
                       );
                     },
@@ -413,7 +430,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withAlpha(13),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -498,7 +515,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withAlpha(13),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -522,28 +539,31 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
           ),
           const SizedBox(height: 16),
           
-          Text(_currentStatus),
-          const SizedBox(height: 8),
+          Text(
+            _currentStatus,
+            style: const TextStyle(fontSize: 14),
+          ),
+          const SizedBox(height: 12),
           
           if (_totalLists > 0) ...[
             LinearProgressIndicator(
               value: _processedLists / _totalLists,
-              backgroundColor: Colors.grey[200],
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[600]!),
+              backgroundColor: Colors.grey[300],
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
             ),
             const SizedBox(height: 8),
             Text('收件人列表: $_processedLists / $_totalLists'),
           ],
           
           if (_totalEmails > 0) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             LinearProgressIndicator(
               value: _processedEmails / _totalEmails,
-              backgroundColor: Colors.grey[200],
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.green[600]!),
+              backgroundColor: Colors.grey[300],
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
             ),
             const SizedBox(height: 8),
-            Text('邮箱地址: $_processedEmails / $_totalEmails'),
+            Text('收件人: $_processedEmails / $_totalEmails'),
           ],
         ],
       ),
@@ -551,28 +571,79 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
   }
 
   Widget _buildCreateButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: _selectedFile == null || _isProcessing ? null : _startProcessing,
-        icon: _isProcessing 
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+    return Column(
+      children: [
+        // 前台处理按钮
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _isProcessing ? null : () => _startProcessing(useBackground: false),
+            icon: _isProcessing 
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.play_arrow),
+            label: Text(_isProcessing ? '处理中...' : '前台处理'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-            )
-          : const Icon(Icons.play_arrow, color: Colors.white),
-        label: Text(_isProcessing ? '处理中...' : '开始创建'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.green,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
         ),
-      ),
+        const SizedBox(height: 12),
+        
+        // 后台处理按钮
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _isProcessing ? null : () => _startProcessing(useBackground: true),
+            icon: const Icon(Icons.schedule),
+            label: const Text('后台处理'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
+        
+        // 说明文字
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orange[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.orange[200]!),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.orange[600], size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '前台处理：在当前页面显示进度，会阻塞界面操作\n'
+                  '后台处理：跳转到进度页面，可以继续操作其他界面',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.orange[700],
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -585,7 +656,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withAlpha(13),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -615,10 +686,10 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
                 Icon(Icons.check_circle, color: Colors.green[600], size: 16),
                 const SizedBox(width: 8),
                 Text(
-                  '成功创建 ${_successLists.length} 个收件人列表',
+                  '成功创建: ${_successLists.length} 个列表',
                   style: TextStyle(
                     color: Colors.green[600],
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -632,10 +703,10 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
                 Icon(Icons.error, color: Colors.red[600], size: 16),
                 const SizedBox(width: 8),
                 Text(
-                  '失败 ${_failedLists.length} 个收件人列表',
+                  '创建失败: ${_failedLists.length} 个列表',
                   style: TextStyle(
                     color: Colors.red[600],
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -649,10 +720,10 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
                 Icon(Icons.warning, color: Colors.orange[600], size: 16),
                 const SizedBox(width: 8),
                 Text(
-                  '无效邮箱 ${_invalidEmails.length} 个',
+                  '无效邮箱: ${_invalidEmails.length} 个',
                   style: TextStyle(
                     color: Colors.orange[600],
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -672,21 +743,25 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
       );
 
       if (result != null && result.files.isNotEmpty) {
-        setState(() {
-          _selectedFile = result.files.first;
-        });
+        if (mounted) {
+          setState(() {
+            _selectedFile = result.files.first;
+          });
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('选择文件失败: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('选择文件失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
-  Future<void> _startProcessing() async {
+  Future<void> _startProcessing({bool useBackground = false}) async {
     if (_selectedFile == null) return;
 
     // 检查配置
@@ -724,9 +799,6 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
       return;
     }
 
-    // 检查阿里云配置
-    // final serviceManager = AliyunServiceManager();
-
     setState(() {
       _isProcessing = true;
       _totalEmails = 0;
@@ -740,122 +812,305 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
     });
 
     try {
-      await _processFile(count);
+      if (useBackground) {
+        // 后台处理
+        await _startBackgroundProcessing(count);
+      } else {
+        // 前台处理
+        await _processFile(count);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('处理失败: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('处理失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+    }
+  }
+
+  /// 处理文件并创建收件人列表
+  Future<void> _processFile(int countPerList) async {
+    // 检查配置
+    if (!_checkConfiguration()) return;
+    
+    // 初始化服务管理器
+    final serviceManager = _initializeServiceManager();
+    
+    // 解析文件数据
+    final emailBatches = await _parseReceiverFile(countPerList);
+    if (emailBatches.isEmpty) return;
+    
+    // 处理收件人列表
+    await _handleReceiverList(serviceManager, emailBatches);
+    
+    if (mounted) {
       setState(() {
-        _isProcessing = false;
+        _currentStatus = '处理完成';
       });
     }
   }
 
-  Future<void> _processFile(int countPerList) async {
-    final serviceManager = AliyunServiceManager();
-    
-    // 从Provider获取现有的收件人列表名称用于重复检查
-    setState(() {
-      _currentStatus = '正在获取现有收件人列表...';
-    });
-    
-    final provider = context.read<ReceiverListProvider>();
-    final existingNames = provider.receiverNames;
-    
-    // 读取文件内容
-    setState(() {
-      _currentStatus = '正在读取文件...';
-    });
+  /// 检查阿里云配置
+  bool _checkConfiguration() {
+    final globalConfig = context.read<GlobalConfigProvider>();
+    if (!globalConfig.isConfigured) {
+      if (mounted) {
+        setState(() {
+          _currentStatus = '阿里云AccessKey未配置，请先配置';
+        });
+      }
+      return false;
+    }
+    return true;
+  }
 
+  /// 初始化服务管理器
+  AliyunServiceManager _initializeServiceManager() {
+    final globalConfig = context.read<GlobalConfigProvider>();
+    final serviceManager = AliyunServiceManager();
+    serviceManager.initialize(globalConfig);
+    return serviceManager;
+  }
+
+  /// 解析收件人文件数据
+  Future<List<List<String>>> _parseReceiverFile(int countPerList) async {
+    if (mounted) {
+      setState(() {
+        _currentStatus = '正在读取文件...';
+      });
+    }
+
+    // 读取文件内容
     List<String> emails = await _readEmailsFromFile();
     
-    // 过滤邮箱
-    setState(() {
-      _currentStatus = '正在过滤邮箱...';
-    });
+    if (mounted) {
+      setState(() {
+        _currentStatus = '正在过滤邮箱...';
+      });
+    }
     
+    // 过滤邮箱
     emails = await _filterEmails(emails);
     
     if (emails.isEmpty) {
-      setState(() {
-        _currentStatus = '没有有效的邮箱地址';
-      });
-      return;
+      if (mounted) {
+        setState(() {
+          _currentStatus = '没有有效的邮箱地址';
+        });
+      }
+      return [];
     }
 
     // 拆分邮箱列表
     final emailBatches = _splitEmails(emails, countPerList);
     
-    setState(() {
-      _totalEmails = emails.length;
-      _totalLists = emailBatches.length;
-      _currentStatus = '开始创建收件人列表...';
-    });
+    if (mounted) {
+      setState(() {
+        _totalEmails = emails.length;
+        _totalLists = emailBatches.length;
+        _currentStatus = '开始处理收件人列表...';
+      });
+    }
+    
+    return emailBatches;
+  }
 
+  /// 处理收件人列表创建和收件人数据写入
+  Future<void> _handleReceiverList(AliyunServiceManager serviceManager, List<List<String>> emailBatches) async {
+    final receiverService = serviceManager.receiverService;
+    final provider = context.read<ReceiverListProvider>();
+    final existingNames = provider.receiverNames;
+    
+    // 查询现有收件人列表
+    if (mounted) {
+      setState(() {
+        _currentStatus = '正在查询现有收件人列表...';
+      });
+    }
+    
+    final existingReceivers = await receiverService.queryReceivers();
+    
     // 处理每个批次
     for (int i = 0; i < emailBatches.length; i++) {
       final batch = emailBatches[i];
       final listName = '${_prefixController.text.trim()}${i + 1}';
       final alias = '${_getCurrentDate()}${(i + 1).toString().padLeft(2, '0')}${_suffixController.text.trim()}';
       
-      // 检查名称是否重复
-      if (existingNames.contains(listName.toLowerCase().trim())) {
-        print('收件人列表名称重复: $listName');
-        _failedLists.add('$listName (名称重复)');
-        continue;
+      if (mounted) {
+        setState(() {
+          _currentStatus = '正在处理收件人列表: $listName (${i + 1}/$_totalLists)';
+        });
       }
-      
-      setState(() {
-        _currentStatus = '正在创建收件人列表: $listName (${i + 1}/$_totalLists)';
-      });
 
       try {
-        // 创建收件人列表
-        final receiverService = serviceManager.receiverService;
-        final createResponse = await receiverService.createReceiver(listName, alias: alias);
-        final receiverId = createResponse.receiverId;
+        // 检查收件人列表是否存在
+        final existingReceiver = _findExistingReceiver(existingReceivers, listName);
         
-        // 分批添加收件人（每次最多500个）
-        final emailChunks = _chunkEmails(batch, 500);
-        for (int j = 0; j < emailChunks.length; j++) {
-          final chunk = emailChunks[j];
-          setState(() {
-            _currentStatus = '正在添加收件人到列表: $listName (${j + 1}/${emailChunks.length})';
-          });
+        if (existingReceiver == null) {
+          // 列表不存在，直接创建
+          await _createNewReceiverList(receiverService, listName, alias, batch);
+        } else {
+          // 列表存在，检查是否有收件人数据
+          final hasReceivers = existingReceiver['Count'] > 0;
           
-          // 为每个邮箱创建收件人参数
-          final receiverParamsList = chunk.map((email) => 
-            ReceiverDetailParams(email: email, fieldValues: {})
-          ).toList();
-          
-          // 批量添加收件人
-          await receiverService.saveReceiverDetails(receiverId, receiverParamsList);
-          
-          setState(() {
-            _processedEmails += chunk.length;
-          });
+          if (!hasReceivers) {
+            // 列表存在但无收件人数据，直接写入
+            await _addReceiversToExistingList(receiverService, existingReceiver['ReceiverId'], batch);
+          } else {
+            // 列表存在且有收件人数据，需要用户选择处理方式
+            final action = await _showConflictDialog(listName, existingReceiver['Count']);
+            if (action == ConflictAction.cancel) {
+              _failedLists.add('$listName (用户取消)');
+              continue;
+            } else if (action == ConflictAction.deleteAndCreate) {
+              await _deleteAndCreateReceiverList(receiverService, listName, alias, batch, existingReceiver['ReceiverId']);
+            } else if (action == ConflictAction.append) {
+              await _addReceiversToExistingList(receiverService, existingReceiver['ReceiverId'], batch);
+            }
+          }
         }
         
         _successLists.add(listName);
         // 将新创建的名称添加到现有名称集合中，避免后续重复
         existingNames.add(listName.toLowerCase().trim());
       } catch (e) {
-        print('创建收件人列表失败: $listName, 错误: $e');
+        debugPrint('处理收件人列表失败: $listName, 错误: $e');
         _failedLists.add(listName);
       }
       
+      if (mounted) {
+        setState(() {
+          _processedLists = i + 1;
+        });
+      }
+    }
+  }
+
+  /// 查找现有的收件人列表
+  Map<String, dynamic>? _findExistingReceiver(List<Map<String, dynamic>> existingReceivers, String listName) {
+    try {
+      return existingReceivers.firstWhere(
+        (receiver) => receiver['ReceiversName'] == listName,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// 创建新的收件人列表
+  Future<void> _createNewReceiverList(
+    dynamic receiverService, 
+    String listName, 
+    String alias, 
+    List<String> emails
+  ) async {
+    if (mounted) {
       setState(() {
-        _processedLists = i + 1;
+        _currentStatus = '正在创建收件人列表: $listName';
       });
     }
     
-    setState(() {
-      _currentStatus = '处理完成';
-    });
+    final createResponse = await receiverService.createReceiver(listName, alias: alias);
+    final receiverId = createResponse.receiverId;
+    
+    await _addReceiversToExistingList(receiverService, receiverId, emails);
+  }
+
+  /// 向现有收件人列表添加收件人
+  Future<void> _addReceiversToExistingList(
+    dynamic receiverService, 
+    String receiverId, 
+    List<String> emails
+  ) async {
+    // 分批添加收件人（每次最多500个）
+    final emailChunks = _chunkEmails(emails, 500);
+    for (int j = 0; j < emailChunks.length; j++) {
+      final chunk = emailChunks[j];
+      if (mounted) {
+        setState(() {
+          _currentStatus = '正在添加收件人到列表 (${j + 1}/${emailChunks.length})';
+        });
+      }
+      
+      // 为每个邮箱创建收件人参数
+      final receiverParamsList = chunk.map((email) => 
+        ReceiverDetailParams(email: email, fieldValues: {})
+      ).toList();
+      
+      // 批量添加收件人
+      await receiverService.saveReceiverDetails(receiverId, receiverParamsList);
+      
+      if (mounted) {
+        setState(() {
+          _processedEmails += chunk.length;
+        });
+      }
+    }
+  }
+
+  /// 删除现有列表并创建新列表
+  Future<void> _deleteAndCreateReceiverList(
+    dynamic receiverService, 
+    String listName, 
+    String alias, 
+    List<String> emails,
+    String existingReceiverId
+  ) async {
+    if (mounted) {
+      setState(() {
+        _currentStatus = '正在删除现有收件人列表: $listName';
+      });
+    }
+    
+    // 删除现有列表
+    await receiverService.deleteReceiver(existingReceiverId);
+    
+    // 等待删除操作完成（阿里云删除操作需要时间）
+    await Future.delayed(Duration(seconds: 2));
+    
+    // 创建新列表（添加后缀避免重名）
+    final newListName = '${listName}_new';
+    await _createNewReceiverList(receiverService, newListName, alias, emails);
+  }
+
+  /// 显示冲突处理对话框
+  Future<ConflictAction> _showConflictDialog(String listName, int existingCount) async {
+    return await showDialog<ConflictAction>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('收件人列表冲突'),
+          content: Text(
+            '收件人列表 "$listName" 已存在，且包含 $existingCount 个收件人。\n\n'
+            '请选择处理方式：',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(ConflictAction.cancel),
+              child: Text('取消'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(ConflictAction.deleteAndCreate),
+              child: Text('删除现有列表并创建新列表'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(ConflictAction.append),
+              child: Text('直接追加到现有列表'),
+            ),
+          ],
+        );
+      },
+    ) ?? ConflictAction.cancel;
   }
 
   Future<List<String>> _readEmailsFromFile() async {
@@ -916,20 +1171,28 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
       allFilterEmails = {...pageFilterEmails};
     }
     if (allFilterEmails.isNotEmpty) {
-      print('=== 过滤邮件列表 ===');
-      print('过滤列表中的邮箱: $allFilterEmails');
-      print('过滤前邮箱数量: ${filteredEmails.length}');
+      debugPrint('=== 过滤邮件列表 ===');
+      debugPrint('过滤列表中的邮箱: $allFilterEmails');
+      debugPrint('过滤前邮箱数量: ${filteredEmails.length}');
       final beforeFilter = List<String>.from(filteredEmails);
       filteredEmails = filteredEmails.where((email) => !allFilterEmails.contains(email)).toList();
-      print('过滤后邮箱数量: ${filteredEmails.length}');
-      print('被过滤掉的邮箱: ${beforeFilter.where((email) => allFilterEmails.contains(email)).toList()}');
+      debugPrint('过滤后邮箱数量: ${filteredEmails.length}');
+      debugPrint('被过滤掉的邮箱: ${beforeFilter.where((email) => allFilterEmails.contains(email)).toList()}');
     }
     
     return filteredEmails;
   }
 
   bool _isValidEmail(String email) {
-    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    // 更严格的邮箱验证正则表达式
+    // 不允许连续的点号，不允许以点号开头或结尾的本地部分
+    final emailRegex = RegExp(r'^[a-zA-Z0-9]([a-zA-Z0-9._%+-]*[a-zA-Z0-9])?@[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}$');
+    
+    // 额外的验证：检查是否包含连续点号
+    if (email.contains('..')) {
+      return false;
+    }
+    
     return emailRegex.hasMatch(email);
   }
 
@@ -953,6 +1216,38 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
 
   String _getCurrentDate() {
     final now = DateTime.now();
-    return '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+    return '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}'
+           '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}'
+           '${now.second.toString().padLeft(2, '0')}';
+  }
+
+  /// 开始后台处理
+  Future<void> _startBackgroundProcessing(int countPerList) async {
+    // 解析文件数据
+    final emailBatches = await _parseReceiverFile(countPerList);
+    if (emailBatches.isEmpty) return;
+
+    // 获取全局配置
+    final globalConfig = context.read<GlobalConfigProvider>();
+    final provider = context.read<ReceiverListProvider>();
+    final existingNames = provider.receiverNames;
+
+    // 跳转到后台处理页面
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const BackgroundProcessingPage(),
+      ),
+    );
+
+    // 开始后台处理
+    final backgroundService = BackgroundReceiverService.instance;
+    await backgroundService.startBackgroundProcessing(
+      globalConfig: globalConfig,
+      emailBatches: emailBatches,
+      prefix: _prefixController.text.trim(),
+      suffix: _suffixController.text.trim(),
+      existingNames: existingNames.toList(),
+    );
   }
 } 

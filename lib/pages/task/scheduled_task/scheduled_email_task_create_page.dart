@@ -85,9 +85,49 @@ class _ScheduledEmailTaskCreatePageState extends State<ScheduledEmailTaskCreateP
   bool _emailTagsLoaded = false;
   bool _showEmailTagDropdown = false;
 
+  // 添加一个方法来检查所有必填字段是否已填写
+  bool _areAllRequiredFieldsFilled() {
+    // 检查任务名称
+    if (_taskNameController.text.trim().isEmpty) return false;
+    
+    // 检查收件人列表
+    if (_selectedReceiverIds.isEmpty) return false;
+    
+    // 检查邮件模板
+    if (_selectedTemplateId == null || _selectedTemplateId!.isEmpty) return false;
+    
+    // 检查发信地址
+    if (_selectedSenderAddress == null || _selectedSenderAddress!.isEmpty) return false;
+    
+    // 检查发信地址类型
+    if (_selectedSenderType == null || _selectedSenderType!.isEmpty) return false;
+    
+    // 检查邮件标签（必填）
+    if (_selectedEmailTag == null || _selectedEmailTag!.isEmpty) return false;
+    
+    // 如果启用了定时发送，检查定时发送时间
+    if (_enableScheduledSend) {
+      if (_startSendTime == null) return false;
+      if (_startSendTime!.isBefore(DateTime.now())) return false;
+    }
+    
+    return true;
+  }
+
   @override
   void initState() {
     super.initState();
+    
+    // 添加任务名称控制器监听器
+    _taskNameController.addListener(() {
+      setState(() {});
+    });
+    
+    // 添加发送间隔控制器监听器
+    _sendIntervalController.addListener(() {
+      setState(() {});
+    });
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ReceiverListProvider>().loadReceivers();
       // 如果是编辑模式，预填充数据
@@ -105,25 +145,25 @@ class _ScheduledEmailTaskCreatePageState extends State<ScheduledEmailTaskCreateP
     _taskNameController.text = task.taskName;
     _selectedTemplateId = task.templateId;
     _selectedTemplateName = task.templateName;
-    _selectedSenderType = task.senderType;
-    _selectedSenderAddress = task.senderAddress;
-    _senderAddressController.text = task.senderAddress;
-    _selectedEmailTag = task.tag;
-    _enableTracking = task.enableTracking;
+    _selectedSenderAddress = task.mailAddress;
+    _senderAddressController.text = task.mailAddress;
+    _selectedEmailTag = task.emailTagId;
+    _enableTracking = task.clickTrack;
     
     // 在编辑模式下预加载邮件标签数据
     _loadEmailTags();
     
+    // 触发状态更新以检查按钮状态
+    setState(() {});
+    
     // 填充收件人列表
-    _selectedReceiverIds = task.receiverLists.map((e) => e.receiverId).toList();
-    _selectedReceiverNames = Map.fromEntries(
-      task.receiverLists.map((e) => MapEntry(e.receiverId, e.receiverName))
-    );
+    _selectedReceiverIds = [task.receiversId];
+    _selectedReceiverNames = {task.receiversId: task.receiversName};
     
     // 填充定时发送信息
-    if (task.scheduledStartTime != null) {
+    if (task.scheduledTime != null) {
       _enableScheduledSend = true;
-      _startSendTime = task.scheduledStartTime;
+      _startSendTime = task.scheduledTime;
     }
     
     // 填充发送间隔
@@ -1756,12 +1796,19 @@ class _ScheduledEmailTaskCreatePageState extends State<ScheduledEmailTaskCreateP
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '邮件标签',
-          style: TextStyle(
-            color: Colors.grey[700],
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
+        RichText(
+          text: TextSpan(
+            style: TextStyle(color: Colors.grey[700], fontSize: 14),
+            children: const [
+              TextSpan(
+                text: '邮件标签',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+              TextSpan(
+                text: ' *',
+                style: TextStyle(color: Colors.red),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 8),
@@ -1934,6 +1981,8 @@ class _ScheduledEmailTaskCreatePageState extends State<ScheduledEmailTaskCreateP
                 _selectedEmailTag = isSelected ? null : tag.tagId;
                 _showEmailTagDropdown = false;
               });
+              // 触发按钮状态更新
+              setState(() {});
             },
           );
         },
@@ -2001,6 +2050,8 @@ class _ScheduledEmailTaskCreatePageState extends State<ScheduledEmailTaskCreateP
   }
 
   Widget _buildBottomActionBar() {
+    final bool isFormValid = _areAllRequiredFieldsFilled();
+    
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -2032,15 +2083,15 @@ class _ScheduledEmailTaskCreatePageState extends State<ScheduledEmailTaskCreateP
           const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton(
-              onPressed: _submitTask,
+              onPressed: isFormValid ? _submitTask : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue[600],
+                backgroundColor: isFormValid ? Colors.blue[600] : Colors.grey[400],
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
-                elevation: 2,
+                elevation: isFormValid ? 2 : 0,
               ),
               child: Text(
                 widget.taskToEdit != null ? '更新任务' : '创建任务',
@@ -2065,9 +2116,9 @@ class _ScheduledEmailTaskCreatePageState extends State<ScheduledEmailTaskCreateP
       taskName: _taskNameController.text,
       selectedReceiverIds: _selectedReceiverIds,
       selectedTemplateId: _selectedTemplateId,
-      selectedSenderAddress: _selectedSenderAddress,
-      selectedSenderType: _selectedSenderType,
-      selectedEmailTag: _selectedEmailTag,
+      selectedMailAddress: _selectedSenderAddress,
+      selectedMailAddressType: _selectedSenderType,
+      selectedEmailTagId: _selectedEmailTag,
       enableScheduledSend: _enableScheduledSend,
       startSendTime: _startSendTime,
       sendIntervalText: _sendIntervalController.text,
@@ -2133,11 +2184,11 @@ class _ScheduledEmailTaskCreatePageState extends State<ScheduledEmailTaskCreateP
           selectedReceiverIds: _selectedReceiverIds,
           templateId: _selectedTemplateId!,
           templateName: _selectedTemplateName!,
-          senderAddress: _selectedSenderAddress!,
-          senderName: senderName,
-          senderType: _selectedSenderType!,
-          emailTag: _selectedEmailTag!,
-          enableTracking: _enableTracking,
+          mailAddress: _selectedSenderAddress!,
+          mailAddressType: _selectedSenderType!,
+          emailTagId: _selectedEmailTag!,
+          emailTagName: _getSelectedEmailTagName() ?? _selectedEmailTag!,
+          clickTrack: _enableTracking,
           enableScheduledSend: _enableScheduledSend,
           startSendTime: _startSendTime,
           sendInterval: sendIntervalMinutes,
@@ -2151,11 +2202,11 @@ class _ScheduledEmailTaskCreatePageState extends State<ScheduledEmailTaskCreateP
           selectedReceiverIds: _selectedReceiverIds,
           templateId: _selectedTemplateId!,
           templateName: _selectedTemplateName!,
-          senderAddress: _selectedSenderAddress!,
-          senderName: senderName,
-          senderType: _selectedSenderType!,
-          emailTag: _selectedEmailTag!,
-          enableTracking: _enableTracking,
+          mailAddress: _selectedSenderAddress!,
+          mailAddressType: _selectedSenderType!,
+          emailTagId: _selectedEmailTag!,
+          emailTagName: _getSelectedEmailTagName() ?? _selectedEmailTag!,
+          clickTrack: _enableTracking,
           enableScheduledSend: _enableScheduledSend,
           startSendTime: _startSendTime,
           sendInterval: sendIntervalMinutes,

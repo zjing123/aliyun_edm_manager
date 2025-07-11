@@ -1,11 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
-import 'package:aliyun_edm_manager/services/config/config_service.dart';
 import 'package:aliyun_edm_manager/models/task/scheduled_email_task_model.dart';
-import 'package:aliyun_edm_manager/models/receiver/receiver_list_model.dart';
 import 'package:aliyun_edm_manager/models/sender/sender_name_model.dart';
 
 class DatabaseService {
@@ -36,36 +33,35 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 7,
       onCreate: _createTables,
       onUpgrade: _upgradeDatabase,
     );
   }
 
   Future<void> _createTables(Database db, int version) async {
-    // 创建定时发送邮件表
+    // 创建定时发送邮件表（更新后的结构）
     await db.execute('''
       CREATE TABLE scheduled_email_tasks (
-        task_id TEXT PRIMARY KEY,
-        task_name TEXT NOT NULL,
-        template_id TEXT NOT NULL,
-        template_name TEXT NOT NULL,
-        receiver_lists TEXT NOT NULL,
-        sender_address TEXT NOT NULL,
-        sender_name TEXT NOT NULL,
-        sender_type TEXT NOT NULL,
-        tag TEXT,
-        enable_tracking INTEGER NOT NULL DEFAULT 0,
-        status TEXT NOT NULL DEFAULT 'pending',
-        created_at TEXT NOT NULL,
-        started_at TEXT,
-        completed_at TEXT,
-        scheduled_start_time TEXT,
-        send_interval_minutes INTEGER,
-        total_emails INTEGER NOT NULL DEFAULT 0,
-        sent_emails INTEGER NOT NULL DEFAULT 0,
-        failed_emails INTEGER NOT NULL DEFAULT 0,
-        error_message TEXT
+        task_id TEXT PRIMARY KEY,                    -- 任务id
+        task_name TEXT NOT NULL,                     -- 任务名称
+        template_id TEXT NOT NULL,                   -- 模板id
+        template_name TEXT NOT NULL,                 -- 模板名称
+        status TEXT NOT NULL DEFAULT 'pending',      -- 任务状态
+        created_at TEXT NOT NULL,                    -- 创建时间
+        started_at TEXT,                             -- 任务开始时间
+        completed_at TEXT,                           -- 任务完成时间
+        send_interval_minutes INTEGER,               -- 任务间隔分钟数
+        error_message TEXT,                          -- 错误信息
+        receivers_id TEXT NOT NULL,                  -- 收件人列表id
+        receivers_name TEXT NOT NULL,                -- 收件人列表名称
+        mail_address_id TEXT NOT NULL,               -- 发信地址 ID
+        mail_address TEXT NOT NULL,                  -- 发信地址
+        mail_address_type TEXT NOT NULL,             -- 发信地址类型
+        email_tag_id TEXT NOT NULL,                  -- 邮件标签id
+        email_tag_name TEXT NOT NULL,                -- 邮件标签名称
+        click_track INTEGER NOT NULL DEFAULT 0,      -- 是否启用跟踪
+        scheduled_time TEXT                          -- 任务执行时间
       )
     ''');
 
@@ -82,7 +78,10 @@ class DatabaseService {
 
     // 创建索引以提高查询性能
     await db.execute('CREATE INDEX idx_task_status ON scheduled_email_tasks(status)');
-    await db.execute('CREATE INDEX idx_scheduled_time ON scheduled_email_tasks(scheduled_start_time)');
+    await db.execute('CREATE INDEX idx_task_receivers_id ON scheduled_email_tasks(receivers_id)');
+    await db.execute('CREATE INDEX idx_task_template_id ON scheduled_email_tasks(template_id)');
+    await db.execute('CREATE INDEX idx_task_mail_address_id ON scheduled_email_tasks(mail_address_id)');
+    await db.execute('CREATE INDEX idx_task_email_tag_id ON scheduled_email_tasks(email_tag_id)');
     await db.execute('CREATE INDEX idx_sender_name ON sender_names(name)');
   }
 
@@ -129,6 +128,160 @@ class DatabaseService {
         }
       } catch (e) {
         print('数据库升级错误（is_default）：$e');
+      }
+    }
+
+    if (oldVersion < 4) {
+      // v4: 跳过创建scheduled_email_task_details表，因为v5会合并字段
+      print('数据库升级：跳过v4的scheduled_email_task_details表创建，将在v5中合并字段');
+    }
+
+    if (oldVersion < 5) {
+      // v5: 将scheduled_email_task_details表的字段合并到scheduled_email_tasks表中
+      try {
+        // 检查新字段是否已存在
+        final columns = await db.rawQuery("PRAGMA table_info(scheduled_email_tasks)");
+        final hasReceiversId = columns.any((col) => col['name'] == 'receivers_id');
+        
+        if (!hasReceiversId) {
+          // 添加新字段
+          await db.execute('ALTER TABLE scheduled_email_tasks ADD COLUMN receivers_id TEXT NOT NULL DEFAULT ""');
+          await db.execute('ALTER TABLE scheduled_email_tasks ADD COLUMN receivers_name TEXT NOT NULL DEFAULT ""');
+          await db.execute('ALTER TABLE scheduled_email_tasks ADD COLUMN mail_address_id TEXT NOT NULL DEFAULT ""');
+          await db.execute('ALTER TABLE scheduled_email_tasks ADD COLUMN mail_address_name TEXT NOT NULL DEFAULT ""');
+          await db.execute('ALTER TABLE scheduled_email_tasks ADD COLUMN mail_address_type TEXT NOT NULL DEFAULT ""');
+          await db.execute('ALTER TABLE scheduled_email_tasks ADD COLUMN email_tag TEXT NOT NULL DEFAULT ""');
+          await db.execute('ALTER TABLE scheduled_email_tasks ADD COLUMN email_tag_name TEXT NOT NULL DEFAULT ""');
+          await db.execute('ALTER TABLE scheduled_email_tasks ADD COLUMN click_track INTEGER NOT NULL DEFAULT 0');
+          await db.execute('ALTER TABLE scheduled_email_tasks ADD COLUMN scheduled_time TEXT');
+          
+          // 创建新索引
+          await db.execute('CREATE INDEX idx_task_receivers_id ON scheduled_email_tasks(receivers_id)');
+          await db.execute('CREATE INDEX idx_task_template_id ON scheduled_email_tasks(template_id)');
+          await db.execute('CREATE INDEX idx_task_mail_address_id ON scheduled_email_tasks(mail_address_id)');
+          await db.execute('CREATE INDEX idx_task_email_tag ON scheduled_email_tasks(email_tag)');
+          
+          print('数据库升级：已为 scheduled_email_tasks 表添加新字段');
+        }
+        
+        // 检查scheduled_email_task_details表是否存在，如果存在则删除
+        final result = await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='scheduled_email_task_details'"
+        );
+        
+        if (result.isNotEmpty) {
+          // 删除旧表
+          await db.execute('DROP TABLE scheduled_email_task_details');
+          print('数据库升级：已删除 scheduled_email_task_details 表');
+        }
+      } catch (e) {
+        print('数据库升级错误（合并字段）：$e');
+      }
+    }
+
+    if (oldVersion < 6) {
+      // v6: 移除部分字段，保留历史数据
+      try {
+        // 1. 创建新表（去除指定字段）
+        await db.execute('''
+          CREATE TABLE scheduled_email_tasks_new (
+            task_id TEXT PRIMARY KEY,
+            task_name TEXT NOT NULL,
+            template_id TEXT NOT NULL,
+            template_name TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TEXT NOT NULL,
+            started_at TEXT,
+            completed_at TEXT,
+            scheduled_start_time TEXT,
+            send_interval_minutes INTEGER,
+            error_message TEXT,
+            receivers_id TEXT NOT NULL,
+            receivers_name TEXT NOT NULL,
+            mail_address_id TEXT NOT NULL,
+            mail_address_name TEXT NOT NULL,
+            mail_address_type TEXT NOT NULL,
+            email_tag TEXT NOT NULL,
+            email_tag_name TEXT NOT NULL,
+            click_track INTEGER NOT NULL DEFAULT 0,
+            scheduled_time TEXT
+          )
+        ''');
+        // 2. 迁移数据（只迁移保留字段）
+        await db.execute('''
+          INSERT INTO scheduled_email_tasks_new (
+            task_id, task_name, template_id, template_name, status, created_at, started_at, completed_at, scheduled_start_time, send_interval_minutes, error_message, receivers_id, receivers_name, mail_address_id, mail_address_name, mail_address_type, email_tag, email_tag_name, click_track, scheduled_time
+          )
+          SELECT
+            task_id, task_name, template_id, template_name, status, created_at, started_at, completed_at, scheduled_start_time, send_interval_minutes, error_message, receivers_id, receivers_name, mail_address_id, mail_address_name, mail_address_type, email_tag, email_tag_name, click_track, scheduled_time
+          FROM scheduled_email_tasks
+        ''');
+        // 3. 删除旧表
+        await db.execute('DROP TABLE scheduled_email_tasks');
+        // 4. 重命名新表
+        await db.execute('ALTER TABLE scheduled_email_tasks_new RENAME TO scheduled_email_tasks');
+        // 5. 重新创建索引
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_task_status ON scheduled_email_tasks(status)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_scheduled_time ON scheduled_email_tasks(scheduled_start_time)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_task_receivers_id ON scheduled_email_tasks(receivers_id)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_task_template_id ON scheduled_email_tasks(template_id)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_task_mail_address_id ON scheduled_email_tasks(mail_address_id)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_task_email_tag ON scheduled_email_tasks(email_tag)');
+        print('数据库升级：v6已迁移scheduled_email_tasks表，去除多余字段');
+      } catch (e) {
+        print('数据库升级错误（v6字段迁移）：$e');
+      }
+    }
+
+    if (oldVersion < 7) {
+      // v7: 进一步移除字段，重命名字段，添加注释
+      try {
+        // 1. 创建新表（移除更多字段，重命名字段）
+        await db.execute('''
+          CREATE TABLE scheduled_email_tasks_new (
+            task_id TEXT PRIMARY KEY,                    -- 任务id
+            task_name TEXT NOT NULL,                     -- 任务名称
+            template_id TEXT NOT NULL,                   -- 模板id
+            template_name TEXT NOT NULL,                 -- 模板名称
+            status TEXT NOT NULL DEFAULT 'pending',      -- 任务状态
+            created_at TEXT NOT NULL,                    -- 创建时间
+            started_at TEXT,                             -- 任务开始时间
+            completed_at TEXT,                           -- 任务完成时间
+            send_interval_minutes INTEGER,               -- 任务间隔分钟数
+            error_message TEXT,                          -- 错误信息
+            receivers_id TEXT NOT NULL,                  -- 收件人列表id
+            receivers_name TEXT NOT NULL,                -- 收件人列表名称
+            mail_address_id TEXT NOT NULL,               -- 发信地址 ID
+            mail_address TEXT NOT NULL,                  -- 发信地址
+            mail_address_type TEXT NOT NULL,             -- 发信地址类型
+            email_tag_id TEXT NOT NULL,                  -- 邮件标签id
+            email_tag_name TEXT NOT NULL,                -- 邮件标签名称
+            click_track INTEGER NOT NULL DEFAULT 0,      -- 是否启用跟踪
+            scheduled_time TEXT                          -- 任务执行时间
+          )
+        ''');
+        // 2. 迁移数据（只迁移保留字段，重命名字段）
+        await db.execute('''
+          INSERT INTO scheduled_email_tasks_new (
+            task_id, task_name, template_id, template_name, status, created_at, started_at, completed_at, send_interval_minutes, error_message, receivers_id, receivers_name, mail_address_id, mail_address, mail_address_type, email_tag_id, email_tag_name, click_track, scheduled_time
+          )
+          SELECT
+            task_id, task_name, template_id, template_name, status, created_at, started_at, completed_at, send_interval_minutes, error_message, receivers_id, receivers_name, mail_address_id, mail_address_name, mail_address_type, email_tag, email_tag_name, click_track, scheduled_time
+          FROM scheduled_email_tasks
+        ''');
+        // 3. 删除旧表
+        await db.execute('DROP TABLE scheduled_email_tasks');
+        // 4. 重命名新表
+        await db.execute('ALTER TABLE scheduled_email_tasks_new RENAME TO scheduled_email_tasks');
+        // 5. 重新创建索引
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_task_status ON scheduled_email_tasks(status)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_task_receivers_id ON scheduled_email_tasks(receivers_id)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_task_template_id ON scheduled_email_tasks(template_id)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_task_mail_address_id ON scheduled_email_tasks(mail_address_id)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_task_email_tag_id ON scheduled_email_tasks(email_tag_id)');
+        print('数据库升级：v7已迁移scheduled_email_tasks表，移除多余字段并重命名字段');
+      } catch (e) {
+        print('数据库升级错误（v7字段迁移）：$e');
       }
     }
   }
@@ -214,9 +367,9 @@ class DatabaseService {
     final db = await database;
     final results = await db.query(
       'scheduled_email_tasks',
-      where: 'task_name LIKE ? OR template_name LIKE ? OR sender_name LIKE ?',
+      where: 'task_name LIKE ? OR template_name LIKE ? OR receivers_name LIKE ?',
       whereArgs: ['%$query%', '%$query%', '%$query%'],
-      orderBy: 'created_at DESC',
+      orderBy: 'started_at ASC',
     );
     return results.map((map) => _mapToTask(map)).toList();
   }
@@ -268,54 +421,46 @@ class DatabaseService {
       'task_name': task.taskName,
       'template_id': task.templateId,
       'template_name': task.templateName,
-      'receiver_lists': jsonEncode(task.receiverLists.map((e) => e.toMap()).toList()),
-      'sender_address': task.senderAddress,
-      'sender_name': task.senderName,
-      'sender_type': task.senderType,
-      'tag': task.tag,
-      'enable_tracking': task.enableTracking ? 1 : 0,
       'status': task.status,
       'created_at': task.createdAt.toIso8601String(),
       'started_at': task.startedAt?.toIso8601String(),
       'completed_at': task.completedAt?.toIso8601String(),
-      'scheduled_start_time': task.scheduledStartTime?.toIso8601String(),
       'send_interval_minutes': task.sendIntervalMinutes,
-      'total_emails': task.totalEmails,
-      'sent_emails': task.sentEmails,
-      'failed_emails': task.failedEmails,
       'error_message': task.errorMessage,
+      'receivers_id': task.receiversId,
+      'receivers_name': task.receiversName,
+      'mail_address_id': task.mailAddressId,
+      'mail_address': task.mailAddress,
+      'mail_address_type': task.mailAddressType,
+      'email_tag_id': task.emailTagId,
+      'email_tag_name': task.emailTagName,
+      'click_track': task.clickTrack ? 1 : 0,
+      'scheduled_time': task.scheduledTime?.toIso8601String(),
     };
   }
 
   // 将Map转换为ScheduledEmailTaskModel
   ScheduledEmailTaskModel _mapToTask(Map<String, dynamic> map) {
-    final receiverListsJson = map['receiver_lists'] as String;
-    final receiverListsData = jsonDecode(receiverListsJson) as List<dynamic>;
-    final receiverLists = receiverListsData
-        .map((e) => ReceiverListConfig.fromMap(e as Map<String, dynamic>))
-        .toList();
-
     return ScheduledEmailTaskModel(
       taskId: map['task_id'] as String,
       taskName: map['task_name'] as String,
       templateId: map['template_id'] as String,
       templateName: map['template_name'] as String,
-      receiverLists: receiverLists,
-      senderAddress: map['sender_address'] as String,
-      senderName: map['sender_name'] as String,
-      senderType: map['sender_type'] as String,
-      tag: map['tag'] as String?,
-      enableTracking: (map['enable_tracking'] as int) == 1,
       status: map['status'] as String,
       createdAt: DateTime.parse(map['created_at'] as String),
       startedAt: map['started_at'] != null ? DateTime.parse(map['started_at'] as String) : null,
       completedAt: map['completed_at'] != null ? DateTime.parse(map['completed_at'] as String) : null,
-      scheduledStartTime: map['scheduled_start_time'] != null ? DateTime.parse(map['scheduled_start_time'] as String) : null,
       sendIntervalMinutes: map['send_interval_minutes'] as int?,
-      totalEmails: map['total_emails'] as int,
-      sentEmails: map['sent_emails'] as int,
-      failedEmails: map['failed_emails'] as int,
       errorMessage: map['error_message'] as String?,
+      receiversId: map['receivers_id'] as String,
+      receiversName: map['receivers_name'] as String,
+      mailAddressId: map['mail_address_id'] as String,
+      mailAddress: map['mail_address'] as String,
+      mailAddressType: map['mail_address_type'] as String,
+      emailTagId: map['email_tag_id'] as String,
+      emailTagName: map['email_tag_name'] as String,
+      clickTrack: (map['click_track'] as int) == 1,
+      scheduledTime: map['scheduled_time'] != null ? DateTime.parse(map['scheduled_time'] as String) : null,
     );
   }
 
@@ -327,6 +472,8 @@ class DatabaseService {
       _database = null;
     }
   }
+
+
 
   // ==================== 发送人名称相关操作 ====================
 

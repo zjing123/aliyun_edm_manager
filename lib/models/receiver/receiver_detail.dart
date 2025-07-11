@@ -94,7 +94,8 @@ class ReceiverDetailParams {
       }
     });
     
-    return '[{${detailMap.entries.map((e) => '"${e.key}":"${e.value}"').join(',')}}]';
+    // 使用JSON编码确保格式正确
+    return jsonEncode([detailMap]);
   }
 
   /// 批量转换为API需要的Detail JSON格式
@@ -116,10 +117,11 @@ class ReceiverDetailParams {
         }
       });
       
-      return '{${detailMap.entries.map((e) => '"${e.key}":"${e.value}"').join(',')}}';
+      return detailMap;
     }).toList();
     
-    return '[${details.join(',')}]';
+    // 使用JSON编码确保格式正确
+    return jsonEncode(details);
   }
 
   /// 从Map创建

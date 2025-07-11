@@ -1,46 +1,44 @@
 class ScheduledEmailTaskModel {
-  final String taskId;
-  final String taskName;
-  final String templateId;
-  final String templateName;
-  final List<ReceiverListConfig> receiverLists;
-  final String senderAddress;
-  final String senderName;
-  final String senderType; // '0' for random, '1' for fixed
-  final String? tag;
-  final bool enableTracking;
-  final String status; // 'pending', 'processing', 'completed', 'failed', 'paused'
-  final DateTime createdAt;
-  final DateTime? startedAt;
-  final DateTime? completedAt;
-  final DateTime? scheduledStartTime; // 定时发送的开始时间
-  final int? sendIntervalMinutes; // 发送间隔(分钟)
-  final int totalEmails;
-  final int sentEmails;
-  final int failedEmails;
-  final String? errorMessage; // 错误消息
+  final String taskId;                    // 任务id
+  final String taskName;                  // 任务名称
+  final String templateId;                // 模板id
+  final String templateName;              // 模板名称
+  final String status;                    // 任务状态
+  final DateTime createdAt;               // 创建时间
+  final DateTime? startedAt;              // 任务开始时间
+  final DateTime? completedAt;            // 任务完成时间
+  final int? sendIntervalMinutes;         // 任务间隔分钟数
+  final String? errorMessage;             // 错误信息
+  final String receiversId;               // 收件人列表id
+  final String receiversName;             // 收件人列表名称
+  final String mailAddressId;             // 发信地址 ID
+  final String mailAddress;               // 发信地址
+  final String mailAddressType;           // 发信地址类型
+  final String emailTagId;                // 邮件标签id
+  final String emailTagName;              // 邮件标签名称
+  final bool clickTrack;                  // 是否启用跟踪
+  final DateTime? scheduledTime;          // 任务执行时间
 
   ScheduledEmailTaskModel({
     required this.taskId,
     required this.taskName,
     required this.templateId,
     required this.templateName,
-    required this.receiverLists,
-    required this.senderAddress,
-    required this.senderName,
-    required this.senderType,
-    this.tag,
-    this.enableTracking = false,
     this.status = 'pending',
     required this.createdAt,
     this.startedAt,
     this.completedAt,
-    this.scheduledStartTime,
     this.sendIntervalMinutes,
-    this.totalEmails = 0,
-    this.sentEmails = 0,
-    this.failedEmails = 0,
     this.errorMessage,
+    required this.receiversId,
+    required this.receiversName,
+    required this.mailAddressId,
+    required this.mailAddress,
+    required this.mailAddressType,
+    required this.emailTagId,
+    required this.emailTagName,
+    this.clickTrack = false,
+    this.scheduledTime,
   });
 
   factory ScheduledEmailTaskModel.fromMap(Map<String, dynamic> map) {
@@ -49,25 +47,21 @@ class ScheduledEmailTaskModel {
       taskName: map['TaskName']?.toString() ?? '',
       templateId: map['TemplateId']?.toString() ?? '',
       templateName: map['TemplateName']?.toString() ?? '',
-      receiverLists: (map['ReceiverLists'] as List<dynamic>?)
-              ?.map((e) => ReceiverListConfig.fromMap(e))
-              .toList() ??
-          [],
-      senderAddress: map['SenderAddress']?.toString() ?? '',
-      senderName: map['SenderName']?.toString() ?? '',
-      senderType: map['SenderType']?.toString() ?? '1',
-      tag: map['Tag']?.toString(),
-      enableTracking: map['EnableTracking'] as bool? ?? false,
       status: map['Status']?.toString() ?? 'pending',
       createdAt: DateTime.tryParse(map['CreatedAt']?.toString() ?? '') ?? DateTime.now(),
       startedAt: map['StartedAt'] != null ? DateTime.tryParse(map['StartedAt'].toString()) : null,
       completedAt: map['CompletedAt'] != null ? DateTime.tryParse(map['CompletedAt'].toString()) : null,
-      scheduledStartTime: map['ScheduledStartTime'] != null ? DateTime.tryParse(map['ScheduledStartTime'].toString()) : null,
       sendIntervalMinutes: map['SendIntervalMinutes'] as int?,
-      totalEmails: map['TotalEmails'] as int? ?? 0,
-      sentEmails: map['SentEmails'] as int? ?? 0,
-      failedEmails: map['FailedEmails'] as int? ?? 0,
       errorMessage: map['ErrorMessage']?.toString(),
+      receiversId: map['ReceiversId']?.toString() ?? '',
+      receiversName: map['ReceiversName']?.toString() ?? '',
+      mailAddressId: map['MailAddressId']?.toString() ?? '',
+      mailAddress: map['MailAddress']?.toString() ?? '',
+      mailAddressType: map['MailAddressType']?.toString() ?? '',
+      emailTagId: map['EmailTagId']?.toString() ?? '',
+      emailTagName: map['EmailTagName']?.toString() ?? '',
+      clickTrack: map['ClickTrack'] as bool? ?? false,
+      scheduledTime: map['ScheduledTime'] != null ? DateTime.tryParse(map['ScheduledTime'].toString()) : null,
     );
   }
 
@@ -77,22 +71,21 @@ class ScheduledEmailTaskModel {
       'TaskName': taskName,
       'TemplateId': templateId,
       'TemplateName': templateName,
-      'ReceiverLists': receiverLists.map((e) => e.toMap()).toList(),
-      'SenderAddress': senderAddress,
-      'SenderName': senderName,
-      'SenderType': senderType,
-      'Tag': tag,
-      'EnableTracking': enableTracking,
       'Status': status,
       'CreatedAt': createdAt.toIso8601String(),
       'StartedAt': startedAt?.toIso8601String(),
       'CompletedAt': completedAt?.toIso8601String(),
-      'ScheduledStartTime': scheduledStartTime?.toIso8601String(),
       'SendIntervalMinutes': sendIntervalMinutes,
-      'TotalEmails': totalEmails,
-      'SentEmails': sentEmails,
-      'FailedEmails': failedEmails,
       'ErrorMessage': errorMessage,
+      'ReceiversId': receiversId,
+      'ReceiversName': receiversName,
+      'MailAddressId': mailAddressId,
+      'MailAddress': mailAddress,
+      'MailAddressType': mailAddressType,
+      'EmailTagId': emailTagId,
+      'EmailTagName': emailTagName,
+      'ClickTrack': clickTrack,
+      'ScheduledTime': scheduledTime?.toIso8601String(),
     };
   }
 
@@ -101,98 +94,47 @@ class ScheduledEmailTaskModel {
     String? taskName,
     String? templateId,
     String? templateName,
-    List<ReceiverListConfig>? receiverLists,
-    String? senderAddress,
-    String? senderName,
-    String? senderType,
-    String? tag,
-    bool? enableTracking,
     String? status,
     DateTime? createdAt,
     DateTime? startedAt,
     DateTime? completedAt,
-    DateTime? scheduledStartTime,
     int? sendIntervalMinutes,
-    int? totalEmails,
-    int? sentEmails,
-    int? failedEmails,
     String? errorMessage,
+    String? receiversId,
+    String? receiversName,
+    String? mailAddressId,
+    String? mailAddress,
+    String? mailAddressType,
+    String? emailTagId,
+    String? emailTagName,
+    bool? clickTrack,
+    DateTime? scheduledTime,
   }) {
     return ScheduledEmailTaskModel(
       taskId: taskId ?? this.taskId,
       taskName: taskName ?? this.taskName,
       templateId: templateId ?? this.templateId,
       templateName: templateName ?? this.templateName,
-      receiverLists: receiverLists ?? this.receiverLists,
-      senderAddress: senderAddress ?? this.senderAddress,
-      senderName: senderName ?? this.senderName,
-      senderType: senderType ?? this.senderType,
-      tag: tag ?? this.tag,
-      enableTracking: enableTracking ?? this.enableTracking,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       startedAt: startedAt ?? this.startedAt,
       completedAt: completedAt ?? this.completedAt,
-      scheduledStartTime: scheduledStartTime ?? this.scheduledStartTime,
       sendIntervalMinutes: sendIntervalMinutes ?? this.sendIntervalMinutes,
-      totalEmails: totalEmails ?? this.totalEmails,
-      sentEmails: sentEmails ?? this.sentEmails,
-      failedEmails: failedEmails ?? this.failedEmails,
       errorMessage: errorMessage ?? this.errorMessage,
+      receiversId: receiversId ?? this.receiversId,
+      receiversName: receiversName ?? this.receiversName,
+      mailAddressId: mailAddressId ?? this.mailAddressId,
+      mailAddress: mailAddress ?? this.mailAddress,
+      mailAddressType: mailAddressType ?? this.mailAddressType,
+      emailTagId: emailTagId ?? this.emailTagId,
+      emailTagName: emailTagName ?? this.emailTagName,
+      clickTrack: clickTrack ?? this.clickTrack,
+      scheduledTime: scheduledTime ?? this.scheduledTime,
     );
   }
 
   @override
   String toString() {
     return 'ScheduledEmailTaskModel(taskId: $taskId, taskName: $taskName, status: $status)';
-  }
-}
-
-class ReceiverListConfig {
-  final String receiverId;
-  final String receiverName;
-  final int intervalMinutes; // 发送间隔（分钟）
-  final int emailCount;
-  final String? listId;
-  final String? listName;
-  final int? receiverCount;
-
-  ReceiverListConfig({
-    required this.receiverId,
-    required this.receiverName,
-    required this.intervalMinutes,
-    required this.emailCount,
-    this.listId,
-    this.listName,
-    this.receiverCount,
-  });
-
-  factory ReceiverListConfig.fromMap(Map<String, dynamic> map) {
-    return ReceiverListConfig(
-      receiverId: map['ReceiverId']?.toString() ?? '',
-      receiverName: map['ReceiverName']?.toString() ?? '',
-      intervalMinutes: map['IntervalMinutes'] as int? ?? 0,
-      emailCount: map['EmailCount'] as int? ?? 0,
-      listId: map['ListId']?.toString(),
-      listName: map['ListName']?.toString(),
-      receiverCount: map['ReceiverCount'] as int?,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'ReceiverId': receiverId,
-      'ReceiverName': receiverName,
-      'IntervalMinutes': intervalMinutes,
-      'EmailCount': emailCount,
-      'ListId': listId,
-      'ListName': listName,
-      'ReceiverCount': receiverCount,
-    };
-  }
-
-  @override
-  String toString() {
-    return 'ReceiverListConfig(receiverId: $receiverId, receiverName: $receiverName, intervalMinutes: $intervalMinutes, receiverCount: $receiverCount)';
   }
 } 

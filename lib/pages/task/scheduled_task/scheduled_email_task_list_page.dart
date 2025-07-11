@@ -324,21 +324,13 @@ class _ScheduledEmailTaskListPageState extends State<ScheduledEmailTaskListPage>
             Row(
               children: [
                 Expanded(
-                  child: _buildInfoItem('发件人', '${task.senderName} <${task.senderAddress}>'),
+                  child: _buildInfoItem('发件人', '${task.mailAddress}'),
                 ),
                 Expanded(
-                  child: Consumer<ReceiverListProvider>(
-                    builder: (context, receiverProvider, child) {
-                      return _buildInfoItem('收件人列表', _getReceiverListNames(task.receiverLists, receiverProvider));
-                    },
-                  ),
+                  child: _buildInfoItem('收件人列表', task.receiversName),
                 ),
                 Expanded(
-                  child: Consumer<ReceiverListProvider>(
-                    builder: (context, receiverProvider, child) {
-                      return _buildInfoItem('收件人数量', '${_getTotalReceiverCount(task.receiverLists, receiverProvider)}');
-                    },
-                  ),
+                  child: _buildInfoItem('收件人数量', '${task.receiversId}'),
                 ),
               ],
             ),
@@ -361,8 +353,8 @@ class _ScheduledEmailTaskListPageState extends State<ScheduledEmailTaskListPage>
     final now = DateTime.now();
     
     // 检查任务是否已过期
-    final isExpired = task.scheduledStartTime != null && 
-                      task.scheduledStartTime!.isBefore(now) && 
+    final isExpired = task.scheduledTime != null && 
+                      task.scheduledTime!.isBefore(now) && 
                       (task.status == 'pending' || task.status == 'paused');
     
     Color color;
@@ -521,7 +513,7 @@ class _ScheduledEmailTaskListPageState extends State<ScheduledEmailTaskListPage>
       filtered = filtered.where((task) {
         return task.taskName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
                task.templateName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-               task.senderName.toLowerCase().contains(_searchQuery.toLowerCase());
+               task.mailAddress.toLowerCase().contains(_searchQuery.toLowerCase());
       }).toList();
     }
 
@@ -534,8 +526,8 @@ class _ScheduledEmailTaskListPageState extends State<ScheduledEmailTaskListPage>
 
   String _getTaskStartTimeText(ScheduledEmailTaskModel task) {
     // 如果有定时发送时间，直接显示时间
-    if (task.scheduledStartTime != null) {
-      return _formatDateTime(task.scheduledStartTime!);
+    if (task.scheduledTime != null) {
+      return _formatDateTime(task.scheduledTime!);
     }
     
     // 如果任务已经开始，显示实际开始时间
@@ -813,26 +805,16 @@ class _ScheduledEmailTaskListPageState extends State<ScheduledEmailTaskListPage>
                       children: [
                         _buildDetailItem('任务名称', task.taskName),
                         _buildDetailItem('模板名称', task.templateName),
-                        _buildDetailItem('发送方地址', task.senderAddress),
-                        _buildDetailItem('发送方名称', task.senderName),
-                        Consumer<ReceiverListProvider>(
-                          builder: (context, receiverProvider, child) {
-                            return _buildDetailItem('收件人列表', _getReceiverListNames(task.receiverLists, receiverProvider));
-                          },
-                        ),
-                        Consumer<ReceiverListProvider>(
-                          builder: (context, receiverProvider, child) {
-                            return _buildDetailItem('收件人数量', '${_getTotalReceiverCount(task.receiverLists, receiverProvider)}');
-                          },
-                        ),
-                        _buildDetailItem('发送类型', task.senderType == '0' ? '随机发送' : '固定发送'),
-                        if (task.tag != null && task.tag!.isNotEmpty)
-                          _buildDetailItem('标签', task.tag!),
-                        _buildDetailItem('启用追踪', task.enableTracking ? '是' : '否'),
+                        _buildDetailItem('发送方地址', task.mailAddress),
+                        _buildDetailItem('发送方类型', task.mailAddressType),
+                        _buildDetailItem('收件人列表', task.receiversName),
+                        _buildDetailItem('收件人数量', task.receiversId),
+                        _buildDetailItem('邮件标签', task.emailTagName),
+                        _buildDetailItem('启用追踪', task.clickTrack ? '是' : '否'),
                         _buildDetailItem('任务状态', _getStatusText(task.status)),
                         _buildDetailItem('创建时间', _formatDateTime(task.createdAt)),
-                        if (task.scheduledStartTime != null)
-                          _buildDetailItem('定时发送时间', _formatDateTime(task.scheduledStartTime!)),
+                        if (task.scheduledTime != null)
+                          _buildDetailItem('定时发送时间', _formatDateTime(task.scheduledTime!)),
                         if (task.startedAt != null)
                           _buildDetailItem('开始时间', _formatDateTime(task.startedAt!)),
                         if (task.completedAt != null)
@@ -952,65 +934,14 @@ class _ScheduledEmailTaskListPageState extends State<ScheduledEmailTaskListPage>
     );
   }
 
-  // 获取收件人列表名称
-  String _getReceiverListNames(List<ReceiverListConfig> receiverLists, ReceiverListProvider receiverListProvider) {
-    if (receiverLists.isEmpty) {
-      return '无收件人列表';
-    }
-    
-    // 调试信息
-    print('收件人列表配置数量: ${receiverLists.length}');
-    print('可用收件人列表数量: ${receiverListProvider.receivers.length}');
-    
-    if (receiverLists.length == 1) {
-      // 单个列表，通过ID查找真实名称
-      final list = receiverLists.first;
-      print('查找收件人ID: ${list.receiverId}');
-      
-      final realReceiver = receiverListProvider.findReceiverById(list.receiverId);
-      if (realReceiver != null) {
-        print('找到真实收件人列表: ${realReceiver.receiversName}');
-        return realReceiver.receiversName;
-      }
-      
-      print('未找到真实收件人列表，使用备用名称');
-      // 如果找不到，使用备用名称
-      return list.listName?.isNotEmpty == true ? list.listName! : list.receiverName;
-    } else {
-      // 多个列表，显示第一个列表名称 + 数量
-      final firstList = receiverLists.first;
-      print('查找第一个收件人ID: ${firstList.receiverId}');
-      
-      final realReceiver = receiverListProvider.findReceiverById(firstList.receiverId);
-      String firstName;
-      if (realReceiver != null) {
-        firstName = realReceiver.receiversName;
-        print('找到第一个真实收件人列表: $firstName');
-      } else {
-        firstName = firstList.listName?.isNotEmpty == true 
-            ? firstList.listName! 
-            : firstList.receiverName;
-        print('使用第一个备用名称: $firstName');
-      }
-      return '$firstName 等${receiverLists.length}个列表';
-    }
+  // 获取收件人列表名称 - 已简化，直接使用模型中的字段
+  String _getReceiverListNames(String receiversName) {
+    return receiversName.isNotEmpty ? receiversName : '无收件人列表';
   }
 
-  // 获取总收件人数量
-  int _getTotalReceiverCount(List<ReceiverListConfig> receiverLists, ReceiverListProvider receiverListProvider) {
-    if (receiverLists.isEmpty) {
-      return 0;
-    }
-    
-    return receiverLists.fold<int>(0, (total, list) {
-      // 优先使用真实的收件人列表数据
-      final realReceiver = receiverListProvider.findReceiverById(list.receiverId);
-      if (realReceiver != null) {
-        return total + realReceiver.count;
-      }
-      // 如果找不到真实数据，使用任务配置中的数据
-      return total + (list.receiverCount ?? list.emailCount);
-    });
+  // 获取总收件人数量 - 已简化，直接使用模型中的字段
+  int _getTotalReceiverCount(String receiversId) {
+    return receiversId.isNotEmpty ? 1 : 0; // 简化处理，实际应该从数据库获取
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
