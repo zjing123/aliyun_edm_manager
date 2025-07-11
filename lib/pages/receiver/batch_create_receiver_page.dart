@@ -11,7 +11,7 @@ import 'package:aliyun_edm_manager/models/receiver/receiver_detail.dart';
 import 'package:aliyun_edm_manager/services/background_receiver_service.dart';
 import 'package:aliyun_edm_manager/pages/receiver/background_processing_page.dart';
 import 'package:aliyun_edm_manager/utils/performance_optimizer.dart';
-import 'package:aliyun_edm_manager/pages/receiver/data_loss_analysis_page.dart';
+
 
 /// 收件人列表冲突处理选项
 enum ConflictAction {
@@ -163,9 +163,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
             _buildCreateButton(),
             const SizedBox(height: 24),
             
-            // 数据丢失分析按钮
-            if (_successLists.isNotEmpty || _failedLists.isNotEmpty) _buildDataLossAnalysisButton(),
-            const SizedBox(height: 24),
+
             
             // 处理结果
             if (_successLists.isNotEmpty || _failedLists.isNotEmpty) _buildResultSection(),
@@ -1432,9 +1430,11 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
   }
 
   List<List<String>> _chunkEmails(List<String> emails, int chunkSize) {
+    // 限制最大批量大小为400，符合API限制500条记录
+    final maxChunkSize = chunkSize > 400 ? 400 : chunkSize;
     final chunks = <List<String>>[];
-    for (int i = 0; i < emails.length; i += chunkSize) {
-      final end = (i + chunkSize < emails.length) ? i + chunkSize : emails.length;
+    for (int i = 0; i < emails.length; i += maxChunkSize) {
+      final end = (i + maxChunkSize < emails.length) ? i + maxChunkSize : emails.length;
       chunks.add(emails.sublist(i, end));
     }
     return chunks;
@@ -1447,51 +1447,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
            '${now.second.toString().padLeft(2, '0')}';
   }
 
-  /// 构建数据丢失分析按钮
-  Widget _buildDataLossAnalysisButton() {
-    return Container(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: _selectedFile == null ? null : _openDataLossAnalysis,
-        icon: const Icon(Icons.analytics, color: Colors.white),
-        label: const Text('数据丢失分析'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.orange,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-      ),
-    );
-  }
 
-  /// 打开数据丢失分析页面
-  Future<void> _openDataLossAnalysis() async {
-    if (_selectedFile == null) return;
-    
-    // 收集最终处理的邮箱列表
-    final finalEmails = <String>[];
-    for (final batch in _getProcessedEmailBatches()) {
-      finalEmails.addAll(batch);
-    }
-    
-    // 跳转到数据丢失分析页面
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const DataLossAnalysisPage(),
-      ),
-    );
-  }
-
-  /// 获取已处理的邮箱批次
-  List<List<String>> _getProcessedEmailBatches() {
-    // 这里需要根据实际的处理逻辑来获取最终处理的邮箱列表
-    // 暂时返回空列表，实际使用时需要从处理结果中获取
-    return [];
-  }
 
   /// 开始后台处理
   Future<void> _startBackgroundProcessing(int countPerList) async {

@@ -910,8 +910,8 @@ class _BatchCreateReceiverPageImprovedState extends State<BatchCreateReceiverPag
         }
       }
       
-      // 分批添加收件人（每次最多200个，避免API限制）
-      final emailChunks = _chunkEmails(batch, 200);
+      // 分批添加收件人（每次最多400个，符合API限制500条记录）
+      final emailChunks = _chunkEmails(batch, 400);
       for (int j = 0; j < emailChunks.length; j++) {
         final chunk = emailChunks[j];
         setState(() {
@@ -1091,8 +1091,8 @@ class _BatchCreateReceiverPageImprovedState extends State<BatchCreateReceiverPag
   }
 
   List<List<String>> _chunkEmails(List<String> emails, int chunkSize) {
-    // 限制最大批量大小为200，避免API限制
-    final maxChunkSize = chunkSize > 200 ? 200 : chunkSize;
+    // 限制最大批量大小为400，符合API限制500条记录
+    final maxChunkSize = chunkSize > 400 ? 400 : chunkSize;
     final chunks = <List<String>>[];
     for (int i = 0; i < emails.length; i += maxChunkSize) {
       final end = (i + maxChunkSize < emails.length) ? i + maxChunkSize : emails.length;

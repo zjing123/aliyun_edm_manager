@@ -200,6 +200,12 @@ class ReceiverService extends BaseAliyunService {
     
     debugPrint('📋 [收件人服务] 批量数据JSON大小: $jsonSize 字符 (${jsonSizeKB}KB)');
     
+    // 检查批量大小是否符合API限制（500条记录）
+    if (batchSize > 500) {
+      debugPrint('⚠️ [收件人服务] 警告: 批量大小超过API限制 (500条记录)，当前: $batchSize');
+      throw Exception('批量大小超过API限制，每次最多500条记录');
+    }
+    
     // 检查数据大小是否超过1MB限制
     if (jsonSize > 1024 * 1024) {
       debugPrint('⚠️ [收件人服务] 警告: 数据大小超过1MB限制 (${jsonSizeKB}KB)');
@@ -335,6 +341,12 @@ class ReceiverService extends BaseAliyunService {
         debugPrint('   - 已存在数量: ${result.existList?.length ?? 0} 个');
         debugPrint('   - 数据大小: ${jsonSizeKB}KB');
         debugPrint('   - 重试次数: $retryCount');
+        
+        // 处理重复收件人的情况
+        if (result.errorCount > 0 && result.existList != null && result.existList!.isNotEmpty) {
+          debugPrint('   ⚠️ 检测到重复收件人: ${result.existList!.length} 个');
+          debugPrint('   📋 重复邮箱列表: ${result.existList!.take(3).join(', ')}${result.existList!.length > 3 ? '...' : ''}');
+        }
         
         if (result.hasFailed && result.failList != null) {
           debugPrint('   ❌ 失败列表: ${result.failList!.take(5).join(', ')}${result.failList!.length > 5 ? '...' : ''}');
