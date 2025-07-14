@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'providers/config/global_config_provider.dart';
 import 'widgets/main_layout.dart';
+import 'theme/app_theme_extension.dart';
 
 class EDMApp extends StatefulWidget {
   const EDMApp({super.key});
@@ -36,6 +37,27 @@ class _EDMAppState extends State<EDMApp> {
           ),
           // 可根据需要添加titleTextStyle, contentTextStyle等
         ),
+        appBarTheme: const AppBarTheme(
+          surfaceTintColor: Colors.transparent,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ButtonStyle(
+            backgroundColor: MaterialStatePropertyAll(AppThemeExtension.light.elevatedButtonBackground),
+            foregroundColor: MaterialStatePropertyAll(AppThemeExtension.light.elevatedButtonForeground),
+            iconColor: MaterialStatePropertyAll(AppThemeExtension.light.elevatedButtonIconColor),
+            shape: MaterialStatePropertyAll(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(AppThemeExtension.light.elevatedButtonRadius)),
+              ),
+            ),
+            textStyle: const MaterialStatePropertyAll(
+              TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+            ),
+          ),
+        ),
+        extensions: <ThemeExtension<dynamic>>[
+          AppThemeExtension.light,
+        ],
       ),
       debugShowCheckedModeBanner: false,
       localizationsDelegates: const [

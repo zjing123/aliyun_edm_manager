@@ -21,8 +21,10 @@ enum ConflictAction {
   deleteAndCreate,
   /// 直接追加到现有列表
   append,
-  /// 取消操作
-  cancel,
+  /// 跳过冲突收件人列表
+  skip,
+  /// 手动确认
+  manual,
 }
 
 class BatchCreateReceiverPage extends StatefulWidget {
@@ -64,6 +66,9 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
   final List<String> _successLists = [];
   final List<String> _failedLists = [];
   final List<String> _invalidEmails = [];
+
+  // 冲突处理方式配置
+  ConflictAction _conflictAction = ConflictAction.manual;
 
   @override
   void initState() {
@@ -514,147 +519,67 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
             ],
           ),
           const SizedBox(height: 16),
-          
           CheckboxListTile(
+            value: _mergeDefaultFilterEmails,
+            onChanged: (v) => setState(() => _mergeDefaultFilterEmails = v ?? true),
             title: const Text('合并默认过滤邮箱列表'),
             subtitle: const Text('勾选后将自动合并默认配置的过滤邮箱和本次输入的过滤邮箱'),
-            value: _mergeDefaultFilterEmails,
-            onChanged: (value) {
-              setState(() {
-                _mergeDefaultFilterEmails = value ?? true;
-              });
-            },
-            controlAffinity: ListTileControlAffinity.leading,
           ),
-          
           CheckboxListTile(
+            value: _removeDuplicates,
+            onChanged: (v) => setState(() => _removeDuplicates = v ?? true),
             title: const Text('邮箱去重'),
             subtitle: const Text('自动去除重复的邮箱地址'),
-            value: _removeDuplicates,
-            onChanged: (value) {
-              setState(() {
-                _removeDuplicates = value ?? true;
-              });
-            },
-            controlAffinity: ListTileControlAffinity.leading,
           ),
-          
           CheckboxListTile(
+            value: _ignoreInvalidEmails,
+            onChanged: (v) => setState(() => _ignoreInvalidEmails = v ?? true),
             title: const Text('忽略无效邮箱'),
             subtitle: const Text('跳过格式不正确的邮箱地址'),
-            value: _ignoreInvalidEmails,
-            onChanged: (value) {
-              setState(() {
-                _ignoreInvalidEmails = value ?? true;
-              });
-            },
-            controlAffinity: ListTileControlAffinity.leading,
           ),
-          
           CheckboxListTile(
+            value: _skipEmptyEmails,
+            onChanged: (v) => setState(() => _skipEmptyEmails = v ?? true),
             title: const Text('跳过空邮箱'),
             subtitle: const Text('跳过空行或只包含空格的邮箱'),
-            value: _skipEmptyEmails,
-            onChanged: (value) {
-              setState(() {
-                _skipEmptyEmails = value ?? true;
-              });
-            },
-            controlAffinity: ListTileControlAffinity.leading,
           ),
-          
-          const Divider(),
-          
-          // 性能优化配置
-          Row(
-            children: [
-              Icon(Icons.speed, color: Colors.orange[600], size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                '性能优化',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
+          const SizedBox(height: 16),
+          // 新增：收件人列表名称冲突处理
+          Text(
+            '收件人列表名称冲突处理',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<ConflictAction>(
+            value: _conflictAction,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              helperText: '当收件人列表名称已存在时的处理方式',
+            ),
+            items: [
+              DropdownMenuItem(
+                value: ConflictAction.deleteAndCreate,
+                child: Text('删除旧收件人列表并创建新收件人列表'),
+              ),
+              DropdownMenuItem(
+                value: ConflictAction.append,
+                child: Text('直接添加收件人数据到收件人列表'),
+              ),
+              DropdownMenuItem(
+                value: ConflictAction.skip,
+                child: Text('跳过冲突收件人列表'),
+              ),
+              DropdownMenuItem(
+                value: ConflictAction.manual,
+                child: Text('手动确认（每个冲突弹窗）'),
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          
-          CheckboxListTile(
-            title: const Text('启用性能模式'),
-            subtitle: const Text('启用并发处理和批量优化，提升处理速度'),
-            value: _enablePerformanceMode,
             onChanged: (value) {
               setState(() {
-                _enablePerformanceMode = value ?? true;
+                _conflictAction = value ?? ConflictAction.manual;
               });
             },
-            controlAffinity: ListTileControlAffinity.leading,
           ),
-          
-          if (_enablePerformanceMode) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('每批处理数量'),
-                      const SizedBox(height: 4),
-                      DropdownButtonFormField<int>(
-                        value: _batchSize,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                        items: [200, 300, 500].map((size) {
-                          return DropdownMenuItem(
-                            value: size,
-                            child: Text('$size 个'),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _batchSize = value ?? 1000;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('最大并发数'),
-                      const SizedBox(height: 4),
-                      DropdownButtonFormField<int>(
-                        value: _maxConcurrent,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                        items: [1, 2, 3, 5].map((count) {
-                          return DropdownMenuItem(
-                            value: count,
-                            child: Text('$count 个'),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _maxConcurrent = value ?? 3;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
         ],
       ),
     );
@@ -1149,9 +1074,9 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
             await _addReceiversToExistingList(receiverService, existingReceiver['ReceiverId'], batch);
           } else {
             // 列表存在且有收件人数据，需要用户选择处理方式
-            final action = await _showConflictDialog(listName, existingReceiver['Count']);
-            if (action == ConflictAction.cancel) {
-              _failedLists.add('$listName (用户取消)');
+            final action = await _handleConflict(listName, existingReceiver['Count']);
+            if (action == ConflictAction.skip) {
+              _failedLists.add('$listName (跳过)');
               continue;
             } else if (action == ConflictAction.deleteAndCreate) {
               await _deleteAndCreateReceiverList(receiverService, listName, alias, batch, existingReceiver['ReceiverId']);
@@ -1398,7 +1323,7 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(ConflictAction.cancel),
+              onPressed: () => Navigator.of(context).pop(ConflictAction.skip),
               child: Text('取消'),
             ),
             TextButton(
@@ -1412,7 +1337,22 @@ class _BatchCreateReceiverPageState extends State<BatchCreateReceiverPage> {
           ],
         );
       },
-    ) ?? ConflictAction.cancel;
+    ) ?? ConflictAction.skip;
+  }
+
+  /// 统一处理收件人列表冲突
+  Future<ConflictAction> _handleConflict(String listName, int existingCount) async {
+    switch (_conflictAction) {
+      case ConflictAction.deleteAndCreate:
+        return ConflictAction.deleteAndCreate;
+      case ConflictAction.append:
+        return ConflictAction.append;
+      case ConflictAction.skip:
+        return ConflictAction.skip;
+      case ConflictAction.manual:
+      default:
+        return await _showConflictDialog(listName, existingCount);
+    }
   }
 
   Future<List<String>> _readEmailsFromFile() async {

@@ -18,6 +18,7 @@ import 'package:aliyun_edm_manager/providers/tag/tag_provider.dart';
 import 'package:aliyun_edm_manager/providers/config/global_config_provider.dart';
 import 'package:aliyun_edm_manager/providers/sender/sender_address_provider.dart';
 import 'package:aliyun_edm_manager/services/aliyun/aliyun_service_manager.dart';
+import 'package:aliyun_edm_manager/pages/util_tools/util_tools_page.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -63,6 +64,11 @@ class _MainLayoutState extends State<MainLayout> {
         NavigationItem(title: '发送详情', route: '/sending-details'),
         NavigationItem(title: '跟踪数据', route: '/track-data'),
       ],
+    ),
+    NavigationItem(
+      title: '实用工具',
+      icon: Icons.build,
+      route: '/util-tools',
     ),
   ];
 
@@ -315,6 +321,8 @@ class _MainLayoutState extends State<MainLayout> {
         return const SendingDetailsPage();
       case '/track-data':
         return const TrackDataPage();
+      case '/util-tools':
+        return const UtilToolsPage();
       default:
         return const OverviewPage();
     }
