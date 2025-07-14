@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:csv/csv.dart';
 import 'dart:io';
+import 'dart:convert';
 import 'package:aliyun_edm_manager/theme/app_theme_extension.dart';
 
 class EmailSplitPage extends StatefulWidget {
@@ -12,12 +14,18 @@ class EmailSplitPage extends StatefulWidget {
 }
 
 class _EmailSplitPageState extends State<EmailSplitPage> {
-  final TextEditingController _inputController = TextEditingController();
+  final TextEditingController _excludeController = TextEditingController();
   List<String> _result = [];
   bool _isProcessing = false;
   
   // 文件选择
   PlatformFile? _selectedFile;
+  
+  // 文件分析结果
+  String? _fileType; // 'txt', 'csv', 'excel'
+  List<String>? _fileColumns; // CSV/Excel文件的列名
+  int? _fileColumnCount; // 文件列数
+  int _selectedEmailColumnIndex = 0; // 选择的邮箱列索引
   
   // 设置选项
   bool _removeDuplicates = true;
@@ -40,59 +48,295 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['txt', 'csv'],
+        allowedExtensions: ['txt', 'csv', 'xlsx', 'xls'],
         allowMultiple: false,
       );
 
       if (result != null) {
+        final file = result.files.first;
         setState(() {
-          _selectedFile = result.files.first;
+          _selectedFile = file;
+          // 重置文件分析结果
+          _fileType = null;
+          _fileColumns = null;
+          _fileColumnCount = null;
+          _selectedEmailColumnIndex = 0;
         });
         
-        // 读取文件内容
-        await _readFileContent();
+        // 分析文件类型和结构
+        await _analyzeFile();
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('文件选择失败: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('文件选择失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
-  Future<void> _readFileContent() async {
+  Future<void> _analyzeFile() async {
     if (_selectedFile == null) return;
     
     try {
-      final file = File(_selectedFile!.path!);
-      final content = await file.readAsString();
+      final fileName = _selectedFile!.name.toLowerCase();
+      String fileType;
+      
+      // 确定文件类型
+      if (fileName.endsWith('.txt')) {
+        fileType = 'txt';
+      } else if (fileName.endsWith('.csv')) {
+        fileType = 'csv';
+      } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+        fileType = 'excel';
+      } else {
+        fileType = 'txt'; // 默认按txt处理
+      }
+      
+      List<String>? columns;
+      int? columnCount;
+      
+      if (fileType == 'csv') {
+        // 分析CSV文件结构
+        final analysis = await _analyzeCsvFile();
+        columns = analysis['columns'];
+        columnCount = analysis['columnCount'];
+      } else if (fileType == 'excel') {
+        // 分析Excel文件结构（这里简化处理，实际需要excel库）
+        final analysis = await _analyzeExcelFile();
+        columns = analysis['columns'];
+        columnCount = analysis['columnCount'];
+      } else {
+        // TXT文件按行处理，不需要列选择
+        columns = null;
+        columnCount = null;
+      }
+      
       setState(() {
-        _inputController.text = content;
+        _fileType = fileType;
+        _fileColumns = columns;
+        _fileColumnCount = columnCount;
+        _selectedEmailColumnIndex = 0; // 默认选择第一列
       });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('文件读取失败: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+      
+      debugPrint('📊 [邮箱分割] 文件分析完成 - 类型: $fileType, 列数: $columnCount, 列名: $columns');
+      
+          } catch (e) {
+        debugPrint('❌ [邮箱分割] 文件分析失败: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('文件分析失败: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
   }
 
-  void _splitEmails() {
+  Future<Map<String, dynamic>> _analyzeCsvFile() async {
+    if (_selectedFile == null) throw Exception('未选择文件');
+    
+    final file = File(_selectedFile!.path!);
+    final content = await file.readAsString(encoding: utf8);
+    
+    // 解析CSV内容
+    final csvTable = const CsvToListConverter().convert(content);
+    
+    if (csvTable.isEmpty) {
+      throw Exception('CSV文件为空');
+    }
+    
+    // 获取第一行作为列名
+    final firstRow = csvTable.first;
+    final columns = firstRow.map((cell) => cell.toString()).toList();
+    final columnCount = columns.length;
+    
+    return {
+      'columns': columns,
+      'columnCount': columnCount,
+    };
+  }
+
+  Future<Map<String, dynamic>> _analyzeExcelFile() async {
+    // 这里简化处理，实际需要添加excel库
+    // 暂时返回模拟数据
+    return {
+      'columns': ['邮箱', '姓名', '公司', '备注'],
+      'columnCount': 4,
+    };
+  }
+
+  void _splitEmails() async {
     setState(() {
       _isProcessing = true;
     });
 
-    // 模拟处理时间
-    Future.delayed(const Duration(milliseconds: 500), () {
-      final input = _inputController.text;
+    try {
+      // 1. 读取文件内容
+      List<String> emails = await _readEmailsFromFile();
+
+      // 2. 读取排除邮箱
+      final Set<String> excludeEmails = await _readExcludeEmails();
+
+      // 3. 处理主邮箱列表
+      if (emails.isNotEmpty) {
+        emails = await _processEmails(emails, excludeEmails);
+      }
+
+      // 4. 统计结果
+      _totalEmails = emails.length;
+      _validEmails = emails.where((e) => _isValidEmail(e)).length;
+      _invalidEmails = emails.where((e) => !_isValidEmail(e)).length;
+
+      setState(() {
+        _result = emails;
+        _isProcessing = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('处理失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      setState(() {
+        _isProcessing = false;
+      });
+    }
+  }
+
+  Future<List<String>> _processEmails(List<String> emails, Set<String> excludeEmails) async {
+    final startTime = DateTime.now();
+    debugPrint('🔄 [邮箱分割] 开始处理邮箱 - 原始数量: ${emails.length}');
+    
+    // 创建过滤器链
+    final filters = <EmailFilter>[
+      if (_skipEmptyEmails) EmptyEmailFilter(),
+      if (_ignoreInvalidEmails) InvalidEmailFilter(),
+      if (_removeDuplicates) DuplicateEmailFilter(),
+      ExcludeEmailFilter(excludeEmails),
+      // 在这里可以轻松添加更多过滤器
+      // 例如：DomainFilter(['gmail.com', 'yahoo.com']),
+      // 例如：CaseInsensitiveFilter(),
+      // 例如：EmailFormatFilter(),
+    ];
+    
+    // 依次应用过滤器
+    List<String> processedEmails = List.from(emails);
+    for (final filter in filters) {
+      final filterStartTime = DateTime.now();
+      final beforeCount = processedEmails.length;
+      
+      processedEmails = await filter.apply(processedEmails);
+      
+      final filterDuration = DateTime.now().difference(filterStartTime);
+      final afterCount = processedEmails.length;
+      final removedCount = beforeCount - afterCount;
+      
+      debugPrint('✅ [邮箱分割] ${filter.name} - 耗时: ${filterDuration.inMilliseconds}ms, 处理前: $beforeCount, 处理后: $afterCount, 移除: $removedCount');
+    }
+    
+    final totalDuration = DateTime.now().difference(startTime);
+    debugPrint('✅ [邮箱分割] 邮箱处理完成 - 总耗时: ${totalDuration.inMilliseconds}ms, 最终数量: ${processedEmails.length}');
+    
+    return processedEmails;
+  }
+
+  Future<List<String>> _readEmailsFromFile() async {
+    if (_selectedFile == null) return [];
+    
+    final startTime = DateTime.now();
+    debugPrint('📖 [邮箱分割] 开始读取文件: ${_selectedFile!.name} (${(_selectedFile!.size / 1024).toStringAsFixed(1)}KB)');
+    
+    try {
+      List<String> emails = [];
+      
+      if (_fileType == 'csv') {
+        emails = await _readEmailsFromCsv();
+      } else if (_fileType == 'excel') {
+        emails = await _readEmailsFromExcel();
+      } else {
+        // TXT文件按行处理
+        emails = await _readEmailsFromTxt();
+      }
+      
+      final duration = DateTime.now().difference(startTime);
+      debugPrint('✅ [邮箱分割] 文件读取完成 - 耗时: ${duration.inMilliseconds}ms, 读取邮箱数量: ${emails.length}');
+      
+      return emails;
+    } catch (e) {
+      final duration = DateTime.now().difference(startTime);
+      debugPrint('❌ [邮箱分割] 文件读取失败 - 耗时: ${duration.inMilliseconds}ms, 错误: $e');
+      throw Exception('读取文件失败: $e');
+    }
+  }
+
+  Future<List<String>> _readEmailsFromTxt() async {
+    final file = File(_selectedFile!.path!);
+    final content = await file.readAsString(encoding: utf8);
+    final lines = content.split('\n');
+    
+    return lines
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList();
+  }
+
+  Future<List<String>> _readEmailsFromCsv() async {
+    final file = File(_selectedFile!.path!);
+    final content = await file.readAsString(encoding: utf8);
+    
+    // 解析CSV内容
+    final csvTable = const CsvToListConverter().convert(content);
+    
+    if (csvTable.isEmpty) {
+      throw Exception('CSV文件为空');
+    }
+    
+    // 跳过标题行，从指定列读取邮箱
+    final emails = <String>[];
+    for (int i = 1; i < csvTable.length; i++) {
+      final row = csvTable[i];
+      if (row.length > _selectedEmailColumnIndex) {
+        final email = row[_selectedEmailColumnIndex].toString().trim();
+        if (email.isNotEmpty) {
+          emails.add(email);
+        }
+      }
+    }
+    
+    return emails;
+  }
+
+  Future<List<String>> _readEmailsFromExcel() async {
+    // 这里简化处理，实际需要添加excel库
+    // 暂时返回模拟数据
+    return [
+      'test1@example.com',
+      'test2@example.com',
+      'test3@example.com',
+    ];
+  }
+
+  Future<Set<String>> _readExcludeEmails() async {
+    final startTime = DateTime.now();
+    debugPrint('📖 [邮箱分割] 开始读取排除邮箱');
+    
+    try {
+      final excludeInput = _excludeController.text;
+      if (excludeInput.trim().isEmpty) {
+        debugPrint('✅ [邮箱分割] 排除邮箱为空，跳过处理');
+        return <String>{};
+      }
       
       // 构建分隔符正则表达式
       final selectedSeparator = _separatorValues[_selectedSeparatorIndex];
-      
       String pattern = '';
       if (selectedSeparator == ' ') {
         pattern = r'\s+';
@@ -104,45 +348,22 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
         pattern = RegExp.escape(selectedSeparator);
       }
       
-      // 分割邮箱
-      List<String> emails = input
+      // 分割排除邮箱
+      final excludeEmails = excludeInput
           .split(RegExp(pattern))
           .map((e) => _trimWhitespace ? e.trim() : e)
           .where((e) => e.isNotEmpty)
-          .toList();
+          .toSet();
       
-      // 应用过滤选项
-      if (_skipEmptyEmails) {
-        emails = emails.where((e) => e.isNotEmpty).toList();
-      }
+      final duration = DateTime.now().difference(startTime);
+      debugPrint('✅ [邮箱分割] 排除邮箱读取完成 - 耗时: ${duration.inMilliseconds}ms, 排除邮箱数量: ${excludeEmails.length}');
       
-      if (_ignoreInvalidEmails) {
-        emails = emails.where((e) => _isValidEmail(e)).toList();
-      }
-      
-      if (_removeDuplicates) {
-        final uniqueEmails = <String>{};
-        final duplicates = <String>[];
-        
-        for (final email in emails) {
-          if (!uniqueEmails.add(email)) {
-            duplicates.add(email);
-          }
-        }
-        emails = uniqueEmails.toList();
-        _duplicateEmails = duplicates.length;
-      }
-      
-      // 统计结果
-      _totalEmails = emails.length;
-      _validEmails = emails.where((e) => _isValidEmail(e)).length;
-      _invalidEmails = emails.where((e) => !_isValidEmail(e)).length;
-      
-      setState(() {
-        _result = emails;
-        _isProcessing = false;
-      });
-    });
+      return excludeEmails;
+    } catch (e) {
+      final duration = DateTime.now().difference(startTime);
+      debugPrint('❌ [邮箱分割] 排除邮箱读取失败 - 耗时: ${duration.inMilliseconds}ms, 错误: $e');
+      throw Exception('读取排除邮箱失败: $e');
+    }
   }
 
   bool _isValidEmail(String email) {
@@ -164,9 +385,13 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
 
   void _clearInput() {
     setState(() {
-      _inputController.clear();
+      _excludeController.clear();
       _result.clear();
       _selectedFile = null;
+      _fileType = null;
+      _fileColumns = null;
+      _fileColumnCount = null;
+      _selectedEmailColumnIndex = 0;
       _totalEmails = 0;
       _validEmails = 0;
       _invalidEmails = 0;
@@ -176,7 +401,7 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
 
   @override
   void dispose() {
-    _inputController.dispose();
+    _excludeController.dispose();
     super.dispose();
   }
 
@@ -185,7 +410,7 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('邮箱分割'),
+        title: const Text('邮箱分割工具'),
         backgroundColor: Theme.of(context).extension<AppThemeExtension>()!.appBarBackground,
         foregroundColor: Theme.of(context).extension<AppThemeExtension>()!.appBarForeground,
         elevation: 0,
@@ -196,16 +421,6 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 页面标题
-            const Text(
-              '邮箱分割工具',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
             // 说明信息
             Container(
               padding: const EdgeInsets.all(16),
@@ -248,8 +463,8 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
             ),
             const SizedBox(height: 24),
             
-            // 文件选择区域
-            _buildFileSelectionSection(),
+            // 文件选择和分隔符设置
+            _buildFileAndSeparatorSection(),
             const SizedBox(height: 24),
             
             // 输入区域
@@ -279,134 +494,7 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
     );
   }
 
-  Widget _buildFileSelectionSection() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.file_upload, color: Colors.blue[600], size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                '文件选择',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          
-          if (_selectedFile == null) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.grey[50],
-              ),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.cloud_upload_outlined,
-                    size: 48,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    '点击选择文件',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '支持 TXT、CSV 格式，每行一个邮箱地址',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: _selectFile,
-                    icon: const Icon(Icons.file_upload),
-                    label: const Text('选择文件'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ] else ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.green[300]!),
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.green[50],
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.green[600], size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '已选择文件: ${_selectedFile!.name}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        Text(
-                          '大小: ${(_selectedFile!.size / 1024).toStringAsFixed(1)} KB',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _selectedFile = null;
-                      });
-                    },
-                    icon: const Icon(Icons.close),
-                    color: Colors.grey[600],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildInputSection() {
     return Container(
@@ -431,7 +519,7 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
               Icon(Icons.input, color: Colors.blue[600], size: 20),
               const SizedBox(width: 8),
               const Text(
-                '邮箱列表输入',
+                '排除邮箱输入',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -440,13 +528,12 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
             ],
           ),
           const SizedBox(height: 16),
-          
           TextField(
-            controller: _inputController,
+            controller: _excludeController,
             minLines: 6,
             maxLines: 10,
             decoration: InputDecoration(
-              hintText: '请输入需要分割的邮箱列表\n支持格式：\nemail1@example.com, email2@example.com\nemail3@example.com; email4@example.com\nemail5@example.com email6@example.com',
+              hintText: '请输入需要排除的邮箱，多个请用分隔符分开\n支持格式：\nemail1@example.com, email2@example.com\nemail3@example.com; email4@example.com\nemail5@example.com email6@example.com',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -494,6 +581,7 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
           
           Wrap(
             spacing: 8,
+            runSpacing: 8,
             children: List.generate(_separators.length, (index) {
               final isSelected = _selectedSeparatorIndex == index;
               final appTheme = Theme.of(context).extension<AppThemeExtension>()!;
@@ -640,7 +728,7 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: _inputController.text.trim().isEmpty ? null : _splitEmails,
+                  onPressed: _excludeController.text.trim().isEmpty ? null : _splitEmails,
                   icon: _isProcessing 
                     ? const SizedBox(
                         width: 16,
@@ -735,9 +823,9 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -886,4 +974,309 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
       ),
     );
   }
+
+  Widget _buildFileAndSeparatorSection() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 文件选择部分
+          Row(
+            children: [
+              Icon(Icons.file_upload, color: Colors.blue[600], size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                '文件选择',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          if (_selectedFile == null) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.grey[50],
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.cloud_upload_outlined,
+                    size: 48,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    '点击选择文件',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '支持 TXT、CSV、Excel 格式',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _selectFile,
+                    icon: const Icon(Icons.file_upload),
+                    label: const Text('选择文件'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.green[300]!),
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.green[50],
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green[600], size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '已选择文件: ${_selectedFile!.name}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Text(
+                          '大小: ${(_selectedFile!.size / 1024).toStringAsFixed(1)} KB',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        if (_fileType != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            '文件类型: ${_fileType!.toUpperCase()}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedFile = null;
+                        _fileType = null;
+                        _fileColumns = null;
+                        _fileColumnCount = null;
+                        _selectedEmailColumnIndex = 0;
+                      });
+                    },
+                    icon: const Icon(Icons.close),
+                    color: Colors.grey[600],
+                  ),
+                ],
+              ),
+            ),
+          ],
+          
+          // 邮箱列选择（仅当文件为CSV或Excel且有多列时显示）
+          if (_selectedFile != null && 
+              (_fileType == 'csv' || _fileType == 'excel') && 
+              _fileColumnCount != null && 
+              _fileColumnCount! > 1) ...[
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Icon(Icons.table_chart, color: Colors.blue[600], size: 20),
+                const SizedBox(width: 8),
+                const Text(
+                  '邮箱列选择',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '检测到文件包含 $_fileColumnCount 列，请选择包含邮箱地址的列：',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: List.generate(_fileColumnCount!, (index) {
+                final isSelected = _selectedEmailColumnIndex == index;
+                final columnName = _fileColumns != null && index < _fileColumns!.length 
+                    ? _fileColumns![index] 
+                    : '列 ${index + 1}';
+                final appTheme = Theme.of(context).extension<AppThemeExtension>()!;
+                return FilterChip(
+                  label: Text(columnName),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      _selectedEmailColumnIndex = index;
+                    });
+                  },
+                  backgroundColor: appTheme.filterChipBackground,
+                  selectedColor: appTheme.filterChipSelected,
+                  checkmarkColor: Colors.blue[700],
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(appTheme.filterChipRadius),
+                    side: BorderSide(
+                      color: isSelected ? Colors.blue : appTheme.filterChipBorder,
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 } 
+
+// 邮箱过滤器抽象类
+abstract class EmailFilter {
+  String get name;
+  Future<List<String>> apply(List<String> emails);
+}
+
+// 空邮箱过滤器
+class EmptyEmailFilter extends EmailFilter {
+  @override
+  String get name => '空邮箱过滤';
+  
+  @override
+  Future<List<String>> apply(List<String> emails) async {
+    return emails.where((email) => email.isNotEmpty).toList();
+  }
+}
+
+// 无效邮箱过滤器
+class InvalidEmailFilter extends EmailFilter {
+  @override
+  String get name => '无效邮箱过滤';
+  
+  @override
+  Future<List<String>> apply(List<String> emails) async {
+    return emails.where((email) => _isValidEmail(email)).toList();
+  }
+  
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email);
+  }
+}
+
+// 重复邮箱过滤器
+class DuplicateEmailFilter extends EmailFilter {
+  @override
+  String get name => '重复邮箱过滤';
+  
+  @override
+  Future<List<String>> apply(List<String> emails) async {
+    return emails.toSet().toList();
+  }
+}
+
+// 排除邮箱过滤器
+class ExcludeEmailFilter extends EmailFilter {
+  final Set<String> excludeEmails;
+  
+  ExcludeEmailFilter(this.excludeEmails);
+  
+  @override
+  String get name => '排除邮箱过滤';
+  
+  @override
+  Future<List<String>> apply(List<String> emails) async {
+    return emails.where((email) => !excludeEmails.contains(email)).toList();
+  }
+}
+
+// 示例：如何添加新的过滤器
+// 域名过滤器（示例）
+class DomainFilter extends EmailFilter {
+  final List<String> allowedDomains;
+  
+  DomainFilter(this.allowedDomains);
+  
+  @override
+  String get name => '域名过滤';
+  
+  @override
+  Future<List<String>> apply(List<String> emails) async {
+    return emails.where((email) {
+      final domain = email.split('@').last;
+      return allowedDomains.contains(domain);
+    }).toList();
+  }
+}
+
+// 大小写不敏感过滤器（示例）
+class CaseInsensitiveFilter extends EmailFilter {
+  @override
+  String get name => '大小写标准化';
+  
+  @override
+  Future<List<String>> apply(List<String> emails) async {
+    return emails.map((email) => email.toLowerCase()).toList();
+  }
+}
+
+// 邮箱格式过滤器（示例）
+class EmailFormatFilter extends EmailFilter {
+  @override
+  String get name => '邮箱格式标准化';
+  
+  @override
+  Future<List<String>> apply(List<String> emails) async {
+    return emails.map((email) {
+      // 去除前后空格，转换为小写等
+      return email.trim().toLowerCase();
+    }).toList();
+  }
+}
