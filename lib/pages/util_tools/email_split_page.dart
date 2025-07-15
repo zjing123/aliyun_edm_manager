@@ -54,12 +54,11 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
   @override
   void initState() {
     super.initState();
-    // 初始化区间规则示例，第一行起始批次默认为1
+    // 初始化简化规则示例
     _batchSplitRules.addAll([
-      BatchSplitRule(startBatch: 1, endBatch: 2, size: 1000),
-      BatchSplitRule(startBatch: 3, endBatch: 3, size: 1500),
-      BatchSplitRule(startBatch: 4, endBatch: 7, size: 2000),
-      BatchSplitRule(startBatch: 8, endBatch: null, size: 3000), // 留空表示到结束
+      BatchSplitRule(startBatch: 1, size: 1000),
+      BatchSplitRule(startBatch: 4, size: 1500),
+      BatchSplitRule(startBatch: 7, size: 2000),
     ]);
   }
 
@@ -261,12 +260,23 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
     while (currentIndex < emails.length) {
       // 找到当前批次适用的规则
       BatchSplitRule? rule;
-      for (final r in _batchSplitRules) {
+      for (int i = 0; i < _batchSplitRules.length; i++) {
+        final r = _batchSplitRules[i];
         final start = r.startBatch;
-        final end = r.endBatch ?? 999999; // 留空表示到结束
-        if (batchNo >= start && batchNo <= end) {
-          rule = r;
-          break;
+        final end = r.getEndBatch(_batchSplitRules, i);
+        
+        if (end != null) {
+          // 有明确结束批次的规则
+          if (batchNo >= start && batchNo <= end) {
+            rule = r;
+            break;
+          }
+        } else {
+          // 最后一个规则（到结束）
+          if (batchNo >= start) {
+            rule = r;
+            break;
+          }
         }
       }
       
@@ -471,95 +481,63 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
       _fixedSplitSizeController.text = '1000';
       _batchSplitRules.clear();
       _batchSplitRules.addAll([
-        BatchSplitRule(startBatch: 1, endBatch: 2, size: 1000),
-        BatchSplitRule(startBatch: 3, endBatch: 3, size: 1500),
-        BatchSplitRule(startBatch: 4, endBatch: 7, size: 2000),
-        BatchSplitRule(startBatch: 8, endBatch: null, size: 3000), // 留空表示到结束
+        BatchSplitRule(startBatch: 1, size: 1000),
+        BatchSplitRule(startBatch: 4, size: 1500),
+        BatchSplitRule(startBatch: 7, size: 2000),
       ]);
     });
   }
 
-  // 验证第一行规则是否有效
-  bool _validateFirstRule() {
-    if (_batchSplitRules.isEmpty) return false;
-    
-    final firstRule = _batchSplitRules.first;
-    
-    // 验证开始批次
-    if (firstRule.startBatch <= 0) return false;
-    
-    // 验证数量
-    if (firstRule.size <= 0) return false;
-    
-    // 验证结束批次（如果有的话）
-    if (firstRule.endBatch != null) {
-      if (firstRule.endBatch! <= 0) return false;
-      if (firstRule.endBatch! < firstRule.startBatch) return false;
-    }
-    
-    return true;
-  }
+
 
   // 自动计算下一个规则的开始批次
   int _calculateNextStartBatch() {
     if (_batchSplitRules.isEmpty) return 1;
     
+    // 简化逻辑：返回最后一个规则的起始批次加1
     final lastRule = _batchSplitRules.last;
-    if (lastRule.endBatch == null) {
-      // 如果最后一个规则留空（表示到结束），则不能再添加新规则
-      return -1;
-    }
-    return lastRule.endBatch! + 1;
+    return lastRule.startBatch + 1;
   }
 
-  // 获取批次规则的连续性提示
+  // 获取批次规则的连续性提示（简化版本）
   String? _getBatchContinuityHint(int ruleIndex) {
     if (ruleIndex == 0) return null; // 第一行不需要提示
     
     final previousRule = _batchSplitRules[ruleIndex - 1];
     final currentRule = _batchSplitRules[ruleIndex];
     
-    if (previousRule.endBatch != null) {
-      final expectedStart = previousRule.endBatch! + 1;
-      if (currentRule.startBatch != expectedStart) {
-        return '起始批次应该是 $expectedStart';
-      }
+    // 检查当前起始批次是否大于上一行的起始批次
+    if (currentRule.startBatch <= previousRule.startBatch) {
+      return '起始批次必须大于上一行的起始批次';
     }
     
     return null;
   }
 
-  // 更新规则时自动调整后续规则的开始批次（级联更新策略）
+  // 更新规则时自动调整后续规则的开始批次（简化级联更新策略）
   void _updateRuleAndAdjustSubsequent(int index, BatchSplitRule newRule) {
     setState(() {
       _batchSplitRules[index] = newRule;
       
-      // 级联更新后续所有规则
-      for (int i = index + 1; i < _batchSplitRules.length; i++) {
-        final previousRule = _batchSplitRules[i - 1];
-        final currentRule = _batchSplitRules[i];
-        
-        // 计算新的起始批次
-        int? newStart;
-        if (previousRule.endBatch != null) {
-          newStart = previousRule.endBatch! + 1;
-        }
-        
-        // 如果前一个规则有明确的结束批次，则更新当前规则的起始批次
-        if (newStart != null) {
-          // 智能调整结束批次：如果当前结束批次小于新的起始批次，则设为null（到结束）
-          int? newEnd = currentRule.endBatch;
-          if (newEnd != null && newEnd < newStart) {
-            newEnd = null; // 设为"到结束"
-          }
-          
-          _batchSplitRules[i] = BatchSplitRule(
-            startBatch: newStart,
-            endBatch: newEnd,
-            size: currentRule.size,
+      // 验证起始批次的有效性
+      if (index > 0) {
+        final previousRule = _batchSplitRules[index - 1];
+        if (newRule.startBatch <= previousRule.startBatch) {
+          // 显示错误提示
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('起始批次必须大于上一行的起始批次'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 2),
+            ),
           );
+          return;
         }
       }
+      
+      // 级联更新后续所有规则（如果需要的话）
+      // 在新的简化设计中，我们不需要自动调整后续规则的起始批次
+      // 用户需要手动设置每个规则的起始批次
     });
   }
 
@@ -1496,203 +1474,289 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  children: const [
-                    Expanded(child: Text('起始批次', style: TextStyle(fontSize: 12, color: Colors.grey))),
-                    SizedBox(width: 8),
-                    Expanded(child: Text('结束批次', style: TextStyle(fontSize: 12, color: Colors.grey))),
-                    SizedBox(width: 8),
-                    Expanded(child: Text('数量', style: TextStyle(fontSize: 12, color: Colors.grey))),
-                    SizedBox(width: 8),
-                    SizedBox(width: 32),
-                  ],
-                ),
+                // 规则列表
                 ..._batchSplitRules.asMap().entries.map((entry) {
                   final index = entry.key;
                   final rule = entry.value;
                   final startController = TextEditingController(text: rule.startBatch.toString());
-                  final endController = TextEditingController(text: rule.endBatch == null ? '' : rule.endBatch.toString());
                   final sizeController = TextEditingController(text: rule.size.toString());
                   final continuityHint = _getBatchContinuityHint(index);
                   
-                  return Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: startController,
-                                keyboardType: TextInputType.number,
-                                enabled: false, // 起始批次全部禁用
-                                decoration: InputDecoration(
-                                  border: const OutlineInputBorder(),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  filled: true,
-                                  fillColor: Colors.grey[100],
-                                ),
-                                onChanged: (value) {},
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: TextField(
-                                controller: endController,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  hintText: '留空表示到结束',
-                                ),
-                                onChanged: (value) {
-                                  int? newEnd;
-                                  if (value.trim().isEmpty) {
-                                    newEnd = null; // 留空表示到结束
-                                  } else {
-                                    newEnd = int.tryParse(value);
-                                  }
-                                  // 实时验证结束批次
-                                  if (newEnd != null) {
-                                    if (newEnd <= 0) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('结束批次必须大于0'),
-                                          backgroundColor: Colors.red,
-                                          duration: Duration(seconds: 2),
-                                        ),
-                                      );
-                                      return;
-                                    }
-                                    if (newEnd < rule.startBatch) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('结束批次不能小于开始批次'),
-                                          backgroundColor: Colors.red,
-                                          duration: Duration(seconds: 2),
-                                        ),
-                                      );
-                                      return;
-                                    }
-                                  }
-                                  final newRule = BatchSplitRule(
-                                    startBatch: rule.startBatch,
-                                    endBatch: newEnd,
-                                    size: rule.size,
-                                  );
-                                  _updateRuleAndAdjustSubsequent(index, newRule);
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: TextField(
-                                controller: sizeController,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                ),
-                                onChanged: (value) {
-                                  final newSize = int.tryParse(value) ?? rule.size;
-                                  if (newSize <= 0) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('数量必须大于0'),
-                                        backgroundColor: Colors.red,
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                    return;
-                                  }
-                                  final newRule = BatchSplitRule(
-                                    startBatch: rule.startBatch,
-                                    endBatch: rule.endBatch,
-                                    size: newSize,
-                                  );
-                                  _updateRuleAndAdjustSubsequent(index, newRule);
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              onPressed: () {
-                                setState(() {
-                                  _batchSplitRules.removeAt(index);
-                                });
-                              },
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              iconSize: 20,
-                            ),
-                          ],
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[200]!),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                      ),
-                      // 显示连续性提示
-                      if (continuityHint != null)
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        // 规则输入行
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              // 规则序号
+                              Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: Colors.blue[100],
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${index + 1}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.blue[700],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // 起始批次输入框
+                              Expanded(
+                                child: TextField(
+                                  controller: startController,
+                                  keyboardType: TextInputType.number,
+                                  enabled: index == 0 ? false : true,
+                                  style: const TextStyle(fontSize: 14),
+                                  decoration: InputDecoration(
+                                    labelText: '起始批次',
+                                    labelStyle: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey[300]!),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey[300]!),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.blue[400]!),
+                                    ),
+                                    filled: index == 0,
+                                    fillColor: index == 0 ? Colors.grey[100] : Colors.grey[50],
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    hintText: index == 0 ? '1' : '请输入起始批次',
+                                    hintStyle: TextStyle(color: Colors.grey[400]),
+                                  ),
+                                  onChanged: (value) {
+                                    if (index == 0) return;
+                                    
+                                    final newStart = int.tryParse(value);
+                                    if (newStart == null || newStart <= 0) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('起始批次必须大于0'),
+                                          backgroundColor: Colors.red,
+                                          duration: Duration(seconds: 2),
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    
+                                    final newRule = BatchSplitRule(
+                                      startBatch: newStart,
+                                      size: rule.size,
+                                    );
+                                    _updateRuleAndAdjustSubsequent(index, newRule);
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // 数量输入框
+                              Expanded(
+                                child: TextField(
+                                  controller: sizeController,
+                                  keyboardType: TextInputType.number,
+                                  style: const TextStyle(fontSize: 14),
+                                  decoration: InputDecoration(
+                                    labelText: '数量',
+                                    labelStyle: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey[300]!),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey[300]!),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.blue[400]!),
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.grey[50],
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    hintText: '请输入数量',
+                                    hintStyle: TextStyle(color: Colors.grey[400]),
+                                  ),
+                                  onChanged: (value) {
+                                    final newSize = int.tryParse(value) ?? rule.size;
+                                    if (newSize <= 0) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('数量必须大于0'),
+                                          backgroundColor: Colors.red,
+                                          duration: Duration(seconds: 2),
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    final newRule = BatchSplitRule(
+                                      startBatch: rule.startBatch,
+                                      size: newSize,
+                                    );
+                                    _updateRuleAndAdjustSubsequent(index, newRule);
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // 删除按钮
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: index == 0 ? Colors.grey[100] : Colors.red[50],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: index == 0 ? Colors.grey[300]! : Colors.red[200]!),
+                                ),
+                                child: IconButton(
+                                  onPressed: index == 0 ? null : () {
+                                    setState(() {
+                                      _batchSplitRules.removeAt(index);
+                                    });
+                                  },
+                                  icon: Icon(
+                                    Icons.delete_outline,
+                                    color: index == 0 ? Colors.grey[400] : Colors.red[600],
+                                    size: 20,
+                                  ),
+                                  padding: const EdgeInsets.all(8),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 40,
+                                    minHeight: 40,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // 批次范围信息
+                        Container(
+                          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue[200]!),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline, color: Colors.blue[600], size: 16),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  '批次范围: ${rule.getDisplayRange(_batchSplitRules, index)} (${rule.size}个)',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.blue[700],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // 连续性提示
+                        if (continuityHint != null)
+                          Container(
+                            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
-                              color: Colors.orange[100],
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: Colors.orange[300]!),
+                              color: Colors.orange[50],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.orange[200]!),
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.info_outline, color: Colors.orange[600], size: 16),
-                                const SizedBox(width: 4),
+                                Icon(Icons.warning_amber_outlined, color: Colors.orange[600], size: 16),
+                                const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     continuityHint,
                                     style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: 13,
                                       color: Colors.orange[700],
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   );
                 }),
                 // 添加新规则按钮
-                TextButton.icon(
-                  onPressed: () {
-                    // 检查第一行规则是否有效
-                    if (!_validateFirstRule()) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('请先完善第一行规则（开始批次、结束批次、数量都必须有效）'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      return;
-                    }
-                    
-                    final nextStart = _calculateNextStartBatch();
-                    if (nextStart == -1) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('当前规则已设置为留空（到结束），不能再添加新规则'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      return;
-                    }
-                    setState(() {
-                      _batchSplitRules.add(BatchSplitRule(
-                        startBatch: nextStart,
-                        endBatch: null,
-                        size: 1000,
-                      ));
-                    });
-                  },
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('添加规则'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.orange[600],
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      // 检查第一行规则是否有效
+                      if (_batchSplitRules.isEmpty || _batchSplitRules[0].size <= 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('请先完善第一行规则（数量必须大于0）'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+                      
+                      final nextStart = _calculateNextStartBatch();
+                      setState(() {
+                        _batchSplitRules.add(BatchSplitRule(
+                          startBatch: nextStart,
+                          size: 1000,
+                        ));
+                      });
+                    },
+                    icon: Icon(Icons.add_circle_outline, color: Colors.white, size: 18),
+                    label: const Text(
+                      '添加规则',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue[600],
+                      foregroundColor: Colors.white,
+                      elevation: 2,
+                      shadowColor: Colors.blue[200],
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -1949,19 +2013,32 @@ class EmailFormatFilter extends EmailFilter {
   }
 }
 
-// 区间分割规则类
+// 简化分割规则类
 class BatchSplitRule {
-  final int startBatch;
-  final int? endBatch; // null 表示到结束
-  final int size;
+  final int startBatch; // 起始批次
+  final int size;       // 分割数量
   
   BatchSplitRule({
     required this.startBatch,
-    this.endBatch,
     required this.size,
   });
   
-  String get displayRange => endBatch == null
-      ? '$startBatch~'
-      : (startBatch == endBatch ? '$startBatch' : '$startBatch~$endBatch');
+  // 计算结束批次（下一个规则的起始批次减1，如果没有下一个规则则为null）
+  int? getEndBatch(List<BatchSplitRule> allRules, int currentIndex) {
+    if (currentIndex < allRules.length - 1) {
+      return allRules[currentIndex + 1].startBatch - 1;
+    }
+    return null; // 最后一个规则表示到结束
+  }
+  
+  String getDisplayRange(List<BatchSplitRule> allRules, int currentIndex) {
+    final endBatch = getEndBatch(allRules, currentIndex);
+    if (endBatch == null) {
+      return '$startBatch~结束';
+    } else if (startBatch == endBatch) {
+      return '$startBatch';
+    } else {
+      return '$startBatch~$endBatch';
+    }
+  }
 }
