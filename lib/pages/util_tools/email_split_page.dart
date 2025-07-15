@@ -5,6 +5,7 @@ import 'package:csv/csv.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:aliyun_edm_manager/theme/app_theme_extension.dart';
+import 'package:path/path.dart' as path;
 
 class EmailSplitPage extends StatefulWidget {
   const EmailSplitPage({super.key});
@@ -44,12 +45,24 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
   // 自定义分割规则
   final List<BatchSplitRule> _batchSplitRules = [];
   
+  // 保存目录设置
+  String? _saveDirectory;
+  final TextEditingController _saveDirectoryController = TextEditingController();
+  
   // 处理统计
   int _totalEmails = 0;
   int _validEmails = 0;
   int _invalidEmails = 0;
   int _duplicateEmails = 0;
   List<List<String>> _splitResults = []; // 分割结果
+  
+  // 进度条相关
+  double _progress = 0.0;
+  String _progressText = '';
+  int _currentBatch = 0;
+  int _totalBatches = 0;
+  int _processedEmails = 0;
+  int _totalEmailsToProcess = 0;
 
   @override
   void initState() {
@@ -89,6 +102,30 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('文件选择失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _selectSaveDirectory() async {
+    try {
+      String? selectedDirectory = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: '选择保存目录',
+      );
+
+      if (selectedDirectory != null) {
+        setState(() {
+          _saveDirectory = selectedDirectory;
+          _saveDirectoryController.text = selectedDirectory;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('目录选择失败: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -191,16 +228,25 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
   void _splitEmails() async {
     setState(() {
       _isProcessing = true;
+      _progress = 0.0;
+      _progressText = '开始处理...';
+      _currentBatch = 0;
+      _totalBatches = 0;
+      _processedEmails = 0;
+      _totalEmailsToProcess = 0;
     });
 
     try {
       // 1. 读取文件内容
+      _updateProgress(0.1, '正在读取文件...');
       List<String> emails = await _readEmailsFromFile();
 
       // 2. 读取排除邮箱
+      _updateProgress(0.2, '正在处理排除邮箱...');
       final Set<String> excludeEmails = await _readExcludeEmails();
 
       // 3. 处理主邮箱列表
+      _updateProgress(0.3, '正在处理邮箱列表...');
       if (emails.isNotEmpty) {
         emails = await _processEmails(emails, excludeEmails);
       }
@@ -211,6 +257,7 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
       _invalidEmails = emails.where((e) => !_isValidEmail(e)).length;
 
       // 5. 执行分割
+      _updateProgress(0.5, '正在分割邮箱...');
       List<List<String>> splitResults = [];
       if (_splitMode == 'fixed') {
         // 固定分割大小模式
@@ -221,11 +268,26 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
         splitResults = _splitWithCustomRules(emails);
       }
 
+      // 6. 保存分割文件
+      _updateProgress(0.7, '正在保存分割文件...');
+      await _saveSplitFiles(splitResults);
+
+      _updateProgress(1.0, '处理完成！');
+
       setState(() {
         _result = emails;
         _splitResults = splitResults;
         _isProcessing = false;
       });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('邮箱分割完成！共生成 ${splitResults.length} 个文件'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -237,6 +299,15 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
       }
       setState(() {
         _isProcessing = false;
+      });
+    }
+  }
+
+  void _updateProgress(double progress, String text) {
+    if (mounted) {
+      setState(() {
+        _progress = progress;
+        _progressText = text;
       });
     }
   }
@@ -485,7 +556,62 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
         BatchSplitRule(startBatch: 4, size: 1500),
         BatchSplitRule(startBatch: 7, size: 2000),
       ]);
+      _saveDirectory = null;
+      _saveDirectoryController.clear();
+      _progress = 0.0;
+      _progressText = '';
     });
+  }
+
+  Future<void> _saveSplitFiles(List<List<String>> splitResults) async {
+    if (_selectedFile == null || splitResults.isEmpty) return;
+
+    try {
+      // 确定保存目录
+      String saveDir;
+      if (_saveDirectory != null && _saveDirectory!.isNotEmpty) {
+        saveDir = _saveDirectory!;
+      } else {
+        // 默认在文件上传目录下新建data目录
+        final fileDir = path.dirname(_selectedFile!.path!);
+        saveDir = path.join(fileDir, 'data');
+      }
+
+      // 创建保存目录
+      final directory = Directory(saveDir);
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
+      }
+
+      // 获取原始文件名（不含扩展名）
+      final originalFileName = path.basenameWithoutExtension(_selectedFile!.name);
+
+      // 保存每个分割批次
+      for (int i = 0; i < splitResults.length; i++) {
+        final batch = splitResults[i];
+        final fileName = '${originalFileName}_${i + 1}.csv';
+        final filePath = path.join(saveDir, fileName);
+
+        // 创建CSV内容
+        final csvData = [
+          ['email'], // 标题行
+          ...batch.map((email) => [email]), // 数据行
+        ];
+
+        final csvString = const ListToCsvConverter().convert(csvData);
+        final file = File(filePath);
+        await file.writeAsString(csvString, encoding: utf8);
+
+        // 更新进度
+        final batchProgress = 0.7 + (0.3 * (i + 1) / splitResults.length);
+        _updateProgress(batchProgress, '正在保存第 ${i + 1}/${splitResults.length} 个文件...');
+      }
+
+      debugPrint('✅ [邮箱分割] 文件保存完成 - 保存目录: $saveDir, 文件数量: ${splitResults.length}');
+    } catch (e) {
+      debugPrint('❌ [邮箱分割] 文件保存失败: $e');
+      throw Exception('保存分割文件失败: $e');
+    }
   }
 
 
@@ -545,6 +671,7 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
   void dispose() {
     _excludeController.dispose();
     _fixedSplitSizeController.dispose();
+    _saveDirectoryController.dispose();
     super.dispose();
   }
 
@@ -626,6 +753,10 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
             _buildSplitSettingsSection(),
             const SizedBox(height: 24),
             
+            // 保存目录设置
+            _buildSaveDirectorySection(),
+            const SizedBox(height: 24),
+            
             // 操作按钮
             _buildActionButtons(),
             const SizedBox(height: 24),
@@ -638,6 +769,9 @@ class _EmailSplitPageState extends State<EmailSplitPage> {
             
             // 分割结果展示
             if (_splitResults.isNotEmpty) _buildSplitResultSection(),
+            
+            // 进度条显示
+            if (_isProcessing) _buildProgressSection(),
           ],
         ),
       ),
@@ -2042,3 +2176,168 @@ class BatchSplitRule {
     }
   }
 }
+
+  // 保存目录设置UI
+  Widget _buildSaveDirectorySection() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.folder_open, color: Colors.blue[600], size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                '保存目录设置',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _saveDirectoryController,
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    hintText: '请选择保存目录（可选，默认在文件目录下创建data文件夹）',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    suffixIcon: IconButton(
+                      onPressed: _selectSaveDirectory,
+                      icon: const Icon(Icons.folder_open),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: _selectSaveDirectory,
+                icon: const Icon(Icons.folder_open),
+                label: const Text('选择目录'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.blue[600], size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '如果不选择保存目录，系统将在上传文件所在目录下自动创建data文件夹来保存分割文件',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.blue[700],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 进度条UI
+  Widget _buildProgressSection() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.sync, color: Colors.blue[600], size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                '处理进度',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // 进度条
+          LinearProgressIndicator(
+            value: _progress,
+            backgroundColor: Colors.grey[200],
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[600]!),
+            minHeight: 8,
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // 进度文本
+          Text(
+            _progressText,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          
+          const SizedBox(height: 8),
+          
+          // 进度百分比
+          Text(
+            '${(_progress * 100).toInt()}%',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
